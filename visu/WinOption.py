@@ -132,6 +132,7 @@ class OPTION(QWidget):
         self.stepXBox=QDoubleSpinBox()
         self.stepXBox.setMaximum(10000)
         self.stepXBox.setValue(self.stepX)
+        self.stepXBox.setDecimals(4)
         hbox6.addWidget(self.checkBoxStepX)
         hbox6.addWidget(self.stepXBox)
         
@@ -139,6 +140,7 @@ class OPTION(QWidget):
         self.stepYBox=QDoubleSpinBox()
         self.stepYBox.setMaximum(10000)
         self.stepYBox.setValue(self.stepY)
+        self.stepYBox.setDecimals(4)
         hbox6.addWidget(self.checkBoxStepY)
         hbox6.addWidget(self.stepYBox)
         

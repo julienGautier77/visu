@@ -890,7 +890,7 @@ class SEE(QWidget) :
                 coupeYMax=1
                 
             if self.winOpt.checkBoxAxeScale.isChecked()==1: # scale axe on 
-                self.label_Cross.setText('x='+ str(int(self.xc)*self.winOpt.stepX) + '  um'+' y=' + str(int(self.yc)*self.winOpt.stepY) +' um')
+                self.label_Cross.setText('x='+ str(round(int(self.xc)*self.winOpt.stepX),2) + '  um'+' y=' + str(round(int(self.yc)*self.winOpt.stepY),2) +' um')
             else : 
                 self.label_Cross.setText('x='+ str(int(self.xc)) + ' y=' + str(int(self.yc)) )
                 

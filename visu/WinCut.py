@@ -70,6 +70,20 @@ class GRAPHCUT(QWidget):
         self.label_Cross.setMaximumWidth(150)
         self.label_Cross. setStyleSheet("font:12pt")
         hLayout1.addWidget(self.label_Cross)
+        self.label_Mean=QLabel('Mean :')
+        hLayout1.addWidget(self.label_Mean)
+        self.label_MeanValue=QLabel('...')
+        hLayout1.addWidget(self.label_MeanValue)
+        
+        self.label_PV=QLabel('PV :')
+        hLayout1.addWidget(self.label_PV)
+        self.label_PVValue=QLabel('...')
+        hLayout1.addWidget(self.label_PVValue)
+        
+        self.label_Variance=QLabel('variance :')
+        hLayout1.addWidget(self.label_Variance)
+        self.label_VarianceValue=QLabel('...')
+        hLayout1.addWidget(self.label_VarianceValue)
         
         self.openButton=QPushButton('Open',self)
         self.openButton.setIcon(QtGui.QIcon(self.icon+"Open.png"))
@@ -138,7 +152,8 @@ class GRAPHCUT(QWidget):
         ext=os.path.splitext(fichier)[1]
         
         if ext=='.txt': # text file
-            self.cutData=np.loadtxt(str(fichier))
+            #self.cutData=np.loadtxt(str(fichier))
+            self.cutData=np.genfromtxt(fichier, delimiter=" ")
             self.PLOT(self.cutData,symbol=False)
             
         else :
@@ -162,8 +177,12 @@ class GRAPHCUT(QWidget):
         print(fichier,' is saved')
         self.conf.setValue(self.name+"/path",self.path)
         time.sleep(0.1)
-        
-        np.savetxt(str(fichier)+'.txt',self.cutData)
+        if self.axis==None:
+            np.savetxt(str(fichier)+'.txt',self.cutData)
+        else :
+            saveData=np.array([self.axis,self.cutData])
+            saveData=saveData.T
+            np.savetxt(str(fichier)+'.txt',saveData)
         
 
         
@@ -198,9 +217,9 @@ class GRAPHCUT(QWidget):
         if self.checkBoxPlot.isChecked()==1 :
             if self.axisOn==True:
                 
-                self.label_Cross.setText('x='+ str(int(self.xc)) + ' y=' + str(round(self.yc,3)))
+                self.label_Cross.setText('x='+ str(round((self.xc),2)) + ' y=' + str(round(self.yc,2)))
             else:
-                self.label_Cross.setText('x='+ str(int(self.xc)) + ' y=' + str(round(self.cutData[self.xc],3)))
+                self.label_Cross.setText('x='+ str(round((self.xc),2)) + ' y=' + str(round(self.cutData[self.xc],2)))
         else : 
             self.label_Cross.setText('')
                 
@@ -226,7 +245,7 @@ class GRAPHCUT(QWidget):
             self.pCut.removeItem(self.hLine)
     
         
-    def PLOT(self,cutData,axis=None,symbol=True,pen=True,label=None):
+    def PLOT(self,cutData,axis=None,symbol=True,pen=True,label=None,labelY=None):
         
         self.cutData=cutData
         self.dimx=np.shape(self.cutData)[0]
@@ -262,12 +281,14 @@ class GRAPHCUT(QWidget):
             
         if label!=None:
             self.pCut.setLabel('bottom',label)
-        
+        if labelY!=None:
+            self.pCut.setLabel('left',labelY)
         
         self.PlotXY()
-        self.affiCross()  
-            
- 
+        self.affiCross()
+        self.label_MeanValue.setText(str(round(np.mean(cutData),3)))
+        self.label_PVValue.setText(str(round(np.ptp(cutData),3)))
+        self.label_VarianceValue.setText(str(round(np.var(cutData),3)))
        
     def SetTITLE(self,title):
         self.setWindowTitle(title)
