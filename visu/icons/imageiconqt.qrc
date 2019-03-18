@@ -1,0 +1,45 @@
+<RCC>
+    <qresource prefix="/">
+        <file>disk.jpg</file>
+        <file>diskette.jpg</file>
+        <file>snap.jpg</file>
+        <file>play-256.png</file>
+        <file>stop.png</file>
+        <file>switchoff.png</file>
+        <file>Camera Addon-595b40b65ba036ed117d3d26.svg</file>
+        <file>Cancel-595b40b65ba036ed117d4346.svg</file>
+        <file>Checked Checkbox-595b40b65ba036ed117d435b.svg</file>
+        <file>Checkmark-595b40b65ba036ed117d435d.svg</file>
+        <file>Circled Play-595b40b65ba036ed117d436f.svg</file>
+        <file>Clock-595b40b65ba036ed117d4379.svg</file>
+        <file>Create-595b40b65ba036ed117d4398.svg</file>
+        <file>Crosshair-595b40b85ba036ed117dc035.svg</file>
+        <file>Delete-595b40b65ba036ed117d43b2.svg</file>
+        <file>Design-595b40b65ba036ed117d43b5.svg</file>
+        <file>Edit Image-595b40b65ba036ed117d43e0.svg</file>
+        <file>Hunt-595b40b65ba036ed117d4352.svg</file>
+        <file>Hunt-595b40b85ba036ed117dbf9b.svg</file>
+        <file>Key-595b40b65ba036ed117d447f.svg</file>
+        <file>Lock-595b40b65ba036ed117d4499.svg</file>
+        <file>Maximize Window-595b40b65ba036ed117d44b6.svg</file>
+        <file>Minimize Window-595b40b65ba036ed117d44c6.svg</file>
+        <file>Multiply-595b40b85ba036ed117da666.svg</file>
+        <file>Open-595b40b65ba036ed117d44fd.svg</file>
+        <file>Play-.svg</file>
+        <file>Record-595b40b65ba036ed117d4557.svg</file>
+        <file>Safe In-595b40b65ba036ed117d457f.svg</file>
+        <file>Save-595b40b65ba036ed117d32f1.svg</file>
+        <file>Saving Book-595b40b65ba036ed117d4586.svg</file>
+        <file>Screenshot-595b40b65ba036ed117d458a.svg</file>
+        <file>Settings-595b40b65ba036ed117d4597.svg</file>
+        <file>Stop.svg</file>
+        <file>Switch On-595b40b85ba036ed117dabd5.svg</file>
+        <file>switchon.svg</file>
+        <file>Toggle Off-595b40b85ba036ed117dac78.svg</file>
+        <file>Toggle On-595b40b85ba036ed117dac79.svg</file>
+        <file>Unchecked Checkbox-595b40b65ba036ed117d4616.svg</file>
+        <file>Unlock-595b40b65ba036ed117d461c.svg</file>
+        <file>Video File-595b40b65ba036ed117d4632.svg</file>
+        <file>YouTube 2-595b40b65ba036ed117d465c.svg</file>
+    </qresource>
+</RCC>
