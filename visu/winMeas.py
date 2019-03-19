@@ -16,7 +16,7 @@ import numpy as np
 import pylab
 from PyQt5.QtGui import QIcon
 from scipy import ndimage
-from WinCut import GRAPHCUT
+from visu.WinCut import GRAPHCUT
 
 class MEAS(QWidget):
     
