@@ -6,5 +6,12 @@ Data vizualisation
 @author: juliengautier
 """
 
-from visu import SEE
-__version__='visu 2019.3'
+from visu import visual
+from visu.visual import SEE
+from visu import andor
+from visu import WinCut
+from visu import winMeas
+from visu import winspec
+from visu import winSuppE
+name="visu"
+__version__='2019.3'
