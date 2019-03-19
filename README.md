@@ -21,11 +21,13 @@ It can make plot profile and data measurements  analysis
     *   pip install visu
 
 ## Usage
-* import visu
-* appli = QApplication(sys.argv)     
-* e = visu.visual.SEE()
-* e.show()
-* appli.exec_() 
+*   from PyQt5.QtWidgets import QApplication
+*   import sys
+*    import visu
+*   appli = QApplication(sys.argv)     
+*   e = visu.visual.SEE()
+*   e.show()
+*   appli.exec_() 
 
 -----------------------------------------
 -----------------------------------------
