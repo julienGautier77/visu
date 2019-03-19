@@ -14,4 +14,4 @@ from visu import winMeas
 from visu import winspec
 from visu import winSuppE
 name="visu"
-__version__='2019.3'
+__version__='2019.3.19'
