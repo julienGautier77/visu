@@ -10,5 +10,5 @@ from setuptools import setup, find_packages
 import visu
 
 setup(name='visu',version=visu.__version__,packages=['visu'],author='Julien Gautier',author_email='julien.gautier@ensta.fr',
-      description='Data visualization',
+      description='Data visualization',include_package_data=True,
       long_description=open('README.md').read(),url='https://github.com/julienGautier77/visu')
