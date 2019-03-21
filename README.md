@@ -11,6 +11,7 @@ It can make plot profile and data measurements  analysis
 ## Requirements
 *   python 3.x
 *   Numpy
+*   PyQt5
 *   pyqtgraph (https://github.com/pyqtgraph/pyqtgraph.git) 
     * pip intall pyqtgraph
 *   qdarkstyle (https://github.com/ColinDuquesnoy/QDarkStyleSheet.git)
