@@ -1,5 +1,6 @@
 # Visu
 
+
 Visu is an user interface library based on pyqtgraph to open and process data image .
 
 It can open .spe .SPE, .sif and .TIFF files
@@ -22,13 +23,13 @@ It can make plot profile and data measurements  analysis
     *   https://github.com/antonl/pyWinSpec
     
 ## Installation
-*   from pypi
+*   from PyPi
     *   pip install visu
 
 ## Usage
 
 
-    from PyQt5.QtWidgets import QApplication'
+    from PyQt5.QtWidgets import QApplication
     import sys
     import visu
     appli = QApplication(sys.argv)   
