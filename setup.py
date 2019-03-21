@@ -14,5 +14,5 @@ setup(name='visu',version=visu.__version__,packages=find_packages(),author='Juli
       classifiers=[
         "Programming Language :: Python :: 3",
         "License :: Free for non-commercial use",
-        "Operating System :: OS Independent"],"Topic :: Scientific/Engineering :: Visualization",
+        "Operating System :: OS Independent","Topic :: Scientific/Engineering :: Visualization"],
       long_description=open('README.md').read(),url='https://github.com/julienGautier77/visu')
