@@ -3,7 +3,7 @@
 """
 Created on Wed Jan 30 15:07:27 2019
 
-https://github.com/julienGautier77/visu
+https://github.com/julienGautier77/visu.git
 
 @author: juliengautier
 
@@ -12,7 +12,8 @@ pip install pyqtgraph (https://github.com/pyqtgraph/pyqtgraph.git)
 
 """
 
-version='2019.3'
+__version__='2019.3'
+__author__='julien Gautier'
 
 from PyQt5.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QWidget,QPushButton,QGridLayout
 from PyQt5.QtWidgets import QInputDialog,QSlider,QCheckBox,QLabel,QSizePolicy,QMenu,QMessageBox
@@ -38,7 +39,7 @@ from visu.andor import SifFile
 import pathlib
 
 
-#__all__=['SEE']
+__all__=['SEE']
 
 class SEE(QWidget) :
     '''open and plot file : 
@@ -51,6 +52,7 @@ class SEE(QWidget) :
     def __init__(self,file=None,path=None):
         
         super(SEE, self).__init__()
+        version=__version__
         p = pathlib.Path(__file__)
         conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
         self.icon=str(p.parent) + '/icons/'
