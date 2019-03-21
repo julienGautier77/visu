@@ -876,7 +876,7 @@ class SEE(QWidget) :
         
 if __name__ == "__main__":
     appli = QApplication(sys.argv) 
-    #appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+    appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
     e = SEE()
     e.show()
     appli.exec_() 

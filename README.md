@@ -1,6 +1,6 @@
 # Visu
 
-Visu is an user interface library to open data file.
+Visu is an user interface library based on pyqtgraph to open and process data image .
 
 It can open .spe .SPE .sif and .TIFF files
 
@@ -24,7 +24,8 @@ It can make plot profile and data measurements  analysis
 *   from PyQt5.QtWidgets import QApplication
 *   import sys
 *    import visu
-*   appli = QApplication(sys.argv)     
+*   appli = QApplication(sys.argv)   
+*   appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
 *   e = visu.visual.SEE()
 *   e.show()
 *   appli.exec_() 
