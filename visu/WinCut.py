@@ -13,14 +13,15 @@ from PyQt5.QtWidgets import QApplication,QHBoxLayout,QWidget
 from PyQt5.QtGui import QIcon
 import sys,time
 
-import pathlib
+import pathlib,os
 
 class GRAPHCUT(QWidget):
     
     def __init__(self,symbol=True):
         super(GRAPHCUT, self).__init__()
         p = pathlib.Path(__file__)
-        self.icon=str(p.parent) + '/icons/'
+        sepa=os.sep
+        self.icon=str(p.parent) + sepa+'icons' +sepa
         self.winPLOT = pg.GraphicsLayoutWidget()
         self.isWinOpen=False
         self.symbol=symbol

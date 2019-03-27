@@ -22,8 +22,8 @@ class OPTION(QWidget):
         super(OPTION, self).__init__()
         p = pathlib.Path(__file__)
         conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
-        self.icon=str(p.parent) + '/icons/'
-        
+        sepa=os.sep
+        self.icon=str(p.parent) + sepa+'icons' +sepa
         self.isWinOpen=False
         self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
        
@@ -48,6 +48,12 @@ class OPTION(QWidget):
         
         TogOff=self.icon+'Toggle_Off.svg'
         TogOn=self.icon+'Toggle_On.svg'
+        
+        
+        TogOff=pathlib.Path(TogOff)
+        TogOff=pathlib.PurePosixPath(TogOff)
+        TogOn=pathlib.Path(TogOn)
+        TogOn=pathlib.PurePosixPath(TogOn)
         self.setStyleSheet("QCheckBox::indicator{width: 30px;height: 30px;}""QCheckBox::indicator:unchecked { image : url(%s);}""QCheckBox::indicator:checked { image:  url(%s);}""QCheckBox{font :10pt;}" % (TogOff,TogOn) )
         
         vbox1=QVBoxLayout()
