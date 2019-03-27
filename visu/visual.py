@@ -36,7 +36,7 @@ from visu.WinCut import GRAPHCUT
 from visu.winMeas import MEAS
 from visu.WinOption import OPTION
 from visu.andor import SifFile
-import pathlib
+import pathlib,os
 
 
 __all__=['SEE']
@@ -55,7 +55,8 @@ class SEE(QWidget) :
         version=__version__
         p = pathlib.Path(__file__)
         conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
-        self.icon=str(p.parent) + '/icons/'
+        sepa=os.sep
+        self.icon=str(p.parent) + sepa+'icons' +sepa
         self.conf = conf
         self.winEncercled=WINENCERCLED('VISU')
         self.winCoupe=GRAPHCUT(symbol=False)
@@ -97,6 +98,12 @@ class SEE(QWidget) :
     def setup(self):
         TogOff=self.icon+'Toggle_Off.svg'
         TogOn=self.icon+'Toggle_On.svg'
+        
+        
+        TogOff=pathlib.Path(TogOff)
+        TogOff=pathlib.PurePosixPath(TogOff)
+        TogOn=pathlib.Path(TogOn)
+        TogOn=pathlib.PurePosixPath(TogOn)
         self.setStyleSheet("QCheckBox::indicator{width: 30px;height: 30px;}""QCheckBox::indicator:unchecked { image : url(%s);}""QCheckBox::indicator:checked { image:  url(%s);}""QCheckBox{font :10pt;}" % (TogOff,TogOn) )
         
         vbox1=QVBoxLayout() 
