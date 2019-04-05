@@ -28,6 +28,11 @@ It can make plot profile and data measurements  analysis
 
 ## Usage
 
+    import visu
+    runVisu()
+
+Or :
+
     from PyQt5.QtWidgets import QApplication
     import sys
     import qdarkstyle
