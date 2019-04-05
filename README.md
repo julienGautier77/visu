@@ -28,15 +28,13 @@ It can make plot profile and data measurements  analysis
 
 ## Usage
 
-
     from PyQt5.QtWidgets import QApplication
     import sys
+    import qdarkstyle
     import visu
+    
     appli = QApplication(sys.argv)   
     appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
     e = visu.visual.SEE()
-    e.show()
-    appli.exec_() 
-
 -----------------------------------------
 -----------------------------------------
