@@ -16,7 +16,7 @@ import sys,time
 import pyqtgraph as pg # pyqtgraph biblio permettent l'affichage 
 import numpy as np
 import qdarkstyle # pip install qdakstyle https://github.com/ColinDuquesnoy/QDarkStyleSheet  sur conda
-import pylab
+import pylab,os
 from scipy.ndimage.filters import gaussian_filter # pour la reduction du bruit
 from scipy.interpolate import splrep, sproot, splev # pour calcul fwhm et fit 
 import pathlib
@@ -31,7 +31,8 @@ class WINENCERCLED(QWidget):
         self.nbcam=nbcam
         p = pathlib.Path(__file__)
         conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
-        self.icon=str(p.parent) + '/icons/'
+        sepa=os.sep
+        self.icon=str(p.parent) + sepa+'icons' +sepa
         self.confCCD = conf
         self.isWinOpen=False
         self.setWindowTitle('Encercled')
@@ -73,8 +74,14 @@ class WINENCERCLED(QWidget):
         
         TogOff=self.icon+'Toggle_Off.svg'
         TogOn=self.icon+'Toggle_On.svg'
+        
+        
+        TogOff=pathlib.Path(TogOff)
+        TogOff=pathlib.PurePosixPath(TogOff)
+        TogOn=pathlib.Path(TogOn)
+        TogOn=pathlib.PurePosixPath(TogOn)
         self.setStyleSheet("QCheckBox::indicator{width: 30px;height: 30px;}""QCheckBox::indicator:unchecked { image : url(%s);}""QCheckBox::indicator:checked { image:  url(%s);}""QCheckBox{font :10pt;}" % (TogOff,TogOn) )
-       
+        
         vbox1=QVBoxLayout()
         self.checkBoxAuto=QCheckBox('Auto',self)
         self.checkBoxAuto.setChecked(True)

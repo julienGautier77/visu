@@ -27,8 +27,9 @@ class MEAS(QWidget):
         super(MEAS, self).__init__()
         p = pathlib.Path(__file__)
         conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+        sepa=os.sep
         
-        self.icon=str(p.parent) + '/icons/'
+        self.icon=str(p.parent) + sepa+'icons' +sepa
         self.isWinOpen=False
         self.setup()
         self.setWindowTitle('MEASUREMENTS')

@@ -61,6 +61,10 @@ class SEE(QWidget) :
         self.winEncercled=WINENCERCLED('VISU')
         self.winCoupe=GRAPHCUT(symbol=False)
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
+        
+        
+        
+        
         self.winM=MEAS()
         self.winOpt=OPTION()
         self.nomFichier=''
