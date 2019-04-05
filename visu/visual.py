@@ -885,7 +885,19 @@ class SEE(QWidget) :
         if self.winOpt.isWinOpen==True:
             self.winOpt.close() 
         exit  
-
+        
+def runVisu() :
+        
+    from PyQt5.QtWidgets import QApplication
+    import sys
+    import qdarkstyle
+    import visu
+    
+    appli = QApplication(sys.argv)   
+    appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+    e = visu.visual.SEE()
+    e.show()
+    appli.exec_() 
         
 if __name__ == "__main__":
     appli = QApplication(sys.argv) 
