@@ -710,7 +710,7 @@ class SEE(QWidget) :
             xmax=levels[1]
             xmin=levels[0]
             
-        self.imh.setLevels([xmin, xmax+(xmax- xmin) / 10])
+        self.imh.setLevels([xmin, xmax-(xmax- xmin) / 10])
         #hist.setImageItem(imh,clear=True)
         self.hist.setHistogramRange(xmin,xmax)
 
@@ -723,7 +723,7 @@ class SEE(QWidget) :
             xmax=levels[1]
             xmin=levels[0]
             
-        self.imh.setLevels([xmin, xmax- (xmax- xmin) / 10])
+        self.imh.setLevels([xmin, xmax+ (xmax- xmin) / 10])
         #hist.setImageItem(imh,clear=True)
         self.hist.setHistogramRange(xmin,xmax)
     
