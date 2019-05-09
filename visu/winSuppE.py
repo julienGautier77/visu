@@ -18,11 +18,10 @@ import numpy as np
 import qdarkstyle # pip install qdakstyle https://github.com/ColinDuquesnoy/QDarkStyleSheet  sur conda
 import pylab,os
 from scipy.ndimage.filters import gaussian_filter # pour la reduction du bruit
-from scipy.interpolate import splrep, sproot, splev # pour calcul fwhm et fit 
+from scipy.interpolate import splrep, sproot # pour calcul fwhm et fit 
 import pathlib
 
 
-from visu import visual
 
 class WINENCERCLED(QWidget):
     

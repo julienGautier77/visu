@@ -12,7 +12,7 @@ pip install pyqtgraph (https://github.com/pyqtgraph/pyqtgraph.git)
 
 """
 
-__version__=__version__='2019.5'
+
 __author__='julien Gautier'
 
 from PyQt5.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QWidget,QPushButton,QGridLayout
@@ -28,7 +28,6 @@ import numpy as np
 import qdarkstyle # pip install qdarkstyle https://github.com/ColinDuquesnoy/QDarkStyleSheet  sur conda
 from scipy.interpolate import splrep, sproot #
 from scipy.ndimage.filters import gaussian_filter,median_filter
-from scipy import ndimage
 from PIL import Image
 from visu.winspec import SpeFile
 from visu.winSuppE import WINENCERCLED
@@ -36,8 +35,11 @@ from visu.WinCut import GRAPHCUT
 from visu.winMeas import MEAS
 from visu.WinOption import OPTION
 from visu.andor import SifFile
+from winFFT import WINFFT
 import pathlib
 
+import __init__
+__version__=__init__.__version__
 
 __all__=['SEE']
 
@@ -60,10 +62,11 @@ class SEE(QWidget) :
         self.conf = conf
         self.winEncercled=WINENCERCLED('VISU')
         self.winCoupe=GRAPHCUT(symbol=False)
-        self.setWindowIcon(QIcon(self.icon+'LOA.png'))
     
         self.winM=MEAS()
         self.winOpt=OPTION()
+        self.winFFT=WINFFT('VISU')
+        self.winFFT1D=GRAPHCUT(symbol=False)#,title='FFT 1D')
         self.nomFichier=''
         self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
         self.path=path
@@ -76,6 +79,7 @@ class SEE(QWidget) :
         self.showNormal()
         self.filter='origin'
         self.ite=None
+        self.setWindowIcon(QIcon(self.icon+'LOA.png'))
         
         if file==None:
             
@@ -148,14 +152,14 @@ class SEE(QWidget) :
         
         hbox4=QHBoxLayout()
         self.labelFileName=QLabel("File :")
-        self.labelFileName.setStyleSheet("font:10pt;")
+        self.labelFileName.setStyleSheet("font:15pt;")
         self.labelFileName.setMinimumHeight(30)
         self.labelFileName.setMaximumWidth(40)
         hbox4.addWidget(self.labelFileName)
         hbox42=QHBoxLayout()
     
         self.fileName=QLabel()
-        self.fileName.setStyleSheet("font:4pt")
+        self.fileName.setStyleSheet("font:10pt")
         self.fileName.setMaximumHeight(30)
         self.fileName.setMaximumWidth(150)
         hbox42.addWidget(self.fileName)
@@ -181,7 +185,7 @@ class SEE(QWidget) :
         vbox1.addWidget(self.ZoomLabel)
         self.checkBoxZoom=QSlider(Qt.Horizontal)
         self.checkBoxZoom.setMaximumWidth(200)
-        self.checkBoxZoom.setMinimum(-20)
+        self.checkBoxZoom.setMinimum(-5)
         self.checkBoxZoom.setMaximum(100)
         self.checkBoxZoom.setValue(-20)
         vbox1.addWidget(self.checkBoxZoom)
@@ -226,6 +230,8 @@ class SEE(QWidget) :
         hbox11.addWidget(self.PlotButton)
         self.MeasButton=QPushButton('Meas.')
         hbox11.addWidget(self.MeasButton)
+        self.fftButton=QPushButton('FFT')
+        hbox11.addWidget(self.fftButton)
         
         hbox10=QHBoxLayout()
         self.ligneButton=QPushButton('Line')
@@ -336,6 +342,7 @@ class SEE(QWidget) :
         self.plotCercle.sigRegionChangeFinished.connect(self.CercChanged)
         self.PlotButton.clicked.connect(self.CUT)
         self.MeasButton.clicked.connect(self.Measurement)
+        self.fftButton.clicked.connect(self.fftTransform)
 
     def Energ(self):
         
@@ -431,7 +438,30 @@ class SEE(QWidget) :
             self.winM.setFile(self.nomFichier)
             self.open_widget(self.winM)
             self.winM.Display(self.data)
+    
+
+    def fftTransform(self):
         
+        if self.ite=='rect':
+            self.RectChanged()
+            self.open_widget(self.winFFT)
+            self.winFFT.Display(self.cut)   
+        if self.ite=='cercle':
+            self.CercChanged()
+            self.open_widget(self.winFFT)
+            self.winFFT.Display(self.cut)
+        if self.ite=='line':
+            self.LigneChanged()
+            self.open_widget(self.winFFT1D)
+            if self.cut.ndim==1:
+                datafft=np.fft.fft(np.array(self.cut))
+                self.norm=abs(np.fft.fftshift(datafft))
+                self.norm=np.log10(1+self.norm)
+                self.winFFT1D.PLOT(self.norm)
+            
+        if self.ite==None:
+            self.open_widget(self.winFFT)
+            self.winFFT.Display(self.data) 
         
     def shortcut(self):
         
@@ -537,7 +567,11 @@ class SEE(QWidget) :
             if self.ite=='cercle':
                 self.CercChanged()
                 self.Measurement()
-            
+        
+        if self.winFFT.isWinOpen==True:
+            self.winFFT.Display(self.data)
+        
+        
         if self.checkBoxAutoSave.isChecked()==True:
             self.pathAutoSave=str(self.conf.value('VISU'+'/pathAutoSave'))
             self.fileNameSave=str(self.conf.value('VISU'+'/nameFile'))
@@ -716,32 +750,52 @@ class SEE(QWidget) :
             
     def Zoom(self):
         
-        self.p1.setXRange(0,self.dimx)
-        self.p1.setYRange(0,self.dimy)
+        """Zoom function
+        """
         self.zo=self.checkBoxZoom.value()
+        
+        if self.checkBoxPlot.isChecked()==0:
+            self.xc=self.dimx/2
+            self.yc=self.dimy/2
+        
+       
         if self.zo<=0:
             self.p1.setXRange(0,self.dimx)
             self.p1.setYRange(0,self.dimy)
+        
         else:
-            self.p1.setXRange(self.xc-10*(100-self.zo),self.xc+10*(100-self.zo))
-            self.p1.setYRange(self.yc-10*(100-self.zo),self.yc+10*(100-self.zo))
+            xmin=self.xc-10*(101-self.zo)
+            xmax=self.xc+10*(101-self.zo)
+            ymin=self.yc-10*(101-self.zo)
+            ymax=self.yc+10*(101-self.zo)
+            
+            if xmin<0:
+                xmin=0
+            if xmax>self.dimx:
+                xmax=self.dimx   
+                
+            if ymin<0:
+                ymin=0
+            if ymax>self.dimy:
+                ymax=self.dimy 
+                
+            self.p1.setXRange(xmin,xmax)
+            self.p1.setYRange(ymin,ymax)
+    
     
     def roiChanged(self):
-        
         self.rx=self.ro1.size()[0]
         self.ry=self.ro1.size()[1]
         self.conf.setValue('VISU'+"/rx",int(self.rx))
         self.conf.setValue('VISU'+"/ry",int(self.ry))
+      
         
-
-    
     def bloquer(self): # block the cross
         
         self.bloqq=1
         self.conf.setValue('VISU'+"/xc",int(self.xc)) # save cross postion in ini file
         self.conf.setValue('VISU'+"/yc",int(self.yc))
-     
-        
+         
     def debloquer(self): # unblock the cross
         self.bloqq=0
     
@@ -787,7 +841,7 @@ class SEE(QWidget) :
 
         if fileOpen==False:
             chemin=self.conf.value('VISU'+"/path")
-            fname=QtGui.QFileDialog.getOpenFileName(self,"Open File",chemin,"Images (*.txt *.spe *.TIFF *.sif);;Text File(*.txt);;Ropper File (*.SPE);;Andor File(*.sif);; TIFF file(*.TIFF)")
+            fname=QtGui.QFileDialog.getOpenFileName(self,"Open File",chemin,"Images (*.txt *.spe *.TIFF *.sif *.tif);;Text File(*.txt);;Ropper File (*.SPE);;Andor File(*.sif);; TIFF file(*.TIFF)")
             fichier=fname[0]
         else:
             fichier=str(fileOpen)
@@ -800,7 +854,7 @@ class SEE(QWidget) :
             dataSPE=SpeFile(fichier)
             data1=dataSPE.data[0]#.transpose() # first frame
             self.data=data1#np.flipud(data1)
-        elif ext=='.TIFF':# tiff File
+        elif ext=='.TIFF' or ext=='.tif':# tiff File
             dat=Image.open(fichier)
             self.data=np.array(dat)
         elif ext=='.sif': 
@@ -829,27 +883,25 @@ class SEE(QWidget) :
 
     def SaveF (self):
         
-        fname=QtGui.QFileDialog.getSaveFileName(self,"Save data as text ",self.path)
+        fname=QtGui.QFileDialog.getSaveFileName(self,"Save data as tiff ",self.path)
         self.path=os.path.dirname(str(fname[0]))
         fichier=fname[0]
         print(fichier,' is saved')
         self.conf.setValue("VISU"+"/path",self.path)
         time.sleep(0.1)
-        #img_PIL = PIL.Image.fromarray(self.data)
-        #img_PIL.save(str(fname[0])+'.TIFF',format='TIFF') 
+#        img_PIL = PIL.Image.fromarray(self.data)
+#        img_PIL.save(str(fname[0])+'.TIFF',format='TIFF') 
         np.savetxt(str(fichier)+'.txt',self.data)
         self.fileName.setText(fname[0]+'.TIFF') 
 
-     
+  
     def newDataReceived(self,data):
-        
         self.data=data
         self.dataOrg=self.data
         self.Display(self.data)
         
         
     def open_widget(self,fene):
-        
         """ open new widget 
         """
 
@@ -864,6 +916,7 @@ class SEE(QWidget) :
             fene.raise_()
             fene.showNormal()
 
+
     def closeEvent(self,event):
         
         if self.winEncercled.isWinOpen==True:
@@ -874,6 +927,11 @@ class SEE(QWidget) :
             self.winM.close()
         if self.winOpt.isWinOpen==True:
             self.winOpt.close() 
+        if self.winFFT.isWinOpen==True:
+            self.winFFT.close()
+        if self.winFFT1D.isWinOpen==True:
+            self.winFFT1D.close()
+            
         exit  
         
 def runVisu() :

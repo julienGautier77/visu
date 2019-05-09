@@ -48,7 +48,7 @@ def print_offsets():
     datatype widths. Fix this in winspec.structs file and let me know!
     '''
 
-    import inspect, re
+    import inspect
 
     A = Header()
 

@@ -17,18 +17,20 @@ import pathlib,os
 
 class GRAPHCUT(QWidget):
     
-    def __init__(self,symbol=True):
+    def __init__(self,symbol=True,title='Plot'):
         super(GRAPHCUT, self).__init__()
         p = pathlib.Path(__file__)
         sepa=os.sep
+        self.title=title
         self.icon=str(p.parent) + sepa+'icons' +sepa
         self.winPLOT = pg.GraphicsLayoutWidget()
         self.isWinOpen=False
         self.symbol=symbol
         self.setup()
-        self.setWindowTitle('PLOT')
+        self.setWindowTitle(self.title)
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
         self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+        
     def setup(self):
         hLayout2=QHBoxLayout()
         hLayout2.addWidget(self.winPLOT)

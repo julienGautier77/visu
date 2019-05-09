@@ -12,7 +12,6 @@ from pyqtgraph.Qt import QtCore,QtGui
 from PyQt5.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QPushButton
 from PyQt5.QtWidgets import QMenu,QWidget,QTableWidget,QTableWidgetItem,QAbstractItemView
 import sys,time,os
-import numpy as np
 import pylab
 from PyQt5.QtGui import QIcon
 from scipy import ndimage
@@ -112,16 +111,15 @@ class MEAS(QWidget):
         fname=QtGui.QFileDialog.getSaveFileName(self,"Save Measurements as txt file",self.path)
         
         self.path=os.path.dirname(str(fname[0]))
-        #mat=np.array(self.TableSauv)
-        #print('mat=',mat)
-#        with open('myfile','w',)as f:
-#            json.dump(self.TableSauv,f)
         f=open(str(fname[0])+'.txt','w')
         f.write("\n".join(self.TableSauv))
         f.close()
         
     def openF(self) :
-        print ('open not done')
+        '''
+        to do
+        '''
+        print ('open not done yet')
     
 
     def PlotMAX(self):
