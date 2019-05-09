@@ -21,8 +21,6 @@ from scipy.ndimage.filters import gaussian_filter # pour la reduction du bruit
 from scipy.interpolate import splrep, sproot # pour calcul fwhm et fit 
 import pathlib
 
-
-
 class WINENCERCLED(QWidget):
     
     def __init__(self,nbcam):

@@ -35,11 +35,11 @@ from visu.WinCut import GRAPHCUT
 from visu.winMeas import MEAS
 from visu.WinOption import OPTION
 from visu.andor import SifFile
-from winFFT import WINFFT
+from visu.winFFT import WINFFT
 import pathlib
 
-import __init__
-__version__=__init__.__version__
+
+__version__='2019.07'
 
 __all__=['SEE']
 
@@ -60,13 +60,14 @@ class SEE(QWidget) :
         sepa=os.sep
         self.icon=str(p.parent) + sepa+'icons' +sepa
         self.conf = conf
+        
         self.winEncercled=WINENCERCLED('VISU')
         self.winCoupe=GRAPHCUT(symbol=False)
     
         self.winM=MEAS()
         self.winOpt=OPTION()
         self.winFFT=WINFFT('VISU')
-        self.winFFT1D=GRAPHCUT(symbol=False)#,title='FFT 1D')
+        self.winFFT1D=GRAPHCUT(symbol=False,title='FFT 1D')
         self.nomFichier=''
         self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
         self.path=path
@@ -567,7 +568,7 @@ class SEE(QWidget) :
             if self.ite=='cercle':
                 self.CercChanged()
                 self.Measurement()
-        
+       
         if self.winFFT.isWinOpen==True:
             self.winFFT.Display(self.data)
         
