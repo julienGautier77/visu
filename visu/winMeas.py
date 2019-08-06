@@ -10,23 +10,34 @@ Window for Measurement
 import qdarkstyle 
 from pyqtgraph.Qt import QtCore,QtGui 
 from PyQt5.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QPushButton
-from PyQt5.QtWidgets import QMenu,QWidget,QTableWidget,QTableWidgetItem,QAbstractItemView
+from PyQt5.QtWidgets import QMenu,QWidget,QTableWidget,QTableWidgetItem,QAbstractItemView,QComboBox
 import sys,time,os
 import pylab
 from PyQt5.QtGui import QIcon
 from scipy import ndimage
 from visu.WinCut import GRAPHCUT
+#from WinCut import GRAPHCUT
 import pathlib
-
+import numpy as np
 
 class MEAS(QWidget):
     
-    def __init__(self):
+    def __init__(self,confMot=None):
         
         super(MEAS, self).__init__()
         p = pathlib.Path(__file__)
         conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
         sepa=os.sep
+        self.confMotPath=confMot
+        
+        self.motorListGui=list()
+        if self.confMotPath!=None:    
+            self.configMot=QtCore.QSettings(self.confMotPath, QtCore.QSettings.IniFormat)
+            self.groups=self.configMot.childGroups()
+            import moteurRSAI as RSAI
+            self.motorType=RSAI
+            self.nbMotors=int(np.size(self.groups))
+        
         
         self.icon=str(p.parent) + sepa+'icons' +sepa
         self.isWinOpen=False
@@ -62,6 +73,7 @@ class MEAS(QWidget):
         
     def setup(self):
         
+            
         vLayout=QVBoxLayout()
         
         hLayout1=QHBoxLayout()
@@ -85,6 +97,8 @@ class MEAS(QWidget):
         menu2.addAction('x center mass',self.PlotXCMASS)
         menu2.addAction('y center mass',self.PlotYCMASS)
         
+        
+        
         self.FileMenu2.setMenu(menu2)
         
         
@@ -97,6 +111,13 @@ class MEAS(QWidget):
         #self.table.setRowCount(10)
        
         self.table.setHorizontalHeaderLabels(('File','Max','Min','x max','y max','Sum','Mean','Size','x c.mass','y c.mass'))
+        if self.confMotPath!=None:
+            self.motorNameBox=QComboBox()
+            hLayout1.addWidget(self.motorNameBox)
+            for mo in range (0,self.nbMotors):
+                self.motorNameBox.addItem(self.groups[mo])
+            self.table.setHorizontalHeaderLabels(('File','Max','Min','x max','y max','Sum','Mean','Size','x c.mass','y c.mass'))
+            
         self.table.horizontalHeader().setVisible(True)
         self.table.setAlternatingRowColors(True)
         self.table.resizeColumnsToContents()
@@ -280,6 +301,6 @@ class MEAS(QWidget):
 if __name__ == "__main__":
     appli = QApplication(sys.argv) 
     appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
-    e = MEAS() 
+    e = MEAS(confMot='./fichiersConfig/configRSAI.ini') 
     e.show()
     appli.exec_()         

@@ -39,7 +39,7 @@ from visu.winFFT import WINFFT
 import pathlib
 
 
-__version__='2019.07'
+__version__='2019.08'
 
 __all__=['SEE']
 
@@ -51,12 +51,16 @@ class SEE(QWidget) :
    
     '''
    
-    def __init__(self,file=None,path=None):
+    def __init__(self,file=None,path=None,confpath=None):
         
         super(SEE, self).__init__()
         version=__version__
         p = pathlib.Path(__file__)
-        conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+        if confpath==None:
+            conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+        else:
+            conf=QtCore.QSettings(confpath, QtCore.QSettings.IniFormat)
+            
         sepa=os.sep
         self.icon=str(p.parent) + sepa+'icons' +sepa
         self.conf = conf
