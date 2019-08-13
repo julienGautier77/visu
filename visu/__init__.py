@@ -8,12 +8,12 @@ Data vizualisation
 
 from visu import visual
 from visu.visual import SEE
-from visu.visual import runVisu
 from visu import andor
 from visu import WinCut
 from visu import winMeas
 from visu import winspec
 from visu import winSuppE
 from visu import winFFT
-
-__version__='2019.7'
+from visu import winZoom
+#from visu import moteurRSAI as RSAI
+__version__='2019.9'

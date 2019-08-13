@@ -31,6 +31,7 @@ class GRAPHCUT(QWidget):
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
         self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
         
+        
     def setup(self):
         hLayout2=QHBoxLayout()
         hLayout2.addWidget(self.winPLOT)
@@ -40,13 +41,38 @@ class GRAPHCUT(QWidget):
 #    def Display(self,cutData) :
 #        pass
         
-    def PLOT(self,cutData):
-        if self.symbol==True:
-            self.pCut.plot(cutData,clear=True,symbol='t')
+    def PLOT(self,cutData,axis=None,symbol=True,pen=True,label=None):
+        
+        self.pen=pen
+        if self.pen ==None:
+            self.symbol=symbol
+            if axis==None:
+                if self.symbol==True:
+                    self.pCut.plot(cutData,clear=True,symbol='t',pen=self.pen)
+                else:
+                    self.pCut.plot(cutData,clear=True,pen=self.pen)
+            else:
+                if self.symbol==True:
+                    self.pCut.plot(axis,cutData,clear=True,symbol='t',pen=self.pen)
+                else:
+                    self.pCut.plot(axis,cutData,clear=True,pen=self.pen)
         else:
-            self.pCut.plot(cutData,clear=True)
-    
-    
+            self.symbol=symbol
+            if axis==None:
+                if self.symbol==True:
+                    self.pCut.plot(cutData,clear=True,symbol='t')
+                else:
+                    self.pCut.plot(cutData,clear=True)
+            else:
+                if self.symbol==True:
+                    self.pCut.plot(axis,cutData,clear=True,symbol='t')
+                else:
+                    self.pCut.plot(axis,cutData,clear=True)
+            
+        if label!=None:
+            self.pCut.setLabel('bottom',label)
+              
+            
     def SetTITLE(self,title):
         self.setWindowTitle(title)
     

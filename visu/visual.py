@@ -9,7 +9,7 @@ https://github.com/julienGautier77/visu.git
 
 pip install qdarkstyle (https://github.com/ColinDuquesnoy/QDarkStyleSheet.git)
 pip install pyqtgraph (https://github.com/pyqtgraph/pyqtgraph.git)
-
+modified 2019/08/13 :add zoom option , motors postions ,configfile
 """
 
 
@@ -39,19 +39,20 @@ from visu.winFFT import WINFFT
 import pathlib
 
 
-__version__='2019.08'
+__version__='2019.09'
 
 __all__=['SEE']
 
 class SEE(QWidget) :
     '''open and plot file : 
-        SEE(file='nameFile,path=pathFileName)
+        SEE(file='nameFile,path=pathFileName,confpath,confMot)
         Make plot profile ands differents measurements(max,min mean...)
         Can open .spe .SPE .sif .TIFF files
-   
+        confpath :usefull if more than 2 SEE object used
+        confMot usefull if RSAI motors is read
     '''
    
-    def __init__(self,file=None,path=None,confpath=None):
+    def __init__(self,file=None,path=None,confpath=None,confMot=None):
         
         super(SEE, self).__init__()
         version=__version__
@@ -64,11 +65,14 @@ class SEE(QWidget) :
         sepa=os.sep
         self.icon=str(p.parent) + sepa+'icons' +sepa
         self.conf = conf
-        
+        print('conf',confMot)
         self.winEncercled=WINENCERCLED('VISU')
         self.winCoupe=GRAPHCUT(symbol=False)
-    
-        self.winM=MEAS()
+        if confMot!=None:
+            print('motor accepted')
+            self.winM=MEAS(confMot=confMot)
+        else :
+            self.winM=MEAS()
         self.winOpt=OPTION()
         self.winFFT=WINFFT('VISU')
         self.winFFT1D=GRAPHCUT(symbol=False,title='FFT 1D')
@@ -167,6 +171,7 @@ class SEE(QWidget) :
         self.fileName.setStyleSheet("font:10pt")
         self.fileName.setMaximumHeight(30)
         self.fileName.setMaximumWidth(150)
+        self.fileName.setAlignment(Qt.AlignLeft)
         hbox42.addWidget(self.fileName)
         vbox1.addLayout(hbox4)
         vbox1.addLayout(hbox42)
@@ -569,10 +574,12 @@ class SEE(QWidget) :
             if self.ite=='rect':
                 self.RectChanged()
                 self.Measurement()
-            if self.ite=='cercle':
+            elif self.ite=='cercle':
                 self.CercChanged()
                 self.Measurement()
-       
+            else :
+                self.Measurement()
+                
         if self.winFFT.isWinOpen==True:
             self.winFFT.Display(self.data)
         
@@ -659,7 +666,7 @@ class SEE(QWidget) :
         coupeX=self.data[int(self.xc),:]
         coupeXMax=np.max(coupeX)
         dataCross=self.data[int(self.xc),int(self.yc)] 
-        self.label_Cross.setText('x='+ str(int(self.xc)) + ' y=' + str(int(self.yc)) + ' value=' + str(dataCross))
+        self.label_Cross.setText('x='+ str(int(self.xc)) + ' y=' + str(int(self.yc)) + ' v.=' + str(dataCross))
         
         if coupeXMax==0: # evite la div par zero
             coupeXMax=1
@@ -959,6 +966,6 @@ if __name__ == "__main__":
     
     appli = QApplication(sys.argv) 
     appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
-    e = SEE()
+    e = SEE()#confMot='C:/Users/loa/Desktop/Princeton2019/')
     e.show()
     appli.exec_() 

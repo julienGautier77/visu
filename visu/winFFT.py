@@ -56,9 +56,7 @@ class WINFFT(QWidget):
     
     def setup(self):
         
-        print('ici')
         self.visualisationFFT=SEEFFT()
-        print('la')
         vbox3=QVBoxLayout() 
         vbox3.addWidget(self.visualisationFFT)
         hMainLayout=QHBoxLayout()

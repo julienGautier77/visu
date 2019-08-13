@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 Created on Mon Mar 18 14:06:58 2019
-
+open('README.md').read()
 @author: juliengautier
 """
 
@@ -15,4 +15,4 @@ setup(name='visu',version=visu.__version__,packages=find_packages(),author='Juli
         "Programming Language :: Python :: 3",
         "License :: Free for non-commercial use",
         "Operating System :: OS Independent","Topic :: Scientific/Engineering :: Visualization"],
-      long_description=open('README.md').read(),url='https://github.com/julienGautier77/visu')
+      url='https://github.com/julienGautier77/visu')
