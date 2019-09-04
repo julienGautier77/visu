@@ -179,13 +179,15 @@ class SEE(QWidget) :
         hbox5=QHBoxLayout()
         self.checkBoxPlot=QCheckBox('CROSS',self)
         self.checkBoxPlot.setChecked(False)
-
+        self.label_CrossValue=QLabel()
+        self.label_CrossValue.setStyleSheet("font:13pt")
         hbox5.addWidget(self.checkBoxPlot)
+        hbox5.addWidget(self.label_CrossValue)
         hbox6=QHBoxLayout()
         self.label_Cross=QLabel()
         #self.label_Cross.setMaximumHeight(20)
         self.label_Cross.setMaximumWidth(150)
-        self.label_Cross. setStyleSheet("font:10pt")
+        self.label_Cross. setStyleSheet("font:12pt")
         hbox6.addWidget(self.label_Cross)
         #hbox6.setSpacing(1)
         vbox1.addLayout(hbox5)
@@ -666,8 +668,8 @@ class SEE(QWidget) :
         coupeX=self.data[int(self.xc),:]
         coupeXMax=np.max(coupeX)
         dataCross=self.data[int(self.xc),int(self.yc)] 
-        self.label_Cross.setText('x='+ str(int(self.xc)) + ' y=' + str(int(self.yc)) + ' v.=' + str(dataCross))
-        
+        self.label_Cross.setText('x='+ str(int(self.xc)) + ' y=' + str(int(self.yc)) )
+        self.label_CrossValue.setText(' v.=' + str(dataCross))
         if coupeXMax==0: # evite la div par zero
             coupeXMax=1
             

@@ -77,6 +77,7 @@ class MEAS(QWidget):
         self.maxx=0
         self.summ=0
         self.moy=0
+        self.label='Shoot'
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
         
     def setFile(self,file) :
@@ -203,44 +204,44 @@ class MEAS(QWidget):
     def PlotMAX(self):
         self.open_widget(self.winCoupeMax)
         self.winCoupeMax.SetTITLE('Plot Max')
-        self.winCoupeMax.PLOT(self.Maxx,axis=self.posMotor,pen=None,label=self.motor)
+        self.winCoupeMax.PLOT(self.Maxx,axis=self.posMotor,pen=None,label=self.label)
            
     def PlotMIN (self):
         self.open_widget(self.winCoupeMin)
         self.winCoupeMin.SetTITLE('Plot Min')
-        self.winCoupeMin.PLOT(self.Minn,axis=self.posMotor,pen=None,label=self.motor)
+        self.winCoupeMin.PLOT(self.Minn,axis=self.posMotor,pen=None,label=self.label)
         
     
     def PlotXMAX(self):
         self.open_widget(self.winCoupeXmax)
         self.winCoupeXmax.SetTITLE('Plot  X MAX')
-        self.winCoupeXmax.PLOT(self.Xmax,axis=self.posMotor,pen=None,label=self.motor)
+        self.winCoupeXmax.PLOT(self.Xmax,axis=self.posMotor,pen=None,label=self.label)
     
     def PlotYMAX(self):
         self.open_widget(self.winCoupeYmax)
         self.winCoupeYmax.SetTITLE('Plot  Y MAX')
-        self.winCoupeYmax.PLOT(self.Ymax,axis=self.posMotor,pen=None,label=self.motor)
+        self.winCoupeYmax.PLOT(self.Ymax,axis=self.posMotor,pen=None,label=self.label)
      
         
     def PlotSUM(self):
         self.open_widget(self.winCoupeSum)
         self.winCoupeSum.SetTITLE('Plot Sum')
-        self.winCoupeSum.PLOT(self.Summ,axis=self.posMotor,pen=None,label=self.motor)
+        self.winCoupeSum.PLOT(self.Summ,axis=self.posMotor,pen=None,label=self.label)
     
     def PlotMEAN (self):
         self.open_widget(self.winCoupeMean)
         self.winCoupeMean.SetTITLE('Plot Mean')
-        self.winCoupeMean.PLOT(self.Mean,axis=self.posMotor,pen=None,label=self.motor)
+        self.winCoupeMean.PLOT(self.Mean,axis=self.posMotor,pen=None,label=self.label)
         
     def PlotXCMASS (self):
         self.open_widget(self.winCoupeXcmass)
         self.winCoupeXcmass.SetTITLE('Plot x center of mass')
-        self.winCoupeXcmass.PLOT(self.Xcmass,axis=self.posMotor,pen=None,label=self.motor)
+        self.winCoupeXcmass.PLOT(self.Xcmass,axis=self.posMotor,pen=None,label=self.label)
     
     def PlotYCMASS (self):
         self.open_widget(self.winCoupeYcmass)
         self.winCoupeYcmass.SetTITLE('Plot Y center of mass')
-        self.winCoupeYcmass.PLOT(self.Xcmass,axis=self.posMotor,pen=None,label=self.motor)    
+        self.winCoupeYcmass.PLOT(self.Xcmass,axis=self.posMotor,pen=None,label=self.label)    
          
     def Display(self,data):
         
@@ -270,13 +271,17 @@ class MEAS(QWidget):
         if self.confMotPath!=None:
             if self.motor=='Motors':
                 Posi=self.shoot
+                self.label='Shoot'
             else:
                 Posi=(self.MOT.position())
+                self.label=self.motor
             self.table.setItem(self.shoot, 10, QTableWidgetItem( str(Posi ) ) )
-            self.posMotor.append(Posi)
+            
         else :
             Posi=self.shoot
+            self.label='Shoot'
             
+        self.posMotor.append(Posi)    
         self.table.resizeColumnsToContents()
         self.labelsVert.append('%s'% self.shoot)
         self.TableSauv.append( '%s,%.1f,%.1f,%i,%i,%.1f,%.3f,%.2f,%.2f,%.2f,%.2f,%.2f' % (self.nomFichier,self.maxx,minn,xmax,ymax,self.summ,self.moy,xs,ys,xcmass,ycmass,Posi) )
@@ -368,7 +373,6 @@ class MEAS(QWidget):
         self.motor=str(self.motorNameBox.currentText())
         if self.motor!='Motors':
             self.MOT=self.motorType.MOTORRSAI(self.motor)
-
 
     
     

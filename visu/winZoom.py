@@ -41,13 +41,19 @@ class ZOOM(QWidget):
         self.setLayout(hLayout2)
         
     def setZoom(self,dat):
-        self.label.setText('%.3e' % dat)
-
+        if self.title=='Sum':
+            self.label.setText('%.3e' % dat)
+        else :
+            self.label.setText('%.1f' % dat)
         
         
     def SetTITLE(self,title):
+        self.title=title
         self.setWindowTitle(title)
-    
+        
+        
+        
+        
     def closeEvent(self, event):
         """ when closing the window
         """
