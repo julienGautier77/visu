@@ -103,7 +103,7 @@ class SEEFFT(QWidget) :
         self.winCoupe=GRAPHCUT(symbol=False)
     
         self.winM=MEAS()
-        self.winOpt=OPTION()
+        self.winOpt=OPTION(conf=conf)
         self.nomFichier=''
         self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
         self.path=path

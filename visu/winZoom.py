@@ -44,7 +44,7 @@ class ZOOM(QWidget):
         if self.title=='Sum':
             self.label.setText('%.3e' % dat)
         else :
-            self.label.setText('%.1f' % dat)
+            self.label.setText('%.0f' % dat)
         
         
     def SetTITLE(self,title):

@@ -57,23 +57,27 @@ class SEE(QWidget) :
         super(SEE, self).__init__()
         version=__version__
         p = pathlib.Path(__file__)
+        sepa=os.sep
         if confpath==None:
             conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+            
         else:
             conf=QtCore.QSettings(confpath, QtCore.QSettings.IniFormat)
             
-        sepa=os.sep
+        self.winOpt=OPTION(conf=conf)
+        
         self.icon=str(p.parent) + sepa+'icons' +sepa
         self.conf = conf
-        print('conf',confMot)
+        
         self.winEncercled=WINENCERCLED('VISU')
         self.winCoupe=GRAPHCUT(symbol=False)
+        
         if confMot!=None:
             print('motor accepted')
             self.winM=MEAS(confMot=confMot)
         else :
             self.winM=MEAS()
-        self.winOpt=OPTION()
+        
         self.winFFT=WINFFT('VISU')
         self.winFFT1D=GRAPHCUT(symbol=False,title='FFT 1D')
         self.nomFichier=''
@@ -161,7 +165,7 @@ class SEE(QWidget) :
         
         hbox4=QHBoxLayout()
         self.labelFileName=QLabel("File :")
-        self.labelFileName.setStyleSheet("font:15pt;")
+        self.labelFileName.setStyleSheet("font:12pt;")
         self.labelFileName.setMinimumHeight(30)
         self.labelFileName.setMaximumWidth(40)
         hbox4.addWidget(self.labelFileName)
@@ -204,7 +208,7 @@ class SEE(QWidget) :
         
         self.checkBoxScale=QCheckBox('Auto Scale',self)
         self.checkBoxScale.setChecked(True)
-        self.checkBoxScale.setMaximumWidth(100)
+        self.checkBoxScale.setMaximumWidth(120)
         
         self.checkBoxColor=QCheckBox('Color',self)
         self.checkBoxColor.setChecked(True)
@@ -667,7 +671,7 @@ class SEE(QWidget) :
         yyy=np.arange(0,int(self.dimy),1)#
         coupeX=self.data[int(self.xc),:]
         coupeXMax=np.max(coupeX)
-        dataCross=self.data[int(self.xc),int(self.yc)] 
+        dataCross=int(self.data[int(self.xc),int(self.yc)] )
         self.label_Cross.setText('x='+ str(int(self.xc)) + ' y=' + str(int(self.yc)) )
         self.label_CrossValue.setText(' v.=' + str(dataCross))
         if coupeXMax==0: # evite la div par zero
@@ -897,7 +901,7 @@ class SEE(QWidget) :
 
     def SaveF (self):
         
-        fname=QtGui.QFileDialog.getSaveFileName(self,"Save data as tiff ",self.path)
+        fname=QtGui.QFileDialog.getSaveFileName(self,"Save data as .txt ",self.path)
         self.path=os.path.dirname(str(fname[0]))
         fichier=fname[0]
         print(fichier,' is saved')
