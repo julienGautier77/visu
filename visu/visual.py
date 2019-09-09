@@ -950,7 +950,8 @@ class SEE(QWidget) :
         if self.winFFT1D.isWinOpen==True:
             self.winFFT1D.close()
             
-        exit  
+        sys.exit(0)     
+        #exit  
         
 def runVisu() :
         
