@@ -25,7 +25,7 @@ import pylab
 import sys,time,os
 import pyqtgraph as pg # pip install pyqtgraph (https://github.com/pyqtgraph/pyqtgraph.git)
 import numpy as np
-import qdarkstyle # pip install qdarkstyle https://github.com/ColinDuquesnoy/QDarkStyleSheet  on conda prompt
+import qdarkstyle # pip install qdarkstyle https://github.com/ColinDuquesnoy/QDarkStyleSheet  sur conda
 from scipy.interpolate import splrep, sproot #
 from scipy.ndimage.filters import gaussian_filter,median_filter
 from PIL import Image
@@ -57,34 +57,29 @@ class SEE(QWidget) :
         super(SEE, self).__init__()
         version=__version__
         p = pathlib.Path(__file__)
-        sepa=os.sep
         if confpath==None:
             conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
-            
         else:
             conf=QtCore.QSettings(confpath, QtCore.QSettings.IniFormat)
-            print('configuration file for visu:',confpath)
             
-        self.winOpt=OPTION(conf=conf)
-        
+        sepa=os.sep
         self.icon=str(p.parent) + sepa+'icons' +sepa
         self.conf = conf
-        
+        print('conf',confMot)
         self.winEncercled=WINENCERCLED('VISU')
         self.winCoupe=GRAPHCUT(symbol=False)
-        
         if confMot!=None:
             print('motor accepted')
             self.winM=MEAS(confMot=confMot)
         else :
             self.winM=MEAS()
-        
+        self.winOpt=OPTION()
         self.winFFT=WINFFT('VISU')
         self.winFFT1D=GRAPHCUT(symbol=False,title='FFT 1D')
         self.nomFichier=''
         self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
         self.path=path
-        self.setWindowTitle('Visualization '+'       v.'+ version)
+        self.setWindowTitle('Visualization'+'       v.'+ version)
         self.setup()
         self.shortcut()
         self.actionButton()
@@ -94,7 +89,7 @@ class SEE(QWidget) :
         self.filter='origin'
         self.ite=None
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
-        self.bgerror=0
+        
         if file==None:
             
             self.dimy=960
@@ -166,7 +161,7 @@ class SEE(QWidget) :
         
         hbox4=QHBoxLayout()
         self.labelFileName=QLabel("File :")
-        self.labelFileName.setStyleSheet("font:12pt;")
+        self.labelFileName.setStyleSheet("font:15pt;")
         self.labelFileName.setMinimumHeight(30)
         self.labelFileName.setMaximumWidth(40)
         hbox4.addWidget(self.labelFileName)
@@ -209,7 +204,7 @@ class SEE(QWidget) :
         
         self.checkBoxScale=QCheckBox('Auto Scale',self)
         self.checkBoxScale.setChecked(True)
-        self.checkBoxScale.setMaximumWidth(120)
+        self.checkBoxScale.setMaximumWidth(100)
         
         self.checkBoxColor=QCheckBox('Color',self)
         self.checkBoxColor.setChecked(True)
@@ -430,11 +425,11 @@ class SEE(QWidget) :
         
         if self.ite=='line':
             self.open_widget(self.winCoupe)
-            self.winCoupe.PLOT(self.cut)
+            self.winCoupe.PLOT(self.cut,symbol=False)
             
         if self.ite=='rect':
             self.open_widget(self.winCoupe)
-            self.winCoupe.PLOT(self.cut1)
+            self.winCoupe.PLOT(self.cut1,symbol=False)
         
         
     def Measurement(self) :
@@ -533,8 +528,7 @@ class SEE(QWidget) :
                 msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
                 msg.exec_()
                 
-        if self.checkBoxBg.isChecked()==True and self.winOpt.dataBgExist==False and self.bgerror==0:
-                self.bgerror=1
+        if self.checkBoxBg.isChecked()==True and self.winOpt.dataBgExist==False:
                 msg = QMessageBox()
                 msg.setIcon(QMessageBox.Critical)
                 msg.setText("Background not soustracred !")
@@ -673,10 +667,10 @@ class SEE(QWidget) :
         yyy=np.arange(0,int(self.dimy),1)#
         coupeX=self.data[int(self.xc),:]
         coupeXMax=np.max(coupeX)
-        dataCross=int(self.data[int(self.xc),int(self.yc)] )
+        dataCross=self.data[int(self.xc),int(self.yc)] 
         self.label_Cross.setText('x='+ str(int(self.xc)) + ' y=' + str(int(self.yc)) )
         self.label_CrossValue.setText(' v.=' + str(dataCross))
-        if coupeXMax==0: # evoid zero
+        if coupeXMax==0: # evite la div par zero
             coupeXMax=1
             
         coupeXnorm=(self.data.shape[0]/10)*(coupeX/coupeXMax) # normalize the curves
@@ -903,7 +897,7 @@ class SEE(QWidget) :
 
     def SaveF (self):
         
-        fname=QtGui.QFileDialog.getSaveFileName(self,"Save data as .txt ",self.path)
+        fname=QtGui.QFileDialog.getSaveFileName(self,"Save data as tiff ",self.path)
         self.path=os.path.dirname(str(fname[0]))
         fichier=fname[0]
         print(fichier,' is saved')
@@ -952,8 +946,7 @@ class SEE(QWidget) :
         if self.winFFT1D.isWinOpen==True:
             self.winFFT1D.close()
             
-        sys.exit(0)     
-        #exit  
+        exit  
         
 def runVisu() :
         
@@ -975,6 +968,6 @@ if __name__ == "__main__":
     
     appli = QApplication(sys.argv) 
     appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
-    e = SEE()
+    e = SEE()#confMot='C:/Users/loa/Desktop/Princeton2019/')
     e.show()
     appli.exec_() 
