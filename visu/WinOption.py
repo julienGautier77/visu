@@ -84,8 +84,9 @@ class OPTION(QWidget):
         hbox4=QHBoxLayout()
         labelTirNumber=QLabel('Next number : ')
         self.tirNumberBox=QSpinBox()
-        self.tirNumberBox.setValue(self.shoot)
         self.tirNumberBox.setMaximum(10000)
+        self.tirNumberBox.setValue(self.shoot)
+        
         hbox4.addWidget(labelTirNumber)
         hbox4.addWidget(self.tirNumberBox)
         
