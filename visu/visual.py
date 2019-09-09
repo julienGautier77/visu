@@ -94,7 +94,7 @@ class SEE(QWidget) :
         self.filter='origin'
         self.ite=None
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
-        
+        self.bgerror=0
         if file==None:
             
             self.dimy=960
@@ -533,7 +533,8 @@ class SEE(QWidget) :
                 msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
                 msg.exec_()
                 
-        if self.checkBoxBg.isChecked()==True and self.winOpt.dataBgExist==False:
+        if self.checkBoxBg.isChecked()==True and self.winOpt.dataBgExist==False and self.bgerror==0:
+                self.bgerror=1
                 msg = QMessageBox()
                 msg.setIcon(QMessageBox.Critical)
                 msg.setText("Background not soustracred !")
