@@ -17,11 +17,11 @@ import numpy as np
 import pathlib
 class OPTION(QWidget):
     
-    def __init__(self):
+    def __init__(self,conf):
         
         super(OPTION, self).__init__()
         p = pathlib.Path(__file__)
-        conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+        #conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
         sepa=os.sep
         self.icon=str(p.parent) + sepa+'icons' +sepa
         self.isWinOpen=False
