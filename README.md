@@ -29,7 +29,7 @@ It can make plot profile and data measurements  analysis
 ## Usage
 
     import visu
-    runVisu()
+    visu.visual.runVisu()
 
 Or :
 

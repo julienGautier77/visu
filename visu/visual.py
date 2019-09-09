@@ -25,7 +25,7 @@ import pylab
 import sys,time,os
 import pyqtgraph as pg # pip install pyqtgraph (https://github.com/pyqtgraph/pyqtgraph.git)
 import numpy as np
-import qdarkstyle # pip install qdarkstyle https://github.com/ColinDuquesnoy/QDarkStyleSheet  sur conda
+import qdarkstyle # pip install qdarkstyle https://github.com/ColinDuquesnoy/QDarkStyleSheet  on conda prompt
 from scipy.interpolate import splrep, sproot #
 from scipy.ndimage.filters import gaussian_filter,median_filter
 from PIL import Image
@@ -63,6 +63,7 @@ class SEE(QWidget) :
             
         else:
             conf=QtCore.QSettings(confpath, QtCore.QSettings.IniFormat)
+            print('configuration file for visu:',confpath)
             
         self.winOpt=OPTION(conf=conf)
         
@@ -83,7 +84,7 @@ class SEE(QWidget) :
         self.nomFichier=''
         self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
         self.path=path
-        self.setWindowTitle('Visualization'+'       v.'+ version)
+        self.setWindowTitle('Visualization '+'       v.'+ version)
         self.setup()
         self.shortcut()
         self.actionButton()
@@ -93,7 +94,7 @@ class SEE(QWidget) :
         self.filter='origin'
         self.ite=None
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
-        
+        self.bgerror=0
         if file==None:
             
             self.dimy=960
@@ -532,7 +533,8 @@ class SEE(QWidget) :
                 msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
                 msg.exec_()
                 
-        if self.checkBoxBg.isChecked()==True and self.winOpt.dataBgExist==False:
+        if self.checkBoxBg.isChecked()==True and self.winOpt.dataBgExist==False and self.bgerror==0:
+                self.bgerror=1
                 msg = QMessageBox()
                 msg.setIcon(QMessageBox.Critical)
                 msg.setText("Background not soustracred !")
@@ -674,7 +676,7 @@ class SEE(QWidget) :
         dataCross=int(self.data[int(self.xc),int(self.yc)] )
         self.label_Cross.setText('x='+ str(int(self.xc)) + ' y=' + str(int(self.yc)) )
         self.label_CrossValue.setText(' v.=' + str(dataCross))
-        if coupeXMax==0: # evite la div par zero
+        if coupeXMax==0: # evoid zero
             coupeXMax=1
             
         coupeXnorm=(self.data.shape[0]/10)*(coupeX/coupeXMax) # normalize the curves
@@ -950,7 +952,8 @@ class SEE(QWidget) :
         if self.winFFT1D.isWinOpen==True:
             self.winFFT1D.close()
             
-        exit  
+        sys.exit(0)     
+        #exit  
         
 def runVisu() :
         
@@ -972,6 +975,6 @@ if __name__ == "__main__":
     
     appli = QApplication(sys.argv) 
     appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
-    e = SEE()#confMot='C:/Users/loa/Desktop/Princeton2019/')
+    e = SEE()
     e.show()
     appli.exec_() 
