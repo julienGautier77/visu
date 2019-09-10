@@ -65,7 +65,6 @@ class SEE(QWidget) :
         sepa=os.sep
         self.icon=str(p.parent) + sepa+'icons' +sepa
         self.conf = conf
-        print('conf',confMot)
         self.winEncercled=WINENCERCLED('VISU')
         self.winCoupe=GRAPHCUT(symbol=False)
         if confMot!=None:
@@ -897,7 +896,7 @@ class SEE(QWidget) :
 
     def SaveF (self):
         
-        fname=QtGui.QFileDialog.getSaveFileName(self,"Save data as tiff ",self.path)
+        fname=QtGui.QFileDialog.getSaveFileName(self,"Save data as txt ",self.path)
         self.path=os.path.dirname(str(fname[0]))
         fichier=fname[0]
         print(fichier,' is saved')
@@ -906,7 +905,7 @@ class SEE(QWidget) :
 #        img_PIL = PIL.Image.fromarray(self.data)
 #        img_PIL.save(str(fname[0])+'.TIFF',format='TIFF') 
         np.savetxt(str(fichier)+'.txt',self.data)
-        self.fileName.setText(fname[0]+'.TIFF') 
+        self.fileName.setText(fname[0]+'.txt') 
 
   
     def newDataReceived(self,data):

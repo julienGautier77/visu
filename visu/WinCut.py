@@ -9,11 +9,14 @@ Windows for plot
 import pyqtgraph as pg # pyqtgraph biblio permettent l'affichage 
 
 import qdarkstyle # pip install qdakstyle https://github.com/ColinDuquesnoy/QDarkStyleSheet  sur conda
-from PyQt5.QtWidgets import QApplication,QHBoxLayout,QWidget,QCheckBox,QLabel,QVBoxLayout
-from PyQt5.QtGui import QIcon
+from PyQt5.QtWidgets import QApplication,QHBoxLayout,QWidget,QCheckBox,QLabel,QVBoxLayout,QPushButton,QMessageBox
+from pyqtgraph.Qt import QtCore,QtGui
 import sys,time
-
+import numpy as np
 import pathlib,os
+from PyQt5.QtGui import QIcon
+
+
 
 class GRAPHCUT(QWidget):
     
@@ -37,7 +40,8 @@ class GRAPHCUT(QWidget):
         self.cutData=[]
         self.actionButton()
         self.bloqq=1
-        
+        self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+       
     def setup(self):
         
         TogOff=self.icon+'Toggle_Off.svg'
@@ -46,7 +50,6 @@ class GRAPHCUT(QWidget):
         TogOff=pathlib.PurePosixPath(TogOff)
         TogOn=pathlib.Path(TogOn)
         TogOn=pathlib.PurePosixPath(TogOn)
-        
         self.setStyleSheet("QCheckBox::indicator{width: 30px;height: 30px;}""QCheckBox::indicator:unchecked { image : url(%s);}""QCheckBox::indicator:checked { image:  url(%s);}""QCheckBox{font :10pt;}" % (TogOff,TogOn) )
         
         
@@ -57,6 +60,25 @@ class GRAPHCUT(QWidget):
         self.label_CrossValue.setStyleSheet("font:15pt")
         hLayout1.addWidget(self.checkBoxPlot)
         hLayout1.addWidget(self.label_CrossValue)
+        
+        self.openButton=QPushButton('Open',self)
+        self.openButton.setIcon(QtGui.QIcon(self.icon+"Open.svg"))
+        self.openButton.setIconSize(QtCore.QSize(50,50))
+        self.openButton.setMaximumWidth(200)
+        self.openButton.setMaximumHeight(100)
+        self.openButton.setShortcut(QtGui.QKeySequence("Ctrl+O"))
+        hLayout1.addWidget(self.openButton)
+        self.openButtonhbox4=QHBoxLayout()
+        self.openButton.setStyleSheet("background-color: rgb(0, 0, 0,0) ;border-color: rgb(0, 0, 0,0)")
+        
+        self.saveButton=QPushButton('Save',self)
+        self.saveButton.setMaximumWidth(100)
+        self.saveButton.setMinimumHeight(100)
+        self.saveButton.setIconSize(QtCore.QSize(50,50))
+        hLayout1.addWidget(self.saveButton)
+        self.saveButton.setIcon(QtGui.QIcon(self.icon+"Saving.svg"))
+        self.saveButton.setStyleSheet("background-color: rgb(0, 0, 0,0) ;border-color: rgb(0, 0, 0,0)")
+        
         
         hLayout2=QHBoxLayout()
         hLayout2.addWidget(self.winPLOT)
@@ -80,7 +102,8 @@ class GRAPHCUT(QWidget):
         self.proxy=pg.SignalProxy(self.pCut.scene().sigMouseMoved, rateLimit=60, slot=self.mouseMoved)
         self.pCut.scene().sigMouseClicked.connect(self.mouseClick)
         self.checkBoxPlot.stateChanged.connect(self.plotCross)
-        
+        self.openButton.clicked.connect(self.OpenF)
+        self.saveButton.clicked.connect(self.SaveF)
         
     def mouseMoved(self,evt):
 
@@ -93,7 +116,7 @@ class GRAPHCUT(QWidget):
                 mousePoint = self.vb.mapSceneToView(pos)
                 self.xMouse = (mousePoint.x())
                 self.yMouse= (mousePoint.y())
-                if ((self.xMouse>0 and self.xMouse<self.cutData.shape[0]-1)) :
+                if ((self.xMouse>-1 and self.xMouse<self.cutData.shape[0])) :
                         self.xc = self.xMouse
                         self.yc= self.cutData[int(self.xc)]
                         self.vLine.setPos(self.xc)
@@ -107,14 +130,51 @@ class GRAPHCUT(QWidget):
             self.pCut.addItem(self.vLine, ignoreBounds=False)
             self.pCut.addItem(self.hLine, ignoreBounds=False)    
         else:
-            self.pCut.removetem(self.vLine)
+            self.pCut.removeItem(self.vLine)
             self.pCut.removeItem(self.hLine) 
-#    def Display(self,cutData) :
-#        pass
+            self.label_CrossValue.setText(" ")
+            
+    def SaveF (self):
         
+            self.path=self.conf.value('VISU'+"/path")
+            fname=QtGui.QFileDialog.getSaveFileName(self,"Save data as txt ",self.path)
+            self.path=os.path.dirname(str(fname[0]))
+            fichier=fname[0]
+            print(fichier,' is saved')
+            self.conf.setValue("VISU"+"/path",self.path)
+            time.sleep(0.1)
+#        img_PIL = PIL.Image.fromarray(self.data)
+#        img_PIL.save(str(fname[0])+'.TIFF',format='TIFF') 
+            np.savetxt(str(fichier)+'.txt',self.cutData)
+        
+    
+    def OpenF(self,fileOpen=None):
+
+        if fileOpen==False:
+            chemin=self.conf.value('VISU'+"/path")
+            fname=QtGui.QFileDialog.getOpenFileName(self,"Open File",chemin,"Images (*.txt *.spe *.TIFF *.sif *.tif);;Text File(*.txt);;Ropper File (*.SPE);;Andor File(*.sif);; TIFF file(*.TIFF)")
+            fichier=fname[0]
+        else:
+            fichier=str(fileOpen)
+            
+        ext=os.path.splitext(fichier)[1]
+        
+        if ext=='.txt': # text file
+            self.data=np.loadtxt(str(fichier))
+            self.PLOT(self.data,symbol=False)
+        else :
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Critical)
+            msg.setText("Wrong file format !")
+            msg.setInformativeText("The format of the file must be : .txt ")
+            msg.setWindowTitle("Warning ...")
+            msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+            msg.exec_()
+    
+    
     def PLOT(self,cutData,axis=None,symbol=True,pen=True,label=None):
         
-        self.cutData=cutData
+        self.cutData=np.array(cutData)
         self.symbol=symbol
         self.pen=pen
         if self.pen ==None:
