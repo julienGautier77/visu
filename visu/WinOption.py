@@ -17,11 +17,16 @@ import numpy as np
 import pathlib
 class OPTION(QWidget):
     
-    def __init__(self,conf):
+    def __init__(self,conf=None):
         
         super(OPTION, self).__init__()
         p = pathlib.Path(__file__)
-        #conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+        
+        if conf==None:
+            self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+        else :
+            self.conf=conf
+            
         sepa=os.sep
         self.icon=str(p.parent) + sepa+'icons' +sepa
         self.isWinOpen=False
@@ -29,7 +34,7 @@ class OPTION(QWidget):
        
         self.setWindowTitle('Option Auto Save')
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
-        self.conf =conf
+        
 
         self.shoot=int(self.conf.value('VISU'+"/tirNumber"))
         self.setup()
@@ -86,7 +91,6 @@ class OPTION(QWidget):
         self.tirNumberBox=QSpinBox()
         self.tirNumberBox.setMaximum(10000)
         self.tirNumberBox.setValue(self.shoot)
-        
         hbox4.addWidget(labelTirNumber)
         hbox4.addWidget(self.tirNumberBox)
         

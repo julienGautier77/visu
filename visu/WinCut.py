@@ -20,7 +20,7 @@ from PyQt5.QtGui import QIcon
 
 class GRAPHCUT(QWidget):
     
-    def __init__(self,symbol=True,title='Plot'):
+    def __init__(self,symbol=True,title='Plot',conf=None):
         super(GRAPHCUT, self).__init__()
         
         p = pathlib.Path(__file__)
@@ -40,7 +40,10 @@ class GRAPHCUT(QWidget):
         self.cutData=[]
         self.actionButton()
         self.bloqq=1
-        self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+        if conf==None:
+            self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+        else :
+            self.conf=conf
        
     def setup(self):
         
@@ -108,7 +111,7 @@ class GRAPHCUT(QWidget):
     def mouseMoved(self,evt):
 
         ## the cross mouve with the mousse mvt
-        if self.bloqq==0: # souris non bloquer
+        if self.checkBoxPlot.isChecked()==1: # 
             
             pos = evt[0]  ## using signal proxy turns original arguments into a tuple
             if self.pCut.sceneBoundingRect().contains(pos):
