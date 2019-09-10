@@ -88,7 +88,7 @@ class SEE(QWidget) :
         self.filter='origin'
         self.ite=None
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
-        
+        self.bgFirstTime=True
         if file==None:
             
             self.dimy=960
@@ -515,6 +515,9 @@ class SEE(QWidget) :
         
         self.data=data
         
+        
+        
+        
         if self.checkBoxBg.isChecked()==True and self.winOpt.dataBgExist==True:
             try :
                 self.data=self.data-self.winOpt.dataBg
@@ -527,7 +530,7 @@ class SEE(QWidget) :
                 msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
                 msg.exec_()
                 
-        if self.checkBoxBg.isChecked()==True and self.winOpt.dataBgExist==False:
+        if self.checkBoxBg.isChecked()==True and self.winOpt.dataBgExist==False and self.bgFirstTime==True:
                 msg = QMessageBox()
                 msg.setIcon(QMessageBox.Critical)
                 msg.setText("Background not soustracred !")
@@ -535,7 +538,7 @@ class SEE(QWidget) :
                 msg.setWindowTitle("Warning ...")
                 msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
                 msg.exec_()
-            
+                self.bgFirstTime==False
             
         self.dimy=np.shape(self.data)[1]
         self.dimx=np.shape(self.data)[0]
@@ -555,7 +558,7 @@ class SEE(QWidget) :
         else :
             self.imh.setImage(self.data.astype(float),autoLevels=False,autoDownsample=True)
         
-        self.PlotXY() #graph update
+        self.PlotXY() #graph  cross update
                 
         
         if self.winEncercled.isWinOpen==True:
@@ -585,7 +588,7 @@ class SEE(QWidget) :
             self.winFFT.Display(self.data)
         
         
-        if self.checkBoxAutoSave.isChecked()==True:
+        if self.checkBoxAutoSave.isChecked()==True:  # auto save
             self.pathAutoSave=str(self.conf.value('VISU'+'/pathAutoSave'))
             self.fileNameSave=str(self.conf.value('VISU'+'/nameFile'))
             date=time.strftime("%Y_%m_%d_%H_%M_%S")
@@ -601,7 +604,7 @@ class SEE(QWidget) :
             else :
                 nomFichier=str(str(self.pathAutoSave)+'/'+self.fileNameSave+'_'+num)
 
-            print( nomFichier, 'saved')
+            print( nomFichier, 'saved as txt')
             np.savetxt(str(nomFichier)+'.txt',self.data)
 
             self.numTir+=1
