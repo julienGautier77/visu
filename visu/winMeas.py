@@ -23,11 +23,15 @@ import numpy as np
 
 class MEAS(QWidget):
     
-    def __init__(self,confMot=None):
+    def __init__(self,confMot=None,conf=None):
         
         super(MEAS, self).__init__()
         p = pathlib.Path(__file__)
-        conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+        if conf==None:
+            self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+        else :
+            self.conf =conf
+            
         sepa=os.sep
         self.confMotPath=None
         self.symbol=False
@@ -49,16 +53,17 @@ class MEAS(QWidget):
         self.shoot=0
         self.nomFichier=''
         self.TableSauv=['file,Max,Min,x Max,y max,Sum,Mean,Size,x c.mass,y c.mass']
-        self.conf =conf
+        
         self.path=self.conf.value('VISU'+"/path")
-        self.winCoupeMax=GRAPHCUT()
-        self.winCoupeMin=GRAPHCUT()
-        self.winCoupeXmax=GRAPHCUT()
-        self.winCoupeYmax=GRAPHCUT()
-        self.winCoupeSum=GRAPHCUT()
-        self.winCoupeMean=GRAPHCUT()
-        self.winCoupeXcmass=GRAPHCUT()
-        self.winCoupeYcmass=GRAPHCUT()
+        self.winCoupeMax=GRAPHCUT(conf=self.conf)
+        self.winCoupeMin=GRAPHCUT(conf=self.conf)
+        self.winCoupeXmax=GRAPHCUT(conf=self.conf)
+        self.winCoupeYmax=GRAPHCUT(conf=self.conf)
+        self.winCoupeSum=GRAPHCUT(conf=self.conf)
+        self.winCoupeMean=GRAPHCUT(conf=self.conf)
+        self.winCoupeXcmass=GRAPHCUT(conf=self.conf)
+        self.winCoupeYcmass=GRAPHCUT(conf=self.conf)
+        
         self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
         self.Maxx=[]
         self.Minn=[]
@@ -74,6 +79,11 @@ class MEAS(QWidget):
         self.winZoomMax=ZOOM()
         self.winZoomSum=ZOOM()
         self.winZoomMean=ZOOM()
+        self.winZoomMin=ZOOM()
+        self.winZoomXMax=ZOOM()
+        self.winZoomYMax=ZOOM()
+        
+        
         self.maxx=0
         self.summ=0
         self.moy=0
@@ -116,9 +126,13 @@ class MEAS(QWidget):
         self.FileMenu2.setMenu(menu2)
         
         menu3=QMenu()
-        menu3.addAction('max',self.ZoomMAX)
-        menu3.addAction('Sum',self.ZoomSUM)
-        menu3.addAction('Mean',self.ZoomMEAN)
+        menu3.addAction('max',self.ZoomMax)
+        menu3.addAction('min',self.ZoomMin)
+        menu3.addAction('Sum',self.ZoomSum)
+        menu3.addAction('Mean',self.ZoomMean)
+        menu3.addAction('X max',self.ZoomXMax)
+        menu3.addAction('Y max',self.ZoomYMax)
+        
         self.FileMenu3.setMenu(menu3)
         
         
@@ -186,17 +200,32 @@ class MEAS(QWidget):
         '''
         print ('open not done yet')
     
-    def ZoomMAX(self):
+    def ZoomMax(self):
         self.open_widget(self.winZoomMax)
         self.winZoomMax.SetTITLE('MAX')
         self.winZoomMax.setZoom(self.maxx)
-        
-    def ZoomSUM(self):
+    def ZoomMin(self):
+        self.open_widget(self.winZoomMin)
+        self.winZoomMin.SetTITLE('MIN')
+        self.winZoomMin.setZoom(self.minn)
+    
+    def ZoomXMax(self):
+        self.open_widget(self.winZoomXMax)
+        self.winZoomXMax.SetTITLE('X MAX')
+        self.winZoomXMax.setZoom(self.xmax)
+    
+    def ZoomYMax(self):
+        self.open_widget(self.winZoomYMax)
+        self.winZoomYMax.SetTITLE('Y MAX')
+        self.winZoomYMax.setZoom(self.ymax)
+    
+    
+    def ZoomSum(self):
         self.open_widget(self.winZoomSum)
         self.winZoomSum.SetTITLE('Sum')
         self.winZoomSum.setZoom(self.summ)
         
-    def ZoomMEAN(self):
+    def ZoomMean(self):
         self.open_widget(self.winZoomMean)
         self.winZoomMean.SetTITLE('Mean')
         self.winZoomMean.setZoom(self.moy)    
@@ -246,12 +275,13 @@ class MEAS(QWidget):
     def Display(self,data):
         
         self.maxx=round(data.max(),3)
-        minn=round(data.min(),3)
+        self.minn=round(data.min(),3)
         self.summ=round(data.sum(),3)
         self.moy=round(data.mean(),3)
         
-        (xmax,ymax)=pylab.unravel_index(data.argmax(),data.shape)
-        print(self.maxx,data[int(xmax),int(ymax)])
+        (self.xmax,self.ymax)=pylab.unravel_index(data.argmax(),data.shape)
+        self.xmax=int(self.xmax)
+        self.xmax=int(self.ymax)
         (xcmass,ycmass)=ndimage.center_of_mass(data)
         xcmass=round(xcmass,3)
         ycmass=round(ycmass,3)
@@ -260,9 +290,9 @@ class MEAS(QWidget):
         self.table.setRowCount(self.shoot+1)
         self.table.setItem(self.shoot, 0, QTableWidgetItem(str(self.nomFichier)))
         self.table.setItem(self.shoot, 1, QTableWidgetItem(str(self.maxx)))
-        self.table.setItem(self.shoot, 2, QTableWidgetItem(str(minn)))
-        self.table.setItem(self.shoot, 3, QTableWidgetItem(str(xmax)))
-        self.table.setItem(self.shoot, 4, QTableWidgetItem(str(ymax)))
+        self.table.setItem(self.shoot, 2, QTableWidgetItem(str(self.minn)))
+        self.table.setItem(self.shoot, 3, QTableWidgetItem(str(self.xmax)))
+        self.table.setItem(self.shoot, 4, QTableWidgetItem(str(self.ymax)))
         self.table.setItem(self.shoot, 5, QTableWidgetItem(str(self.summ)))
         self.table.setItem(self.shoot, 6, QTableWidgetItem(str(self.moy)))
         self.table.setItem(self.shoot, 7, QTableWidgetItem(  (str(xs) +'*'+ str(ys) ) ))
@@ -284,13 +314,13 @@ class MEAS(QWidget):
         self.posMotor.append(Posi)    
         self.table.resizeColumnsToContents()
         self.labelsVert.append('%s'% self.shoot)
-        self.TableSauv.append( '%s,%.1f,%.1f,%i,%i,%.1f,%.3f,%.2f,%.2f,%.2f,%.2f,%.2f' % (self.nomFichier,self.maxx,minn,xmax,ymax,self.summ,self.moy,xs,ys,xcmass,ycmass,Posi) )
+        self.TableSauv.append( '%s,%.1f,%.1f,%i,%i,%.1f,%.3e,%.2f,%.2f,%.2f,%.2f,%.2f' % (self.nomFichier,self.maxx,self.minn,self.xmax,self.ymax,self.summ,self.moy,xs,ys,xcmass,ycmass,Posi) )
         self.Maxx.append(self.maxx)
-        self.Minn.append(minn)
+        self.Minn.append(self.minn)
         self.Summ.append(self.summ)
         self.Mean.append(self.moy)
-        self.Xmax.append(xmax)
-        self.Ymax.append(ymax)
+        self.Xmax.append(self.xmax)
+        self.Ymax.append(self.ymax)
         self.Xcmass.append(xcmass)
         self.Ycmass.append(ycmass)
         
@@ -320,11 +350,19 @@ class MEAS(QWidget):
         # update zoom windows  
         
         if self.winZoomMax.isWinOpen==True:
-            self.ZoomMAX()
+            self.ZoomMax()
+        if self.winZoomMin.isWinOpen==True:
+            self.ZoomMin()
+        if self.winZoomXMax.isWinOpen==True:
+            self.ZoomXMax()
+        if self.winZoomYMax.isWinOpen==True:
+            self.ZoomYMax()
         if self.winZoomSum.isWinOpen==True:
-            self.ZoomSUM()
+            self.ZoomSum()
         if self.winZoomMean.isWinOpen==True:
-            self.ZoomMEAN()    
+            self.ZoomMean()    
+            
+            
         self.shoot+=1
       
     def closeEvent(self, event):

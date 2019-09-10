@@ -23,14 +23,17 @@ import pathlib
 
 class WINENCERCLED(QWidget):
     
-    def __init__(self,nbcam):
+    def __init__(self,conf=None):
         super(WINENCERCLED, self).__init__()
-        self.nbcam=nbcam
+        
         p = pathlib.Path(__file__)
-        conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+        if conf==None:
+            self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+        else :
+            self.conf=conf
         sepa=os.sep
         self.icon=str(p.parent) + sepa+'icons' +sepa
-        self.confCCD = conf
+        
         self.isWinOpen=False
         self.setWindowTitle('Encercled')
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
@@ -43,12 +46,12 @@ class WINENCERCLED(QWidget):
         self.dimx=1200
         self.dimy=900
         self.bloqq=1
-        self.xec=int(self.confCCD.value(self.nbcam+"/xec"))
-        self.yec=int(self.confCCD.value(self.nbcam+"/yec"))
-        self.r1x=int(self.confCCD.value(self.nbcam+"/r1x"))
-        self.r1y=int(self.confCCD.value(self.nbcam+"/r1y"))
-        self.r2=int(self.confCCD.value(self.nbcam+"/r2x"))
-        self.r2=int(self.confCCD.value(self.nbcam+"/r2y"))
+        self.xec=int(self.conf.value('VISU'+"/xec"))
+        self.yec=int(self.conf.value('VISU'+"/yec"))
+        self.r1x=int(self.conf.value('VISU'+"/r1x"))
+        self.r1y=int(self.conf.value('VISU'"/r1y"))
+        self.r2=int(self.conf.value('VISU'+"/r2x"))
+        self.r2=int(self.conf.value('VISU'+"/r2y"))
         self.setup()
         self.ActionButton()
         self.kE=0 # variable pour la courbe E fct du nb shoot
@@ -339,8 +342,8 @@ class WINENCERCLED(QWidget):
             
     def bloquer(self): # bloque la croix 
         self.bloqq=1
-        self.confCCD.setValue(self.nbcam+"/xec",int(self.xec)) # save cross postion in ini file
-        self.confCCD.setValue(self.nbcam+"/yec",int(self.yec))
+        self.conf.setValue('VISU'+"/xec",int(self.xec)) # save cross postion in ini file
+        self.conf.setValue('VISU'+"/yec",int(self.yec))
         self.CalculE()
         
     def debloquer(self): # deblaoque la croix : elle bouge avec la souris

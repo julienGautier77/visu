@@ -38,12 +38,14 @@ from visu.andor import SifFile
 
 class WINFFT(QWidget):
     
-    def __init__(self,nbcam):
+    def __init__(self,conf=None):
         
         super(WINFFT, self).__init__()
-        self.nbcam=nbcam
         p = pathlib.Path(__file__)
-        conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+        if conf==None:
+            self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+        else :
+            self.conf=conf
         sepa=os.sep
         self.icon=str(p.parent) + sepa+'icons' +sepa
         self.confCCD = conf
@@ -90,20 +92,22 @@ class SEEFFT(QWidget) :
    
     '''
    
-    def __init__(self,file=None,path=None):
+    def __init__(self,file=None,path=None,conf=None):
         
         super(SEEFFT, self).__init__()
         p = pathlib.Path(__file__)
-        conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+        if conf==None:
+            self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+        else :
+            self.conf=conf
         sepa=os.sep
         self.icon=str(p.parent) + sepa+'icons' +sepa
-        self.conf = conf
         
-        self.winEncercled=WINENCERCLED('VISU')
+        
+        self.winEncercled=WINENCERCLED()
         self.winCoupe=GRAPHCUT(symbol=False)
-    
         self.winM=MEAS()
-        self.winOpt=OPTION(conf=conf)
+        self.winOpt=OPTION()
         self.nomFichier=''
         self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
         self.path=path

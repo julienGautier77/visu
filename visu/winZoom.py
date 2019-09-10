@@ -36,7 +36,7 @@ class ZOOM(QWidget):
         self.label.setMinimumWidth(400)
         self.label.setMaximumHeight(200)
         self.label.setMaximumWidth(500)
-        self.label.setStyleSheet('font :bold  45pt;color: white')
+        self.label.setStyleSheet('font :bold  60pt;color: white')
         hLayout2.addWidget(self.label)
         self.setLayout(hLayout2)
         

@@ -61,19 +61,21 @@ class SEE(QWidget) :
             conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
         else:
             conf=QtCore.QSettings(confpath, QtCore.QSettings.IniFormat)
-            
+        
+        self.conf = conf 
+        
         sepa=os.sep
         self.icon=str(p.parent) + sepa+'icons' +sepa
-        self.conf = conf
-        self.winEncercled=WINENCERCLED('VISU')
+        
+        self.winEncercled=WINENCERCLED(conf=self.conf)
         self.winCoupe=GRAPHCUT(symbol=False)
         if confMot!=None:
             print('motor accepted')
-            self.winM=MEAS(confMot=confMot)
+            self.winM=MEAS(confMot=confMot,conf=self.conf)
         else :
-            self.winM=MEAS()
-        self.winOpt=OPTION()
-        self.winFFT=WINFFT('VISU')
+            self.winM=MEAS(conf=self.conf)
+        self.winOpt=OPTION(conf=self.conf)
+        self.winFFT=WINFFT(conf=self.conf)
         self.winFFT1D=GRAPHCUT(symbol=False,title='FFT 1D')
         self.nomFichier=''
         self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
@@ -328,7 +330,7 @@ class SEE(QWidget) :
         self.plotRect=pg.RectROI([self.xc,self.yc],[4*self.rx,self.ry],pen='g')
         self.plotCercle=pg.CircleROI([self.xc,self.yc],[80,80],pen='g')
         
-        #self.plotRect.addScaleRotateHandle([0.5, 1], [0.5, 0.5])
+        self.plotRect.addRotateFreeHandle([0.5, 1], [0.5, 0.5])
         
         
     def actionButton(self):
@@ -468,7 +470,7 @@ class SEE(QWidget) :
                 datafft=np.fft.fft(np.array(self.cut))
                 self.norm=abs(np.fft.fftshift(datafft))
                 self.norm=np.log10(1+self.norm)
-                self.winFFT1D.PLOT(self.norm)
+                self.winFFT1D.PLOT(self.norm,symbol=False)
             
         if self.ite==None:
             self.open_widget(self.winFFT)
