@@ -81,6 +81,12 @@ class OPTION(QWidget):
         vbox1.addLayout(hbox2)
         
         hbox3=QHBoxLayout()
+        
+         
+        self.checkBoxTiff=QCheckBox('Save as TIFF',self)
+        self.checkBoxTiff.setChecked(False)
+        hbox2.addWidget(self.checkBoxTiff)
+        
         self.checkBoxDate=QCheckBox('add date',self)
         self.checkBoxDate.setChecked(False)
         hbox2.addWidget(self.checkBoxDate)

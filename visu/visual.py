@@ -39,7 +39,7 @@ from visu.winFFT import WINFFT
 import pathlib
 
 
-__version__='2019.09'
+__version__='2020.03'
 
 __all__=['SEE']
 
@@ -89,6 +89,7 @@ class SEE(QWidget) :
         self.filter='origin'
         self.ite=None
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
+        self.bloqKeyboard=False
         
         if file==None:
             
@@ -199,7 +200,7 @@ class SEE(QWidget) :
         self.checkBoxZoom.setMaximumWidth(200)
         self.checkBoxZoom.setMinimum(-5)
         self.checkBoxZoom.setMaximum(100)
-        self.checkBoxZoom.setValue(-20)
+        self.checkBoxZoom.setValue(-5)
         vbox1.addWidget(self.checkBoxZoom)
         
         self.checkBoxScale=QCheckBox('Auto Scale',self)
@@ -497,20 +498,28 @@ class SEE(QWidget) :
         self.shortcutEnerg.activated.connect(self.Energ)
         self.shortcutEnerg.setContext(Qt.ShortcutContext(3))
         
-        self.shortcutMeas=QtGui.QShortcut(QtGui.QKeySequence('Ctrl+m'),self)
-        self.shortcutMeas.activated.connect(self.Measurement)
-        self.shortcutMeas.setContext(Qt.ShortcutContext(3))
+        self.shortcutMeas1=QtGui.QShortcut(QtGui.QKeySequence('Ctrl+m'),self)
+        self.shortcutMeas1.activated.connect(self.Measurement)
+        self.shortcutMeas1.setContext(Qt.ShortcutContext(3))
         
         self.shortcutMeas=QtGui.QShortcut(QtGui.QKeySequence('Ctrl+k'),self)
         self.shortcutMeas.activated.connect(self.CUT)
         self.shortcutMeas.setContext(Qt.ShortcutContext(3))
         
         
+        self.shortcutBloq=QtGui.QShortcut(QtGui.QKeySequence("Ctrl+b"),self)
+        self.shortcutBloq.activated.connect(self.bloquer)
+        self.shortcutBloq.setContext(Qt.ShortcutContext(3))
+        
+        self.shortcutDebloq=QtGui.QShortcut(QtGui.QKeySequence("Ctrl+d"),self)
+        self.shortcutDebloq.activated.connect(self.debloquer)
+        self.shortcutDebloq.setContext(Qt.ShortcutContext(3))
+        
         # mousse mvt
         self.proxy=pg.SignalProxy(self.p1.scene().sigMouseMoved, rateLimit=60, slot=self.mouseMoved)
         self.p1.scene().sigMouseClicked.connect(self.mouseClick)
         self.vb=self.p1.vb
-           
+        
         
     def Display(self,data):
         
@@ -603,7 +612,13 @@ class SEE(QWidget) :
                 nomFichier=str(str(self.pathAutoSave)+'/'+self.fileNameSave+'_'+num)
 
             print( nomFichier, 'saved')
-            np.savetxt(str(nomFichier)+'.txt',self.data)
+            
+            if self.winOpt.checkBoxTiff.isChecked()==True: #save as tiff 
+                img_PIL = Image.fromarray(self.data)
+                img_PIL.save(str(nomFichier)+'.TIFF',format='TIFF') 
+            else :
+                
+                np.savetxt(str(nomFichier)+'.txt',self.data)
 
             self.numTir+=1
             self.winOpt.setTirNumber(self.numTir)
@@ -614,28 +629,45 @@ class SEE(QWidget) :
     
     def mouseClick(self): # block the cross if mousse button clicked
         if self.bloqq==1:
-            self.debloquer()
+            self.bloqq=0
         else :
-            self.bloquer()
+            self.bloqq=1
+
+    def bloquer(self): # block the cross by keyboard
+        
+        self.bloqKeyboard=True
+        self.conf.setValue('VISU'+"/xc",int(self.xc)) # save cross postion in ini file
+        self.conf.setValue('VISU'+"/yc",int(self.yc))
+        self.vLine.setPen('r')
+        self.hLine.setPen('r')
+        
+        
+    def debloquer(self): # unblock the cross
+        self.bloqKeyboard=False
+        self.vLine.setPen('y')
+        self.hLine.setPen('y')
+
+
             
     def mouseMoved(self,evt):
-
+        
         ## the cross mouve with the mousse mvt
-        if self.bloqq==0: # souris non bloquer
-            
-            pos = evt[0]  ## using signal proxy turns original arguments into a tuple
-            if self.p1.sceneBoundingRect().contains(pos):
+        if self.bloqKeyboard==False :
+            if self.bloqq==0 : # souris non bloquer
                 
-                mousePoint = self.vb.mapSceneToView(pos)
-                self.xMouse = (mousePoint.x())
-                self.yMouse= (mousePoint.y())
-                if ((self.xMouse>0 and self.xMouse<self.data.shape[0]-1) and (self.yMouse>0 and self.yMouse<self.data.shape[1]-1) ):
-                        self.xc = self.xMouse
-                        self.yc= self.yMouse  
-                        self.vLine.setPos(self.xc)
-                        self.hLine.setPos(self.yc) # the cross move only in the graph    
-                        #self.ro1.setPos([self.xc-(self.rx/2),self.yc-(self.ry/2)])
-                        self.PlotXY()
+                pos = evt[0]  ## using signal proxy turns original arguments into a tuple
+                if self.p1.sceneBoundingRect().contains(pos):
+                    
+                    mousePoint = self.vb.mapSceneToView(pos)
+                    self.xMouse = (mousePoint.x())
+                    self.yMouse= (mousePoint.y())
+                    if ((self.xMouse>0 and self.xMouse<self.data.shape[0]-1) and (self.yMouse>0 and self.yMouse<self.data.shape[1]-1) ):
+                            self.xc = self.xMouse
+                            self.yc= self.yMouse  
+                            self.vLine.setPos(self.xc)
+                            self.hLine.setPos(self.yc) # the cross move only in the graph    
+                            #self.ro1.setPos([self.xc-(self.rx/2),self.yc-(self.ry/2)])
+                            self.PlotXY()
                 
     def fwhm(self,x, y, order=3):
         """
@@ -768,7 +800,7 @@ class SEE(QWidget) :
         """
         self.zo=self.checkBoxZoom.value()
         
-        if self.checkBoxPlot.isChecked()==0:
+        if self.checkBoxPlot.isChecked()==0: # if croos is not selected zoom in the center 
             self.xc=self.dimx/2
             self.yc=self.dimy/2
         
@@ -804,15 +836,7 @@ class SEE(QWidget) :
         self.conf.setValue('VISU'+"/ry",int(self.ry))
       
         
-    def bloquer(self): # block the cross
-        
-        self.bloqq=1
-        self.conf.setValue('VISU'+"/xc",int(self.xc)) # save cross postion in ini file
-        self.conf.setValue('VISU'+"/yc",int(self.yc))
-         
-    def debloquer(self): # unblock the cross
-        self.bloqq=0
-    
+ 
     def HIST(self):
         
         if self.checkBoxHist.isChecked()==1:
@@ -897,16 +921,23 @@ class SEE(QWidget) :
 
     def SaveF (self):
         
-        fname=QtGui.QFileDialog.getSaveFileName(self,"Save data as tiff ",self.path)
+        fname=QtGui.QFileDialog.getSaveFileName(self,"Save data as txt",self.path)
         self.path=os.path.dirname(str(fname[0]))
         fichier=fname[0]
+        
+        ext=os.path.splitext(fichier)[1]
+        print(ext)
         print(fichier,' is saved')
         self.conf.setValue("VISU"+"/path",self.path)
         time.sleep(0.1)
-#        img_PIL = PIL.Image.fromarray(self.data)
-#        img_PIL.save(str(fname[0])+'.TIFF',format='TIFF') 
-        np.savetxt(str(fichier)+'.txt',self.data)
-        self.fileName.setText(fname[0]+'.TIFF') 
+        if self.winOpt.checkBoxTiff.isChecked()==True: 
+            img_PIL = Image.fromarray(self.data)
+            
+            img_PIL.save(str(fname[0])+'.TIFF',format='TIFF')
+            self.fileName.setText(fname[0]+'.TIFF') 
+        else :
+            np.savetxt(str(fichier)+'.txt',self.data)
+            self.fileName.setText(fname[0]+'.txt') 
 
   
     def newDataReceived(self,data):
@@ -946,7 +977,7 @@ class SEE(QWidget) :
         if self.winFFT1D.isWinOpen==True:
             self.winFFT1D.close()
             
-        exit  
+        exit()  
         
 def runVisu() :
         
