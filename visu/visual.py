@@ -61,21 +61,20 @@ class SEE(QWidget) :
             conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
         else:
             conf=QtCore.QSettings(confpath, QtCore.QSettings.IniFormat)
-        
-        self.conf = conf 
-        
+            
         sepa=os.sep
         self.icon=str(p.parent) + sepa+'icons' +sepa
-        
-        self.winEncercled=WINENCERCLED(conf=self.conf)
+        self.conf = conf
+        print('conf',confMot)
+        self.winEncercled=WINENCERCLED('VISU')
         self.winCoupe=GRAPHCUT(symbol=False)
         if confMot!=None:
             print('motor accepted')
-            self.winM=MEAS(confMot=confMot,conf=self.conf)
+            self.winM=MEAS(confMot=confMot)
         else :
-            self.winM=MEAS(conf=self.conf)
-        self.winOpt=OPTION(conf=self.conf)
-        self.winFFT=WINFFT(conf=self.conf)
+            self.winM=MEAS()
+        self.winOpt=OPTION()
+        self.winFFT=WINFFT('VISU')
         self.winFFT1D=GRAPHCUT(symbol=False,title='FFT 1D')
         self.nomFichier=''
         self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
@@ -90,7 +89,7 @@ class SEE(QWidget) :
         self.filter='origin'
         self.ite=None
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
-        self.bgFirstTime=True
+        
         if file==None:
             
             self.dimy=960
@@ -330,7 +329,7 @@ class SEE(QWidget) :
         self.plotRect=pg.RectROI([self.xc,self.yc],[4*self.rx,self.ry],pen='g')
         self.plotCercle=pg.CircleROI([self.xc,self.yc],[80,80],pen='g')
         
-        self.plotRect.addRotateFreeHandle([0.5, 1], [0.5, 0.5])
+        #self.plotRect.addScaleRotateHandle([0.5, 1], [0.5, 0.5])
         
         
     def actionButton(self):
@@ -426,11 +425,11 @@ class SEE(QWidget) :
         
         if self.ite=='line':
             self.open_widget(self.winCoupe)
-            self.winCoupe.PLOT(self.cut,symbol=False)
+            self.winCoupe.PLOT(self.cut)
             
         if self.ite=='rect':
             self.open_widget(self.winCoupe)
-            self.winCoupe.PLOT(self.cut1,symbol=False)
+            self.winCoupe.PLOT(self.cut1)
         
         
     def Measurement(self) :
@@ -470,7 +469,7 @@ class SEE(QWidget) :
                 datafft=np.fft.fft(np.array(self.cut))
                 self.norm=abs(np.fft.fftshift(datafft))
                 self.norm=np.log10(1+self.norm)
-                self.winFFT1D.PLOT(self.norm,symbol=False)
+                self.winFFT1D.PLOT(self.norm)
             
         if self.ite==None:
             self.open_widget(self.winFFT)
@@ -517,9 +516,6 @@ class SEE(QWidget) :
         
         self.data=data
         
-        
-        
-        
         if self.checkBoxBg.isChecked()==True and self.winOpt.dataBgExist==True:
             try :
                 self.data=self.data-self.winOpt.dataBg
@@ -532,7 +528,7 @@ class SEE(QWidget) :
                 msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
                 msg.exec_()
                 
-        if self.checkBoxBg.isChecked()==True and self.winOpt.dataBgExist==False and self.bgFirstTime==True:
+        if self.checkBoxBg.isChecked()==True and self.winOpt.dataBgExist==False:
                 msg = QMessageBox()
                 msg.setIcon(QMessageBox.Critical)
                 msg.setText("Background not soustracred !")
@@ -540,7 +536,7 @@ class SEE(QWidget) :
                 msg.setWindowTitle("Warning ...")
                 msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
                 msg.exec_()
-                self.bgFirstTime==False
+            
             
         self.dimy=np.shape(self.data)[1]
         self.dimx=np.shape(self.data)[0]
@@ -560,7 +556,7 @@ class SEE(QWidget) :
         else :
             self.imh.setImage(self.data.astype(float),autoLevels=False,autoDownsample=True)
         
-        self.PlotXY() #graph  cross update
+        self.PlotXY() #graph update
                 
         
         if self.winEncercled.isWinOpen==True:
@@ -590,7 +586,7 @@ class SEE(QWidget) :
             self.winFFT.Display(self.data)
         
         
-        if self.checkBoxAutoSave.isChecked()==True:  # auto save
+        if self.checkBoxAutoSave.isChecked()==True:
             self.pathAutoSave=str(self.conf.value('VISU'+'/pathAutoSave'))
             self.fileNameSave=str(self.conf.value('VISU'+'/nameFile'))
             date=time.strftime("%Y_%m_%d_%H_%M_%S")
@@ -606,7 +602,7 @@ class SEE(QWidget) :
             else :
                 nomFichier=str(str(self.pathAutoSave)+'/'+self.fileNameSave+'_'+num)
 
-            print( nomFichier, 'saved as txt')
+            print( nomFichier, 'saved')
             np.savetxt(str(nomFichier)+'.txt',self.data)
 
             self.numTir+=1
@@ -901,7 +897,7 @@ class SEE(QWidget) :
 
     def SaveF (self):
         
-        fname=QtGui.QFileDialog.getSaveFileName(self,"Save data as txt ",self.path)
+        fname=QtGui.QFileDialog.getSaveFileName(self,"Save data as tiff ",self.path)
         self.path=os.path.dirname(str(fname[0]))
         fichier=fname[0]
         print(fichier,' is saved')
@@ -910,7 +906,7 @@ class SEE(QWidget) :
 #        img_PIL = PIL.Image.fromarray(self.data)
 #        img_PIL.save(str(fname[0])+'.TIFF',format='TIFF') 
         np.savetxt(str(fichier)+'.txt',self.data)
-        self.fileName.setText(fname[0]+'.txt') 
+        self.fileName.setText(fname[0]+'.TIFF') 
 
   
     def newDataReceived(self,data):
