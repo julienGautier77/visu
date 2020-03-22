@@ -8,40 +8,49 @@ Created on Wed Feb 13 16:02:40 2019
 
 import qdarkstyle 
 from pyqtgraph.Qt import QtCore,QtGui 
-from PyQt5.QtWidgets import QApplication,QCheckBox,QVBoxLayout,QHBoxLayout,QPushButton
+from PyQt5.QtWidgets import QApplication,QCheckBox,QVBoxLayout,QHBoxLayout,QPushButton,QDoubleSpinBox
 from PyQt5.QtWidgets import QWidget,QLabel,QTextEdit,QSpinBox,QLineEdit,QMessageBox
 from PyQt5.QtGui import QIcon
 import sys,os
 import numpy as np
 
 import pathlib
+
 class OPTION(QWidget):
     
-    def __init__(self,conf=None):
+    closeEventVar=QtCore.pyqtSignal(bool) 
+    
+    def __init__(self,conf=None,name='VISU'):
+        
+        
         
         super(OPTION, self).__init__()
+        
         p = pathlib.Path(__file__)
         
         if conf==None:
             self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
         else :
             self.conf=conf
-            
+        self.name=name
         sepa=os.sep
         self.icon=str(p.parent) + sepa+'icons' +sepa
         self.isWinOpen=False
         self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
        
-        self.setWindowTitle('Option Auto Save')
+        self.setWindowTitle('Options Auto Save & visualisation')
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
         
-
-        self.shoot=int(self.conf.value('VISU'+"/tirNumber"))
+        self.stepX=float(self.conf.value(self.name+"/stepX"))
+        self.stepY=float(self.conf.value(self.name+"/stepY"))
+        self.shoot=int(self.conf.value(self.name+"/tirNumber"))
         self.setup()
-        self.pathAutoSave=self.conf.value('VISU'+"/path")
-        self.pathBg=self.conf.value('VISU'+"/pathBg")
+        self.pathAutoSave=self.conf.value(self.name+"/path")
+        self.pathBg=self.conf.value(self.name+"/pathBg")
         self.actionButton()
         self.dataBgExist=False
+        
+
         
         
         
@@ -51,8 +60,8 @@ class OPTION(QWidget):
 
     def setup(self):
         
-        TogOff=self.icon+'Toggle_Off.svg'
-        TogOn=self.icon+'Toggle_On.svg'
+        TogOff=self.icon+'Toggle_Off.png'
+        TogOn=self.icon+'Toggle_On.png'
         
         
         TogOff=pathlib.Path(TogOff)
@@ -63,7 +72,7 @@ class OPTION(QWidget):
         
         vbox1=QVBoxLayout()
         self.buttonPath=QPushButton('Path : ')
-        self.pathBox=QTextEdit(str(self.conf.value('VISU'+"/pathAutoSave")))
+        self.pathBox=QTextEdit(str(self.conf.value(self.name+"/pathAutoSave")))
         self.pathBox.setMaximumHeight(60)
         hbox1=QHBoxLayout()
         hbox1.addWidget(self.buttonPath)
@@ -73,7 +82,7 @@ class OPTION(QWidget):
         
         hbox2=QHBoxLayout()
         labelName=QLabel('Name : ')
-        self.nameBox=QLineEdit(str(self.conf.value('VISU'+"/nameFile")))
+        self.nameBox=QLineEdit(str(self.conf.value(self.name+"/nameFile")))
         self.nameBox.setMaximumHeight(30)
         hbox2.addWidget(labelName)
         hbox2.addWidget(self.nameBox)
@@ -112,6 +121,35 @@ class OPTION(QWidget):
         
         vbox1.addLayout(hbox5)
         
+        hbox6=QHBoxLayout()
+        self.checkBoxAxeScale=QCheckBox('Scale Factor : ',self)
+        
+        self.checkBoxAxeScale.setChecked(False)
+        hbox6.addWidget(self.checkBoxAxeScale)
+        
+        
+        self.checkBoxStepX=QLabel('X axe (Pixel/um) : ')
+        self.stepXBox=QDoubleSpinBox()
+        self.stepXBox.setMaximum(10000)
+        self.stepXBox.setValue(self.stepX)
+        hbox6.addWidget(self.checkBoxStepX)
+        hbox6.addWidget(self.stepXBox)
+        
+        self.checkBoxStepY=QLabel('Y axe (Pixel/um) : ')
+        self.stepYBox=QDoubleSpinBox()
+        self.stepYBox.setMaximum(10000)
+        self.stepYBox.setValue(self.stepY)
+        hbox6.addWidget(self.checkBoxStepY)
+        hbox6.addWidget(self.stepYBox)
+        
+        vbox1.addLayout(hbox6)
+        
+        hbox7=QHBoxLayout()
+        self.checkBoxFwhm=QCheckBox('FWHM ',self)
+        
+        self.checkBoxFwhm.setChecked(False)
+        hbox7.addWidget(self.checkBoxFwhm)
+        vbox1.addLayout(hbox7)
         
         hMainLayout=QHBoxLayout()
         hMainLayout.addLayout(vbox1)
@@ -123,22 +161,34 @@ class OPTION(QWidget):
         self.nameBox.textChanged.connect(self.nameFileChanged)
         self.tirNumberBox.valueChanged.connect(self.TirNumberChange)
         self.buttonFileBg.clicked.connect(self.selectBg)
+        self.stepXBox.valueChanged.connect(self.stepXChange)
+        self.stepYBox.valueChanged.connect(self.stepYChange)
         
+    def stepXChange(self) :
+        self.stepX=self.stepXBox.value()
+        self.conf.setValue(self.name+"/stepX",self.stepX)
+        
+        
+    def stepYChange(self) :
+        self.stepY=self.stepYBox.value()
+        self.conf.setValue(self.name+"/stepY",self.stepY)
+
         
     def PathChanged(self) :
        
         self.pathAutoSave=str(QtGui.QFileDialog.getExistingDirectory(self,"Select Directory",self.pathAutoSave))
         self.pathBox.setText(self.pathAutoSave)
-        self.conf.setValue("VISU"+"/pathAutoSave",str(self.pathAutoSave))
+        self.conf.setValue(self.name+"/pathAutoSave",str(self.pathAutoSave))
         
     def nameFileChanged(self):
         self.fileName=self.nameBox.text()
-        self.conf.setValue("VISU"+"/nameFile",str(self.fileName))
+        self.conf.setValue(self.name+"/nameFile",str(self.fileName))
             
     def TirNumberChange(self):
         self.tirNumber=self.tirNumberBox.value()
-        self.conf.setValue("VISU"+"/tirNumber",self.tirNumber)
+        self.conf.setValue(self.name+"/tirNumber",self.tirNumber)
         self.conf.sync()
+        
     def setTirNumber(self,tirNumber) :
         self.tirNumber=tirNumber
         self.tirNumberBox.setValue(self.tirNumber)
@@ -152,7 +202,7 @@ class OPTION(QWidget):
         ext=os.path.splitext(fichier)[1]
         self.fileBgBox.setText(fichier)
         
-        self.conf.setValue("VISU"+"/pathBg",os.path.dirname(fichier))
+        self.conf.setValue(self.name+"/pathBg",os.path.dirname(fichier))
         
         self.dataBgExist=True
         
@@ -186,7 +236,9 @@ class OPTION(QWidget):
     def closeEvent(self, event):
         """ when closing the window
         """
-        self.isWinOpen=False    
+        self.isWinOpen=False   
+        self.closeEventVar.emit(True)
+        
 
 
 if __name__ == "__main__":

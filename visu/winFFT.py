@@ -38,9 +38,10 @@ from visu.andor import SifFile
 
 class WINFFT(QWidget):
     
-    def __init__(self,conf=None):
+    def __init__(self,conf=None,name='VISU'):
         
         super(WINFFT, self).__init__()
+        self.name=name
         p = pathlib.Path(__file__)
         if conf==None:
             self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
@@ -58,7 +59,7 @@ class WINFFT(QWidget):
     
     def setup(self):
         
-        self.visualisationFFT=SEEFFT()
+        self.visualisationFFT=SEEFFT(conf=None,name='VISU')
         vbox3=QVBoxLayout() 
         vbox3.addWidget(self.visualisationFFT)
         hMainLayout=QHBoxLayout()
@@ -92,24 +93,27 @@ class SEEFFT(QWidget) :
    
     '''
    
-    def __init__(self,file=None,path=None,conf=None):
+    def __init__(self,file=None,path=None,conf=None,name='VISU'):
         
         super(SEEFFT, self).__init__()
         p = pathlib.Path(__file__)
+        self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
         if conf==None:
-            self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
-        else :
-            self.conf=conf
+            conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+        else :self.conf=conf
+        self.name=name
         sepa=os.sep
         self.icon=str(p.parent) + sepa+'icons' +sepa
+        self.conf = conf
         
+        self.winEncercled=WINENCERCLED(conf=self.conf,name=self.name)
+        self.winCoupe=GRAPHCUT(symbol=False,conf=self.conf,name=self.name)
+    
+        self.winM=MEAS(conf=self.conf,name=self.name)
+        self.winOpt=OPTION(conf=self.conf,name=self.name)
         
-        self.winEncercled=WINENCERCLED()
-        self.winCoupe=GRAPHCUT(symbol=False)
-        self.winM=MEAS()
-        self.winOpt=OPTION()
         self.nomFichier=''
-        self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+        
         self.path=path
         self.setWindowTitle('FTT')
         self.setup()
@@ -134,7 +138,7 @@ class SEEFFT(QWidget) :
             self.data=(50*np.random.rand(self.dimx,self.dimy)).round() + 150
         else:
             if path==None:
-                self.path=self.conf.value('VISU'+"/path")
+                self.path=self.conf.value(self.name+"/path")
             
             self.OpenF(fileOpen=self.path+'/'+file)
             
@@ -143,8 +147,8 @@ class SEEFFT(QWidget) :
         
     def setup(self):
         
-        TogOff=self.icon+'Toggle_Off.svg'
-        TogOn=self.icon+'Toggle_On.svg'
+        TogOff=self.icon+'Toggle_Off.png'
+        TogOn=self.icon+'Toggle_On.png'
         TogOff=pathlib.Path(TogOff)
         TogOff=pathlib.PurePosixPath(TogOff)
         TogOn=pathlib.Path(TogOn)
@@ -156,7 +160,7 @@ class SEEFFT(QWidget) :
         
         hbox2=QHBoxLayout()
         self.openButton=QPushButton('Open',self)
-        self.openButton.setIcon(QtGui.QIcon(self.icon+"Open.svg"))
+        self.openButton.setIcon(QtGui.QIcon(self.icon+"Open.png"))
         self.openButton.setIconSize(QtCore.QSize(50,50))
         self.openButton.setMaximumWidth(200)
         self.openButton.setMaximumHeight(100)
@@ -170,7 +174,7 @@ class SEEFFT(QWidget) :
         self.saveButton.setMinimumHeight(100)
         self.saveButton.setIconSize(QtCore.QSize(50,50))
         hbox2.addWidget(self.saveButton)
-        self.saveButton.setIcon(QtGui.QIcon(self.icon+"Saving.svg"))
+        self.saveButton.setIcon(QtGui.QIcon(self.icon+"Saving.png"))
         self.saveButton.setStyleSheet("background-color: rgb(0, 0, 0,0) ;border-color: rgb(0, 0, 0,0)")
         vbox1.addLayout(hbox2)
         
@@ -184,7 +188,7 @@ class SEEFFT(QWidget) :
         grid_layout0.addWidget(self.checkBoxBg,1,0)
         self.optionAutoSave=QPushButton('Options',self)
         hbox3.addLayout( grid_layout0)
-        self.optionAutoSave.setIcon(QtGui.QIcon(self.icon+"Settings.svg"))
+        self.optionAutoSave.setIcon(QtGui.QIcon(self.icon+"Settings.png"))
         #self.optionAutoSave.setIconSize(QtCore.QSize(20,20))
         hbox3.addWidget(self.optionAutoSave)
         vbox1.addLayout(hbox3)
@@ -584,10 +588,10 @@ class SEEFFT(QWidget) :
                 self.Measurement()
        
         if self.checkBoxAutoSave.isChecked()==True:
-            self.pathAutoSave=str(self.conf.value('VISU'+'/pathAutoSave'))
-            self.fileNameSave=str(self.conf.value('VISU'+'/nameFile'))
+            self.pathAutoSave=str(self.conf.value(self.name+'/pathAutoSave'))
+            self.fileNameSave=str(self.conf.value(self.name+'/nameFile'))
             date=time.strftime("%Y_%m_%d_%H_%M_%S")
-            self.numTir=int(self.conf.value('VISU'+'/tirNumber'))
+            self.numTir=int(self.conf.value(self.name+'/tirNumber'))
             if self.numTir<10:
                 num="00"+str(self.numTir)
             elif 9<self.numTir<100:
@@ -604,7 +608,7 @@ class SEEFFT(QWidget) :
 
             self.numTir+=1
             self.winOpt.setTirNumber(self.numTir)
-            self.conf.setValue("VISU"+"/tirNumber",self.numTir)
+            self.conf.setValue(self.name+"/tirNumber",self.numTir)
             self.fileName.setText(nomFichier)
     
         self.Zoom()
@@ -797,15 +801,15 @@ class SEEFFT(QWidget) :
     def roiChanged(self):
         self.rx=self.ro1.size()[0]
         self.ry=self.ro1.size()[1]
-        self.conf.setValue('VISU'+"/rx",int(self.rx))
-        self.conf.setValue('VISU'+"/ry",int(self.ry))
+        self.conf.setValue(self.name+"/rx",int(self.rx))
+        self.conf.setValue(self.name+"/ry",int(self.ry))
       
         
     def bloquer(self): # block the cross
         
         self.bloqq=1
-        self.conf.setValue('VISU'+"/xc",int(self.xc)) # save cross postion in ini file
-        self.conf.setValue('VISU'+"/yc",int(self.yc))
+        self.conf.setValue(self.name+"/xc",int(self.xc)) # save cross postion in ini file
+        self.conf.setValue(self.name+"/yc",int(self.yc))
          
     def debloquer(self): # unblock the cross
         self.bloqq=0
@@ -851,7 +855,7 @@ class SEEFFT(QWidget) :
     def OpenF(self,fileOpen=None):
 
         if fileOpen==False:
-            chemin=self.conf.value('VISU'+"/path")
+            chemin=self.conf.value(self.name+"/path")
             fname=QtGui.QFileDialog.getOpenFileName(self,"Open File",chemin,"Images (*.txt *.spe *.TIFF *.sif *.tif);;Text File(*.txt);;Ropper File (*.SPE);;Andor File(*.sif);; TIFF file(*.TIFF)")
             fichier=fname[0]
         else:
@@ -884,8 +888,8 @@ class SEEFFT(QWidget) :
             msg.exec_()
             
         chemin=os.path.dirname(fichier)
-        self.conf.setValue("VISU"+"/path",chemin)
-        self.conf.setValue("VISU"+"/lastFichier",os.path.split(fichier)[1])
+        self.conf.setValue(self.name+"/path",chemin)
+        self.conf.setValue(self.name+"/lastFichier",os.path.split(fichier)[1])
         self.fileName.setText(os.path.split(fichier)[1])
         self.nomFichier=os.path.split(fichier)[1]
         self.dataOrg=self.data
@@ -898,7 +902,7 @@ class SEEFFT(QWidget) :
         self.path=os.path.dirname(str(fname[0]))
         fichier=fname[0]
         print(fichier,' is saved')
-        self.conf.setValue("VISU"+"/path",self.path)
+        self.conf.setValue(self.name+"/path",self.path)
         time.sleep(0.1)
 #        img_PIL = PIL.Image.fromarray(self.data)
 #        img_PIL.save(str(fname[0])+'.TIFF',format='TIFF') 
@@ -954,7 +958,7 @@ class SEEFFT(QWidget) :
 if __name__ == "__main__":
     appli = QApplication(sys.argv) 
     appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
-    e = WINFFT(nbcam='VISU')  
+    e = WINFFT(name='VISU')  
     e.show()
     appli.exec_()    
         

@@ -23,35 +23,36 @@ import pathlib
 
 class WINENCERCLED(QWidget):
     
-    def __init__(self,conf=None):
+    def __init__(self,conf=None,name='VISU'):
         super(WINENCERCLED, self).__init__()
-        
+        self.name=name
         p = pathlib.Path(__file__)
         if conf==None:
             self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
         else :
             self.conf=conf
+        
         sepa=os.sep
         self.icon=str(p.parent) + sepa+'icons' +sepa
-        
+
         self.isWinOpen=False
         self.setWindowTitle('Encercled')
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
         self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
         self.left=100
         self.top=30
-        self.width=500
+        self.width=800
         self.height=800
         self.setGeometry(self.left,self.top,self.width,self.height)
         self.dimx=1200
         self.dimy=900
         self.bloqq=1
-        self.xec=int(self.conf.value('VISU'+"/xec"))
-        self.yec=int(self.conf.value('VISU'+"/yec"))
-        self.r1x=int(self.conf.value('VISU'+"/r1x"))
-        self.r1y=int(self.conf.value('VISU'"/r1y"))
-        self.r2=int(self.conf.value('VISU'+"/r2x"))
-        self.r2=int(self.conf.value('VISU'+"/r2y"))
+        self.xec=int(self.conf.value(self.name+"/xec"))
+        self.yec=int(self.conf.value(self.name+"/yec"))
+        self.r1x=int(self.conf.value(self.name+"/r1x"))
+        self.r1y=int(self.conf.value(self.name+"/r1y"))
+        self.r2=int(self.conf.value(self.name+"/r2x"))
+        self.r2=int(self.conf.value(self.name+"/r2y"))
         self.setup()
         self.ActionButton()
         self.kE=0 # variable pour la courbe E fct du nb shoot
@@ -72,8 +73,8 @@ class WINENCERCLED(QWidget):
     
     def setup(self):
         
-        TogOff=self.icon+'Toggle_Off.svg'
-        TogOn=self.icon+'Toggle_On.svg'
+        TogOff=self.icon+'Toggle_Off.png'
+        TogOn=self.icon+'Toggle_On.png'
         
         
         TogOff=pathlib.Path(TogOff)
@@ -124,8 +125,6 @@ class WINENCERCLED(QWidget):
         self.LabelE1Mean.setStyleSheet("color:red;font:14pt")
         
         
-        
-        
         LabelE2=QLabel("E2 Sum ")
         LabelE2.setStyleSheet("color:yellow;font:14pt")
         self.LabelE2Sum=QLabel("? ")
@@ -161,15 +160,21 @@ class WINENCERCLED(QWidget):
         self.winImage.setContentsMargins(0,0,0,0)
         self.winImage.setAspectLocked(True)
         self.winImage.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.winImage.ci.setContentsMargins(0,0,0,0)
+        #self.winImage.ci.setContentsMargins(0,0,0,0)
         
         vbox2=QVBoxLayout()
-        vbox2.addWidget(self.winImage)
+        hbox2=QHBoxLayout()
+        
+        
+        hbox2.addWidget(self.winImage)
+        vbox2.addLayout(hbox2)
         vbox2.setContentsMargins(0,0,0,0)
         
-        self.p1=self.winImage.addPlot(0,0,1,1)
+        self.p1=self.winImage.addPlot()
+        
         self.imh=pg.ImageItem()
         self.p1.addItem(self.imh)
+        
         self.p1.setMouseEnabled(x=False,y=False)
         self.p1.setContentsMargins(0,0,0,0)
         
@@ -217,7 +222,7 @@ class WINENCERCLED(QWidget):
         hLayout1.addLayout(vbox1)
         
         
-#        hLayout1.setContentsMargins(1,1,1,1)
+        hLayout1.setContentsMargins(1,1,1,1)
 #        hLayout1.setSpacing(1)
 #        hLayout1.setStretch(10,1)
         
@@ -291,12 +296,16 @@ class WINENCERCLED(QWidget):
         
         
         hLayout2=QHBoxLayout()
+        
         hLayout2.addWidget(self.winCurve)
         hLayout2.addLayout(grid_layout2)
+        
         vMainLayout.addLayout(hLayout2)
         
         
-        self.setLayout(vMainLayout)
+        hMainLayout=QHBoxLayout()
+        hMainLayout.addLayout(vMainLayout)
+        self.setLayout(hMainLayout)
         self.setContentsMargins(1,1,1,1)
         
         
@@ -342,8 +351,8 @@ class WINENCERCLED(QWidget):
             
     def bloquer(self): # bloque la croix 
         self.bloqq=1
-        self.conf.setValue('VISU'+"/xec",int(self.xec)) # save cross postion in ini file
-        self.conf.setValue('VISU'+"/yec",int(self.yec))
+        self.conf.setValue(self.name+"/xec",int(self.xec)) # save cross postion in ini file
+        self.conf.setValue(self.name+"/yec",int(self.yec))
         self.CalculE()
         
     def debloquer(self): # deblaoque la croix : elle bouge avec la souris
@@ -456,6 +465,7 @@ class WINENCERCLED(QWidget):
         self.dimy=self.data.shape[1]
         self.p1.setXRange(0,self.dimx)
         self.p1.setYRange(0,self.dimy)
+        self.p1.setAspectLocked(True,ratio=1)
         self.imh.setImage(data.astype(float),autoLevels=True,autoDownsample=True)
         self.CalculCentroid()
         self.Coupe()
@@ -604,6 +614,6 @@ class WINENCERCLED(QWidget):
 if __name__ == "__main__":
     appli = QApplication(sys.argv) 
     appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
-    e = WINENCERCLED(nbcam='VISU')  
+    e = WINENCERCLED(name='VISU')  
     e.show()
     appli.exec_()         
