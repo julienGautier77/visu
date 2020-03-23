@@ -146,7 +146,6 @@ class SEE(QWidget) :
     def setup(self):
         # definition of all button 
         
-        
         TogOff=self.icon+'Toggle_Off.png' 
         TogOn=self.icon+'Toggle_On.png'
         TogOff=pathlib.Path(TogOff)
