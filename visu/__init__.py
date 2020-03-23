@@ -16,4 +16,4 @@ from visu import winSuppE
 from visu import winFFT
 from visu import winZoom
 #from visu import moteurRSAI as RSAI
-__version__='2019.9'
+__version__='2020.03'
