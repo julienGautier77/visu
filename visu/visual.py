@@ -11,14 +11,14 @@ pip install qdarkstyle (https://github.com/ColinDuquesnoy/QDarkStyleSheet.git)
 
 pip install pyqtgraph (https://github.com/pyqtgraph/pyqtgraph.git)
 
-modified 2020/03/17 :add save tiff and save in graphCut
+modified 2020/03/23 :add save tiff and save in graphCut, scale px to um
 """
 
 
 __author__='julien Gautier'
 
 from PyQt5.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QWidget,QPushButton,QGridLayout
-from PyQt5.QtWidgets import QInputDialog,QSlider,QCheckBox,QLabel,QSizePolicy,QMenu,QMessageBox,QDockWidget
+from PyQt5.QtWidgets import QInputDialog,QSlider,QCheckBox,QLabel,QSizePolicy,QMenu,QMessageBox
 from PyQt5.QtWidgets import QShortcut
 from pyqtgraph.Qt import QtCore,QtGui 
 from PyQt5.QtCore import Qt
@@ -43,7 +43,7 @@ import pathlib
 
 __version__='2020.03'
 
-__all__=['SEE']
+__all__=['SEE','runVisu']
 
 class SEE(QWidget) :
     '''open and plot file : 
@@ -71,10 +71,10 @@ class SEE(QWidget) :
         self.conf = conf
         self.confMot=confMot
         
-        self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+        self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5()) # dark style
         
         if confMot!=None:
-            ('motor accepted')
+            print('motor accepted')
             self.winM=MEAS(confMot=self.confMot,conf=self.conf,name=self.name)
         else :
             self.winM=MEAS(conf=self.conf,name=self.name)
@@ -90,22 +90,19 @@ class SEE(QWidget) :
         
         self.path=path
         self.setWindowTitle('Visualization'+'       v.'+ version)
-        self.bloqKeyboard=bool((self.conf.value(self.name+"/bloqKeyboard"))  ) 
-        print(self.bloqKeyboard,'bloqKeyboard')
-        self.bloqq=1 # cross bloquer avec souris click 
+        self.bloqKeyboard=bool((self.conf.value(self.name+"/bloqKeyboard"))  )  # block cross by keyboard
+        self.bloqq=1 # block the cross by click on mouse
         self.setup()
         self.shortcut()
         self.actionButton()
         self.activateWindow()
         self.raise_()
         self.showNormal()
-        self.filter='origin'
+        # initialize variable : 
+        self.filter='origin' # filter initial value
         self.ite=None
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
-        self.zo=1 # zoom value
-        
-        self.scaleFisrtTime=True
-        self.scaleOn=False
+        self.zo=1 # zoom initial value
         
         def twoD_Gaussian(x,y, amplitude, xo, yo, sigma_x, sigma_y, theta, offset):
            xo = float(xo)
@@ -117,7 +114,7 @@ class SEE(QWidget) :
 
         
         if file==None:
-            
+            # to have a gaussian picture when we start
             self.dimy=960
             self.dimx=1240
             # Create x and y index
@@ -147,8 +144,10 @@ class SEE(QWidget) :
         
         
     def setup(self):
+        # definition of all button 
         
-        TogOff=self.icon+'Toggle_Off.png'
+        
+        TogOff=self.icon+'Toggle_Off.png' 
         TogOn=self.icon+'Toggle_On.png'
         TogOff=pathlib.Path(TogOff)
         TogOff=pathlib.PurePosixPath(TogOff)
@@ -383,6 +382,7 @@ class SEE(QWidget) :
         
         
     def actionButton(self):
+        # action of button
         
         self.openButton.clicked.connect(self.OpenF)
         self.saveButton.clicked.connect(self.SaveF)
@@ -410,6 +410,7 @@ class SEE(QWidget) :
         # self.winOpt.checkBoxStepY.stateChanged.connect(lambda:self.Display(self.data))
 
     def shortcut(self):
+        # keyboard shortcut
         
         self.shortcutPu=QShortcut(QtGui.QKeySequence("+"),self)
         self.shortcutPu.activated.connect(self.paletteup)
@@ -447,19 +448,19 @@ class SEE(QWidget) :
         self.shortcutDebloq.activated.connect(self.debloquer)
         self.shortcutDebloq.setContext(Qt.ShortcutContext(3))
         
-        # mousse mvt
+        # mousse action:
         self.proxy=pg.SignalProxy(self.p1.scene().sigMouseMoved, rateLimit=60, slot=self.mouseMoved)
         self.p1.scene().sigMouseClicked.connect(self.mouseClick)
         self.vb=self.p1.vb
         
         
     def Energ(self):
-        
+        # open windget for calculated encercled energy and plot it vs shoot number
         self.open_widget(self.winEncercled)
         self.winEncercled.Display(self.data)
         
     def LIGNE(self) : 
-        
+        #plot a line
         try :
             self.p1.removeItem(self.plotRect)
             self.p1.removeItem(self.plotCercle)
@@ -475,7 +476,7 @@ class SEE(QWidget) :
         
       
     def LigneChanged(self):
-        
+        # take ROI 
         self.cut=self.plotLine.getArrayRegion(self.data,self.imh)
         
     def Rectangle(self)  :
@@ -495,6 +496,7 @@ class SEE(QWidget) :
             self.RectChanged()
         
     def RectChanged(self):
+        # take ROI
         self.cut=(self.plotRect.getArrayRegion(self.data,self.imh))
         self.cut1=self.cut.mean(axis=1)
         
@@ -514,12 +516,12 @@ class SEE(QWidget) :
             self.ite='cercle'
         
     def CercChanged(self):
-        
+        # take ROI
         self.cut=(self.plotCercle.getArrayRegion(self.data,self.imh))
         self.cut1=self.cut.mean(axis=1)
     
     def CUT(self): 
-        
+        # plot on a separated widget the ROI plot profile
         if self.ite=='line':
             
             self.open_widget(self.winCoupe)
@@ -531,7 +533,7 @@ class SEE(QWidget) :
         
         
     def Measurement(self) :
-        
+        # show widget for measurement on all image or ROI  (max, min mean ...)
         if self.ite=='rect':
             self.RectChanged()
             self.winM.setFile(self.nomFichier)
@@ -557,7 +559,7 @@ class SEE(QWidget) :
     
 
     def fftTransform(self):
-        
+        # show on a new widget fft 
         if self.ite=='rect':
             self.RectChanged()
             self.open_widget(self.winFFT)
@@ -583,7 +585,7 @@ class SEE(QWidget) :
         
         
     def Display(self,data):
-        
+        #  display the data and refresh all the calculated things and plots
         self.data=data
         
         if self.checkBoxBg.isChecked()==True and self.winOpt.dataBgExist==True:
@@ -666,11 +668,11 @@ class SEE(QWidget) :
             else :
                 self.Measurement()
                 
-        if self.winFFT.isWinOpen==True:
+        if self.winFFT.isWinOpen==True: # fft update
             self.winFFT.Display(self.data)
         
         
-        if self.checkBoxAutoSave.isChecked()==True:
+        if self.checkBoxAutoSave.isChecked()==True: ## autosave data
             self.pathAutoSave=str(self.conf.value(self.name+'/pathAutoSave'))
             self.fileNameSave=str(self.conf.value(self.name+'/nameFile'))
             date=time.strftime("%Y_%m_%d_%H_%M_%S")
@@ -681,12 +683,12 @@ class SEE(QWidget) :
                 num="0"+str(self.numTir)
             else:
                 num=str(self.numTir)
-            if self.winOpt.checkBoxDate.isChecked()==True: # rajoute la date
+            if self.winOpt.checkBoxDate.isChecked()==True: # add the date
                 nomFichier=str(str(self.pathAutoSave)+'/'+self.fileNameSave+'_'+num+'_'+date)
             else :
                 nomFichier=str(str(self.pathAutoSave)+'/'+self.fileNameSave+'_'+num)
 
-            ( nomFichier, 'saved')
+            print( nomFichier, 'saved')
             if self.winOpt.checkBoxTiff.isChecked()==True: #save as tiff 
                 img_PIL = Image.fromarray(self.data)
                 img_PIL.save(str(nomFichier)+'.TIFF',format='TIFF') 
@@ -699,7 +701,7 @@ class SEE(QWidget) :
             self.conf.setValue(self.name+"/tirNumber",self.numTir)
             self.fileName.setText(nomFichier)
     
-        self.Zoom()
+        self.Zoom() # update zoom
     
     def mouseClick(self): # block the cross if mousse button clicked
         
@@ -715,8 +717,8 @@ class SEE(QWidget) :
     def mouseMoved(self,evt):
 
         ## the cross mouve with the mousse mvt
-        if self.bloqKeyboard==False :
-            if self.bloqq==0: # souris non bloquer
+        if self.bloqKeyboard==False :  #mouse not  blocked by  keyboard
+            if self.bloqq==0: # mouse not  blocked by mouse  click
                 
                 pos = evt[0]  ## using signal proxy turns original arguments into a tuple
                 if self.p1.sceneBoundingRect().contains(pos):
@@ -751,8 +753,10 @@ class SEE(QWidget) :
         
         
     def Coupe(self):
+        # make  plot profile on cross
         
-        if self.maxGraphBox.isChecked()==True:
+        
+        if self.maxGraphBox.isChecked()==True: # find and fix the cross on the maximum of the image
             
             dataF=gaussian_filter(self.data,5)
             (self.xc,self.yc)=pylab.unravel_index(dataF.argmax(),self.data.shape) #take the max ndimage.measurements.center_of_mass(dataF)#
@@ -769,7 +773,7 @@ class SEE(QWidget) :
         coupeYMax=np.max(coupeY)
         
         
-        if coupeXMax==0: # evite la div par zero
+        if coupeXMax==0: # avoid zero
             coupeXMax=1
         
         if coupeYMax==0:
@@ -780,7 +784,7 @@ class SEE(QWidget) :
         else :   
             self.label_Cross.setText('x='+ str(int(self.xc)) + ' y=' + str(int(self.yc)) )
             
-        dataCross=round(dataCross,3)
+        dataCross=round(dataCross,3) # take data  value  on the cross
         self.label_CrossValue.setText(' v.=' + str(dataCross))
         
         
@@ -794,7 +798,7 @@ class SEE(QWidget) :
         ###  fwhm on the  X et Y curves if max  >20 counts if checked in winOpt
         
         
-        if self.winOpt.checkBoxFwhm.isChecked()==1:
+        if self.winOpt.checkBoxFwhm.isChecked()==1: # show fwhm values on graph
             xCXmax=np.amax(coupeXnorm) # max
             if xCXmax>20:
                 try :
@@ -855,7 +859,7 @@ class SEE(QWidget) :
             self.p1.removeItem(self.textY)
             
     def paletteup(self):
-        
+        # change the color scale
         levels=self.imh.getLevels()
         if levels[0]==None:
             xmax =self.data.max()
@@ -883,7 +887,7 @@ class SEE(QWidget) :
         self.hist.setHistogramRange(xmin,xmax)
     
     def Color(self):
-        """ image in colour
+        """ image in colour/n&b
         """
         if self.checkBoxColor.isChecked()==1:
             self.hist.gradient.loadPreset('flame')
@@ -937,6 +941,7 @@ class SEE(QWidget) :
         self.Coupe()
             
     def roiChanged(self):
+        
         self.rx=self.ro1.size()[0]
         self.ry=self.ro1.size()[1]
         self.conf.setValue(self.name+"/rx",int(self.rx))
@@ -962,7 +967,7 @@ class SEE(QWidget) :
         
         
     def HIST(self):
-        
+        #show histogramm
         if self.checkBoxHist.isChecked()==1:
             self.winImage.addItem(self.hist)
         else:
@@ -970,7 +975,7 @@ class SEE(QWidget) :
     
     
     def Gauss(self):
-        
+        # gauss filter
         self.filter='gauss'
         sigma, ok=QInputDialog.getInt(self,'Gaussian Filter ','Enter sigma value (radius)')
         if ok:
@@ -980,7 +985,7 @@ class SEE(QWidget) :
         
         
     def Median(self):
-        
+        #median  filter
         self.filter='median'
         sigma, ok=QInputDialog.getInt(self,'Median Filter ','Enter sigma value (radius)')
         if ok:
@@ -1000,6 +1005,7 @@ class SEE(QWidget) :
         print('original')
         
     def OpenF(self,fileOpen=False):
+        #open file in txt spe TIFF sif  format
         fileOpen=fileOpen
         print(fileOpen)
         print('open')
@@ -1078,6 +1084,7 @@ class SEE(QWidget) :
 
   
     def newDataReceived(self,data):
+        # Do display and save origin data when new data is  sent to  visu
         self.data=data
         self.dimy=np.shape(self.data)[1]
         self.dimx=np.shape(self.data)[0]
@@ -1088,6 +1095,7 @@ class SEE(QWidget) :
         
         
     def ScaleImg(self):
+        #sacle Axis px to um
         self.Display(self.data)
             
         
@@ -1111,7 +1119,7 @@ class SEE(QWidget) :
 
 
     def closeEvent(self,event):
-        
+        # when the window is closed
         if self.winEncercled.isWinOpen==True:
             self.winEncercled.close()
         if self.winCoupe.isWinOpen==True:
@@ -1147,6 +1155,6 @@ if __name__ == "__main__":
     
     appli = QApplication(sys.argv) 
     appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
-    e = SEE()#confMot='C:/Users/loa/Desktop/Princeton2019/')
+    e = SEE()
     e.show()
     appli.exec_() 

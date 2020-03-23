@@ -289,7 +289,7 @@ class MEAS(QWidget):
         self.minn=round(data.min(),3)
         self.summ=round(data.sum(),3)
         self.moy=round(data.mean(),3)
-        print(self.parent.ite)
+        
         (self.xmax,self.ymax)=pylab.unravel_index(data.argmax(),data.shape)
         #print(self.maxx,data[int(self.xmax),int(self.ymax)])
         (self.xcmass,self.ycmass)=ndimage.center_of_mass(data)
