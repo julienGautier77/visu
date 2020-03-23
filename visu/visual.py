@@ -125,7 +125,7 @@ class SEE(QWidget) :
             self.y = np.arange(0,self.dimy)
             self.y,self.x = np.meshgrid(self.y, self.x)
             
-            self.data=twoD_Gaussian(self.x, self.y,450, 800, 600, 40, 60, 0, 10)+(50*np.random.rand(self.dimx,self.dimy)).round() 
+            self.data=twoD_Gaussian(self.x, self.y,450, 800, 600, 40, 40, 0, 10)+(50*np.random.rand(self.dimx,self.dimy)).round() 
         
             #self.data=(50*np.random.rand(self.dimx,self.dimy)).round() + 150
         else:
