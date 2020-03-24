@@ -755,7 +755,7 @@ class SEE(QWidget) :
         # make  plot profile on cross
         
         
-        if self.maxGraphBox.isChecked()==True: # find and fix the cross on the maximum of the image
+        if self.maxGraphBox.isChecked()==True  and self.bloqKeyboard==False  : # find and fix the cross on the maximum of the image
             
             dataF=gaussian_filter(self.data,5)
             (self.xc,self.yc)=pylab.unravel_index(dataF.argmax(),self.data.shape) #take the max ndimage.measurements.center_of_mass(dataF)#
@@ -957,7 +957,6 @@ class SEE(QWidget) :
         self.hLine.setPen('r')
         
     def debloquer(self): # unblock the cross
-        print('debloquer')
         self.bloqKeyboard=bool(False)
         self.vLine.setPen('y')
         self.hLine.setPen('y')

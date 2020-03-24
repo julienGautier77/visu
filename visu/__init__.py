@@ -8,6 +8,7 @@ Data vizualisation
 
 from visu import visual
 from visu.visual import SEE
+from visu.visual import runVisu
 from visu import andor
 from visu import WinCut
 from visu import winMeas
