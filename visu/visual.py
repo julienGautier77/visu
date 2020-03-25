@@ -47,14 +47,21 @@ __all__=['SEE','runVisu']
 
 class SEE(QWidget) :
     '''open and plot file : 
-        SEE(file='nameFile,path=pathFileName,confpath,confMot)
+        SEE(file='nameFile,path=pathFileName,confpath,confMot,name,aff)
         Make plot profile ands differents measurements(max,min mean...)
         Can open .spe .SPE .sif .TIFF files
-        confpath :usefull if more than 2 SEE object used
+        
+        
+        file = name of the file to open
+        path=path of the file to open
+        confpath=path  and  file name of the ini file if =None ini file will be the one in visu folder
         confMot usefull if RSAI motors is read
+        name= name of the item  in the ini file could be usfull if there is more than two visu widget open in the  same   time
+            default is  VISU
+        aff = display button on the  right or on the left
     '''
    
-    def __init__(self,file=None,path=None,confpath=None,confMot=None,name='VISU'):
+    def __init__(self,file=None,path=None,confpath=None,confMot=None,name='VISU',aff='right'):
         
         super(SEE, self).__init__()
         version=__version__
@@ -70,7 +77,7 @@ class SEE(QWidget) :
         self.icon=str(p.parent) + sepa+'icons' +sepa
         self.conf = conf
         self.confMot=confMot
-        
+        self.aff=aff
         self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5()) # dark style
         
         if confMot!=None:
@@ -155,7 +162,7 @@ class SEE(QWidget) :
         
         self.setStyleSheet("QCheckBox::indicator{width: 30px;height: 30px;}""QCheckBox::indicator:unchecked { image : url(%s);}""QCheckBox::indicator:checked { image:  url(%s);}""QCheckBox{font :10pt;}" % (TogOff,TogOn) )
         
-        vbox1=QVBoxLayout() 
+        self.vbox1=QVBoxLayout() 
         
         hbox2=QHBoxLayout()
         self.openButton=QPushButton('Open',self)
@@ -175,7 +182,7 @@ class SEE(QWidget) :
         hbox2.addWidget(self.saveButton)
         self.saveButton.setIcon(QtGui.QIcon(self.icon+"Saving.png"))
         self.saveButton.setStyleSheet("background-color: rgb(0, 0, 0,0) ;border-color: rgb(0, 0, 0,0)")
-        vbox1.addLayout(hbox2)
+        self.vbox1.addLayout(hbox2)
         
         hbox3=QHBoxLayout()
         grid_layout0 = QGridLayout()
@@ -190,7 +197,7 @@ class SEE(QWidget) :
         self.optionAutoSave.setIcon(QtGui.QIcon(self.icon+"Settings.png"))
         #self.optionAutoSave.setIconSize(QtCore.QSize(20,20))
         hbox3.addWidget(self.optionAutoSave)
-        vbox1.addLayout(hbox3)
+        self.vbox1.addLayout(hbox3)
 
         hbox8=QHBoxLayout()
         
@@ -208,8 +215,8 @@ class SEE(QWidget) :
         self.fileName.setMaximumWidth(200)
         self.fileName.setAlignment(Qt.AlignRight)
         hbox42.addWidget(self.fileName)
-        vbox1.addLayout(hbox4)
-        vbox1.addLayout(hbox42)
+        self.vbox1.addLayout(hbox4)
+        self.vbox1.addLayout(hbox42)
         
         hbox5=QHBoxLayout()
         self.checkBoxPlot=QCheckBox('CROSS',self)
@@ -225,17 +232,17 @@ class SEE(QWidget) :
         self.label_Cross. setStyleSheet("font:12pt")
         hbox6.addWidget(self.label_Cross)
         #hbox6.setSpacing(1)
-        vbox1.addLayout(hbox5)
-        vbox1.addLayout(hbox6)
+        self.vbox1.addLayout(hbox5)
+        self.vbox1.addLayout(hbox6)
         
         self.ZoomLabel=QLabel('Zoom')
-        vbox1.addWidget(self.ZoomLabel)
+        self.vbox1.addWidget(self.ZoomLabel)
         self.checkBoxZoom=QSlider(Qt.Horizontal)
         self.checkBoxZoom.setMaximumWidth(250)
         self.checkBoxZoom.setMinimum(0)
         self.checkBoxZoom.setMaximum(200)
         self.checkBoxZoom.setValue(0)
-        vbox1.addWidget(self.checkBoxZoom)
+        self.vbox1.addWidget(self.checkBoxZoom)
         
         self.checkBoxScale=QCheckBox('Auto Scale',self)
         self.checkBoxScale.setChecked(True)
@@ -259,7 +266,7 @@ class SEE(QWidget) :
         
         hbox8.addLayout(grid_layout)
         
-        vbox1.addLayout(hbox8)
+        self.vbox1.addLayout(hbox8)
         
         hbox9=QHBoxLayout()
         self.energyBox=QPushButton('&Encercled',self)
@@ -271,7 +278,7 @@ class SEE(QWidget) :
         menu.addAction('&Origin',self.Orig)
         self.filtreBox.setMenu(menu)
         hbox9.addWidget(self.filtreBox)
-        vbox1.addLayout(hbox9)
+        self.vbox1.addLayout(hbox9)
         
         hbox11=QHBoxLayout()
         self.PlotButton=QPushButton('Plot')
@@ -295,9 +302,9 @@ class SEE(QWidget) :
         self.circleButton.setIcon(QtGui.QIcon(self.icon+"Red_circle.png")) 
         hbox10.addWidget(self.circleButton)
         
-        vbox1.addLayout(hbox11)
-        vbox1.addLayout(hbox10)
-        vbox1.addStretch(1)
+        self.vbox1.addLayout(hbox11)
+        self.vbox1.addLayout(hbox10)
+        self.vbox1.addStretch(1)
         
         self.winImage = pg.GraphicsLayoutWidget()
         #self.winImage.setContentsMargins(1,1,1,1)
@@ -305,14 +312,14 @@ class SEE(QWidget) :
         self.winImage.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         #self.winImage.ci.setContentsMargins(1,1,1,1)
         
-        vbox2=QVBoxLayout()
+        self.vbox2=QVBoxLayout()
         # self.dockImage=QDockWidget(self)
         
         # self.dockImage.setWidget(self.winImage)
         # self.dockImage.setFeatures(QDockWidget.DockWidgetFloatable)
         #vbox2.addWidget(self.dockImage)
-        vbox2.addWidget(self.winImage)
-        vbox2.setContentsMargins(0,0,0,0)
+        self.vbox2.addWidget(self.winImage)
+        self.vbox2.setContentsMargins(0,0,0,0)
         
         self.p1=self.winImage.addPlot()
         self.imh=pg.ImageItem()
@@ -363,8 +370,14 @@ class SEE(QWidget) :
         
         ## main layout
         hMainLayout=QHBoxLayout()
-        hMainLayout.addLayout(vbox2)
-        hMainLayout.addLayout(vbox1)
+        if self.aff=='right':
+            hMainLayout.addLayout(self.vbox2)
+            hMainLayout.addLayout(self.vbox1)
+        if self.aff=='left':
+            hMainLayout.addLayout(self.vbox1)
+            hMainLayout.addLayout(self.vbox2)
+            
+            
         hMainLayout.setContentsMargins(1,1,1,1)
         hMainLayout.setSpacing(1)
         hMainLayout.setStretch(10,1)
