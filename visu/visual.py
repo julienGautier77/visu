@@ -1091,7 +1091,7 @@ class SEE(QWidget) :
             self.conf.setValue(self.name+"/path",self.path)
             time.sleep(0.1)
             np.savetxt(str(fichier)+'.txt',self.data)
-            self.fileName.setText(fname[0]+'.txt')
+            self.fileName.setText(fname[0]+str(ext))
 
   
     def newDataReceived(self,data):
@@ -1106,7 +1106,7 @@ class SEE(QWidget) :
         
         
     def ScaleImg(self):
-        #sacle Axis px to um
+        #scale Axis px to um
         self.Display(self.data)
             
         
