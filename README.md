@@ -51,9 +51,9 @@ Or :
     e.show()
     
   ### To  insert in  a  code
-  visu is a  QtWidgets it can be use like  a  widget :
-  from PyQt5.QtWidgets import QApplication,QWidget
-  widgetVisu=visu.visual.SEE()
+  visu is a  QtWidgets it can be use like  a  widget :  
+  from PyQt5.QtWidgets import QApplication,QWidget  
+  widgetVisu=visu.visual.SEE()   
   
 -----------------------------------------
 -----------------------------------------
