@@ -58,16 +58,21 @@ class SEE(QWidget) :
         confMot usefull if RSAI motors is read
         name= name of the item  in the ini file could be usfull if there is more than two visu widget open in the  same   time
             default is  VISU
-        aff = display button on the  right or on the left
+        
+        kwds :
+            aff = "right" or "left" display button on the  right or on the left
+            fft="on" or "off" display fft 
     '''
    
-    def __init__(self,file=None,path=None,confpath=None,confMot=None,name='VISU',aff='right'):
+    def __init__(self,file=None,path=None,confpath=None,confMot=None,name='VISU',**kwds):
         
         super(SEE, self).__init__()
         version=__version__
+        self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5()) # dark style
         p = pathlib.Path(__file__)
         self.name=str(name)
         print(self.name)
+        
         if confpath==None:
             conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
         else:
@@ -77,24 +82,50 @@ class SEE(QWidget) :
         self.icon=str(p.parent) + sepa+'icons' +sepa
         self.conf = conf
         self.confMot=confMot
-        self.aff=aff
-        self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5()) # dark style
+        self.nomFichier=''
+        
+        ### kwds definition  : 
+        
+        if "aff" in kwds:
+            self.aff=kwds["aff"]
+        else :
+            self.aff="right"
+        
+        if "fft" in kwds:
+            self.fft=kwds["fft"]
+        else:
+            self.fft="on"
+        
+        if "meas" in kwds:
+            self.meas=kwds["meas"]
+        else:
+           self.meas="on" 
+           
+        if "encercled" in kwds:
+            self.encercled=kwds["encercled"]
+        else:
+            self.encercled="on"
+        
+        
+        if self.fft=='on'  :  
+            self.winFFT=WINFFT(conf=self.conf,name=self.name)
+            self.winFFT1D=GRAPHCUT(symbol=False,title='FFT 1D',conf=self.conf,name=self.name)
+          
         
         if confMot!=None:
             print('motor accepted')
-            self.winM=MEAS(confMot=self.confMot,conf=self.conf,name=self.name)
+            if self.meas=="on":
+                self.winM=MEAS(confMot=self.confMot,conf=self.conf,name=self.name)
         else :
-            self.winM=MEAS(conf=self.conf,name=self.name)
+            if self.meas=="on":
+                self.winM=MEAS(conf=self.conf,name=self.name)
             
         self.winOpt=OPTION(conf=self.conf,name=self.name)
-        self.winEncercled=WINENCERCLED(conf=self.conf,name=self.name)
+        
+        if self.encercled=="on":
+            self.winEncercled=WINENCERCLED(conf=self.conf,name=self.name)
+        
         self.winCoupe=GRAPHCUT(symbol=False,conf=self.conf,name=self.name)
-        self.winFFT=WINFFT(conf=self.conf,name=self.name)
-        self.winFFT1D=GRAPHCUT(symbol=False,title='FFT 1D',conf=self.conf,name=self.name)
-        
-        
-        self.nomFichier=''
-        
         self.path=path
         self.setWindowTitle('Visualization'+'       v.'+ version)
         self.bloqKeyboard=bool((self.conf.value(self.name+"/bloqKeyboard"))  )  # block cross by keyboard
@@ -269,8 +300,9 @@ class SEE(QWidget) :
         self.vbox1.addLayout(hbox8)
         
         hbox9=QHBoxLayout()
-        self.energyBox=QPushButton('&Encercled',self)
-        hbox9.addWidget(self.energyBox)
+        if self.encercled=="on":
+            self.energyBox=QPushButton('&Encercled',self)
+            hbox9.addWidget(self.energyBox)
         self.filtreBox=QPushButton('&Filters',self)
         menu=QMenu()
         menu.addAction('&Gaussian',self.Gauss)
@@ -285,8 +317,9 @@ class SEE(QWidget) :
         hbox11.addWidget(self.PlotButton)
         self.MeasButton=QPushButton('Meas.')
         hbox11.addWidget(self.MeasButton)
-        self.fftButton=QPushButton('FFT')
-        hbox11.addWidget(self.fftButton)
+        if self.fft=='on':
+            self.fftButton=QPushButton('FFT')
+            hbox11.addWidget(self.fftButton)
         
         hbox10=QHBoxLayout()
         self.ligneButton=QPushButton('Line')
@@ -405,7 +438,8 @@ class SEE(QWidget) :
         self.ro1.sigRegionChangeFinished.connect(self.roiChanged)
         self.checkBoxZoom.valueChanged.connect(self.Zoom)
         #self.checkBoxZoom.stateChanged.connect(self.Zoom)
-        self.energyBox.clicked.connect(self.Energ)
+        if self.encercled=="on":
+            self.energyBox.clicked.connect(self.Energ)
         self.checkBoxHist.stateChanged.connect(self.HIST)
         self.maxGraphBox.stateChanged.connect(self.Coupe)  
         self.ligneButton.clicked.connect(self.LIGNE)
@@ -416,7 +450,8 @@ class SEE(QWidget) :
         self.plotCercle.sigRegionChangeFinished.connect(self.CercChanged)
         self.PlotButton.clicked.connect(self.CUT)
         self.MeasButton.clicked.connect(self.Measurement)
-        self.fftButton.clicked.connect(self.fftTransform)
+        if self.fft=='on':
+            self.fftButton.clicked.connect(self.fftTransform)
         
         self.winOpt.closeEventVar.connect(self.ScaleImg)
         # self.winOpt.checkBoxStepY.stateChanged.connect(lambda:self.Display(self.data))
@@ -439,10 +474,10 @@ class SEE(QWidget) :
         self.shortcutSave=QtGui.QShortcut(QtGui.QKeySequence("Ctrl+s"),self)
         self.shortcutSave.activated.connect(self.SaveF)
         self.shortcutSave.setContext(Qt.ShortcutContext(3))
-        
-        self.shortcutEnerg=QtGui.QShortcut(QtGui.QKeySequence("Ctrl+e"),self)
-        self.shortcutEnerg.activated.connect(self.Energ)
-        self.shortcutEnerg.setContext(Qt.ShortcutContext(3))
+        if self.encercled=="on":
+            self.shortcutEnerg=QtGui.QShortcut(QtGui.QKeySequence("Ctrl+e"),self)
+            self.shortcutEnerg.activated.connect(self.Energ)
+            self.shortcutEnerg.setContext(Qt.ShortcutContext(3))
         
         self.shortcutMeas=QtGui.QShortcut(QtGui.QKeySequence('Ctrl+m'),self)
         self.shortcutMeas.activated.connect(self.Measurement)
@@ -548,15 +583,17 @@ class SEE(QWidget) :
         # show widget for measurement on all image or ROI  (max, min mean ...)
         if self.ite=='rect':
             self.RectChanged()
-            self.winM.setFile(self.nomFichier)
-            self.open_widget(self.winM)
-            self.winM.Display(self.cut)
+            if self.meas=="on":
+                self.winM.setFile(self.nomFichier)
+                self.open_widget(self.winM)
+                self.winM.Display(self.cut)
             
         if self.ite=='cercle':
             self.CercChanged()
-            self.winM.setFile(self.nomFichier)
-            self.open_widget(self.winM)
-            self.winM.Display(self.cut)
+            if self.meas=="on":
+                self.winM.setFile(self.nomFichier)
+                self.open_widget(self.winM)
+                self.winM.Display(self.cut)
         
         # if self.ite=='line':
         #     self.LigneChanged()
@@ -565,9 +602,10 @@ class SEE(QWidget) :
         #     self.winM.Display(self.cut)
         
         if self.ite==None:
-            self.winM.setFile(self.nomFichier)
-            self.open_widget(self.winM)
-            self.winM.Display(self.data)
+            if self.meas=="on":
+                self.winM.setFile(self.nomFichier)
+                self.open_widget(self.winM)
+                self.winM.Display(self.data)
     
 
     def fftTransform(self):
@@ -656,9 +694,9 @@ class SEE(QWidget) :
         
         self.PlotXY() #graph update
                 
-        
-        if self.winEncercled.isWinOpen==True:
-            self.winEncercled.Display(self.data) ## energy update
+        if self.encercled=="on":
+            if self.winEncercled.isWinOpen==True:
+                self.winEncercled.Display(self.data) ## energy update
         
         if self.winCoupe.isWinOpen==True:
             if self.ite=='line':
@@ -669,19 +707,19 @@ class SEE(QWidget) :
                 self.CUT()
             if self.ite=='cercle':
                 self.CercChanged()
-                
-        if self.winM.isWinOpen==True: #  measurement update
-            if self.ite=='rect':
-                self.RectChanged()
-                self.Measurement()
-            elif self.ite=='cercle':
-                self.CercChanged()
-                self.Measurement()
-            else :
-                self.Measurement()
-                
-        if self.winFFT.isWinOpen==True: # fft update
-            self.winFFT.Display(self.data)
+        if self.meas=="on":       
+            if self.winM.isWinOpen==True: #  measurement update
+                if self.ite=='rect':
+                    self.RectChanged()
+                    self.Measurement()
+                elif self.ite=='cercle':
+                    self.CercChanged()
+                    self.Measurement()
+                else :
+                    self.Measurement()
+        if self.fft=='on':        
+            if self.winFFT.isWinOpen==True: # fft update
+                self.winFFT.Display(self.data)
         
         
         if self.checkBoxAutoSave.isChecked()==True: ## autosave data
@@ -1018,10 +1056,9 @@ class SEE(QWidget) :
     def OpenF(self,fileOpen=False):
         #open file in txt spe TIFF sif  format
         fileOpen=fileOpen
-        print(fileOpen)
-        print('open')
+        
         if fileOpen==False:
-            print('ici')
+            
             chemin=self.conf.value(self.name+"/path")
             fname=QtGui.QFileDialog.getOpenFileName(self,"Open File",chemin,"Images (*.txt *.spe *.TIFF *.sif *.tif);;Text File(*.txt);;Ropper File (*.SPE);;Andor File(*.sif);; TIFF file(*.TIFF)")
             fichier=fname[0]
@@ -1108,11 +1145,7 @@ class SEE(QWidget) :
     def ScaleImg(self):
         #scale Axis px to um
         self.Display(self.data)
-            
-        
-        
-        
-        
+       
     def open_widget(self,fene):
         """ open new widget 
         """
@@ -1131,22 +1164,23 @@ class SEE(QWidget) :
 
     def closeEvent(self,event):
         # when the window is closed
-        if self.winEncercled.isWinOpen==True:
-            self.winEncercled.close()
+        if self.encercled=="on":
+            if self.winEncercled.isWinOpen==True:
+                self.winEncercled.close()
         if self.winCoupe.isWinOpen==True:
             self.winCoupe.close()
-        if self.winM.isWinOpen==True:
-            self.winM.close()
+        if self.meas=="on":
+            if self.winM.isWinOpen==True:
+                self.winM.close()
         if self.winOpt.isWinOpen==True:
             self.winOpt.close() 
-        if self.winFFT.isWinOpen==True:
-            self.winFFT.close()
-        if self.winFFT1D.isWinOpen==True:
-            self.winFFT1D.close()
+        if self.fft=='on':
+            if self.winFFT.isWinOpen==True:
+                self.winFFT.close()
+            if self.winFFT1D.isWinOpen==True:
+                self.winFFT1D.close()
         
-            
-            
-        
+       
         
 def runVisu() :
         
