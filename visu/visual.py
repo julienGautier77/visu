@@ -41,7 +41,7 @@ from visu.winFFT import WINFFT
 import pathlib
 
 
-__version__='2020.03'
+__version__='2020.04'
 
 __all__=['SEE','runVisu']
 
@@ -61,30 +61,36 @@ class SEE(QWidget) :
         
         kwds :
             aff = "right" or "left" display button on the  right or on the left
-            fft="on" or "off" display fft 
+            fft="on" or "off" display 1d and 2D fft 
     '''
    
-    def __init__(self,file=None,path=None,confpath=None,confMot=None,name='VISU',**kwds):
+    def __init__(self,file=None,path=None,**kwds):
         
         super(SEE, self).__init__()
         version=__version__
         self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5()) # dark style
         p = pathlib.Path(__file__)
-        self.name=str(name)
-        print(self.name)
         
-        if confpath==None:
-            conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
-        else:
-            conf=QtCore.QSettings(confpath, QtCore.QSettings.IniFormat)
-            
+        
         sepa=os.sep
         self.icon=str(p.parent) + sepa+'icons' +sepa
-        self.conf = conf
-        self.confMot=confMot
+        
+        
         self.nomFichier=''
         
+        
         ### kwds definition  : 
+        
+        if "confpath "in kwds :
+            self.conpath=kwds["confpath"]
+            self.conf=QtCore.QSettings(self.confpath, QtCore.QSettings.IniFormat)
+        else:
+            self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+        
+        if "name" in kwds:
+            self.name=kwds["name"]
+        else:
+            self.name="VISU"
         
         if "aff" in kwds:
             self.aff=kwds["aff"]
@@ -111,10 +117,15 @@ class SEE(QWidget) :
             self.winFFT=WINFFT(conf=self.conf,name=self.name)
             self.winFFT1D=GRAPHCUT(symbol=False,title='FFT 1D',conf=self.conf,name=self.name)
           
-        
-        if confMot!=None:
+        if "filter" in kwds:
+            self.winFilter=kwds['filter']
+        else :
+            self.winFilter='on'
+            
+        if "confMot" in kwds:
             print('motor accepted')
             if self.meas=="on":
+                self.confMot=kwds["confoMot"]
                 self.winM=MEAS(confMot=self.confMot,conf=self.conf,name=self.name)
         else :
             if self.meas=="on":
@@ -141,6 +152,7 @@ class SEE(QWidget) :
         self.ite=None
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
         self.zo=1 # zoom initial value
+        self.scaleAxis="off"
         
         def twoD_Gaussian(x,y, amplitude, xo, yo, sigma_x, sigma_y, theta, offset):
            xo = float(xo)
@@ -300,23 +312,30 @@ class SEE(QWidget) :
         self.vbox1.addLayout(hbox8)
         
         hbox9=QHBoxLayout()
+        
         if self.encercled=="on":
             self.energyBox=QPushButton('&Encercled',self)
             hbox9.addWidget(self.energyBox)
-        self.filtreBox=QPushButton('&Filters',self)
-        menu=QMenu()
-        menu.addAction('&Gaussian',self.Gauss)
-        menu.addAction('&Median',self.Median)
-        menu.addAction('&Origin',self.Orig)
-        self.filtreBox.setMenu(menu)
-        hbox9.addWidget(self.filtreBox)
+            
+        if self.winFilter=='on':
+            self.filtreBox=QPushButton('&Filters',self)
+            menu=QMenu()
+            menu.addAction('&Gaussian',self.Gauss)
+            menu.addAction('&Median',self.Median)
+            menu.addAction('&Origin',self.Orig)
+            self.filtreBox.setMenu(menu)
+            hbox9.addWidget(self.filtreBox)
+            
         self.vbox1.addLayout(hbox9)
         
         hbox11=QHBoxLayout()
         self.PlotButton=QPushButton('Plot')
         hbox11.addWidget(self.PlotButton)
-        self.MeasButton=QPushButton('Meas.')
-        hbox11.addWidget(self.MeasButton)
+        
+        if self.meas=='on':
+            self.MeasButton=QPushButton('Meas.')
+            hbox11.addWidget(self.MeasButton)
+            
         if self.fft=='on':
             self.fftButton=QPushButton('FFT')
             hbox11.addWidget(self.fftButton)
@@ -449,7 +468,8 @@ class SEE(QWidget) :
         self.plotRect.sigRegionChangeFinished.connect(self.RectChanged)
         self.plotCercle.sigRegionChangeFinished.connect(self.CercChanged)
         self.PlotButton.clicked.connect(self.CUT)
-        self.MeasButton.clicked.connect(self.Measurement)
+        if self.meas=='on':
+            self.MeasButton.clicked.connect(self.Measurement)
         if self.fft=='on':
             self.fftButton.clicked.connect(self.fftTransform)
         
@@ -525,6 +545,15 @@ class SEE(QWidget) :
     def LigneChanged(self):
         # take ROI 
         self.cut=self.plotLine.getArrayRegion(self.data,self.imh)
+        print(self.plotLine.pos(),self.plotLine.listPoints())
+        self.linePoints=self.plotLine.listPoints()
+        self.lineXo=self.linePoints[0][0]
+        self.lineYo=self.linePoints[0][1]
+        self.lineXf=self.linePoints[1][0]
+        self.lineYf=self.linePoints[1][1]
+        print(self.lineXo,self.lineYo,self.lineXf,self.lineYf)
+        self.plotLineAngle=np.arctan((self.lineYf-self.lineYo)/(self.lineXf-self.lineXo))
+        print(self.plotLineAngle)
         
     def Rectangle(self)  :
         
@@ -676,7 +705,7 @@ class SEE(QWidget) :
         self.p1.setAspectLocked(True,ratio=1)
         
             
-        if self.checkBoxScale.isChecked()==1: # autoscale on
+        if self.checkBoxScale.isChecked()==1: # color autoscale on
             
             if self.winOpt.checkBoxAxeScale.isChecked()==1:
                 self.axeX.setScale(self.winOpt.stepX)
@@ -685,6 +714,7 @@ class SEE(QWidget) :
                 self.axeY.setLabel('um')
                 self.axeX.showLabel(True)
             if self.winOpt.checkBoxAxeScale.isChecked()==0:
+                self.scaleAxis="off"
                 self.axeX.setScale(1)
                 self.axeY.setScale(1)  
                 self.axeX.showLabel(False)
@@ -805,82 +835,83 @@ class SEE(QWidget) :
     def Coupe(self):
         # make  plot profile on cross
         
-        
-        if self.maxGraphBox.isChecked()==True  and self.bloqKeyboard==False  : # find and fix the cross on the maximum of the image
+        if self.checkBoxPlot.isChecked==True:
             
-            dataF=gaussian_filter(self.data,5)
-            (self.xc,self.yc)=pylab.unravel_index(dataF.argmax(),self.data.shape) #take the max ndimage.measurements.center_of_mass(dataF)#
-            self.vLine.setPos(self.xc)
-            self.hLine.setPos(self.yc)
-        
-            
-        dataCross=self.data[int(self.xc),int(self.yc)] 
-        coupeX=self.data[int(self.xc),:]
-        coupeY=self.data[:,int(self.yc)]
-        xxx=np.arange(0,int(self.dimx),1)#
-        yyy=np.arange(0,int(self.dimy),1)#
-        coupeXMax=np.max(coupeX)
-        coupeYMax=np.max(coupeY)
-        
-        
-        if coupeXMax==0: # avoid zero
-            coupeXMax=1
-        
-        if coupeYMax==0:
-            coupeYMax=1
-            
-        if self.winOpt.checkBoxAxeScale.isChecked()==1: # scale axe on 
-            self.label_Cross.setText('x='+ str(int(self.xc)*self.winOpt.stepX) + '  um'+' y=' + str(int(self.yc)*self.winOpt.stepY) +' um')
-        else :   
-            self.label_Cross.setText('x='+ str(int(self.xc)) + ' y=' + str(int(self.yc)) )
-            
-        dataCross=round(dataCross,3) # take data  value  on the cross
-        self.label_CrossValue.setText(' v.=' + str(dataCross))
-        
-        
-        coupeXnorm=(self.data.shape[0]/10)*(coupeX/coupeXMax) # normalize the curves
-        self.curve2.setData(20+self.xminR+coupeXnorm,yyy,clear=True)
-
-          
-        coupeYnorm=(self.data.shape[1]/10)*(coupeY/coupeYMax)
-        self.curve3.setData(xxx,20+self.yminR+coupeYnorm,clear=True)
-        
-        ###  fwhm on the  X et Y curves if max  >20 counts if checked in winOpt
-        
-        
-        if self.winOpt.checkBoxFwhm.isChecked()==1: # show fwhm values on graph
-            xCXmax=np.amax(coupeXnorm) # max
-            if xCXmax>20:
-                try :
-                    fwhmX=self.fwhm(yyy, coupeXnorm, order=3)
-                except : fwhmX=None
-                if fwhmX==None:
-                    self.textX.setText('')
-                else:
-                    if self.winOpt.checkBoxAxeScale.isChecked()==1:
-                        self.textX.setText('fwhm='+str(round(fwhmX*self.winOpt.stepX,2))+' um',color='w')
-                    else :
-                       self.textX.setText('fwhm='+str(round(fwhmX,2)),color='w')
-                yCXmax=yyy[coupeXnorm.argmax()]
+            if self.maxGraphBox.isChecked()==True  and self.bloqKeyboard==False  : # find and fix the cross on the maximum of the image
                 
-                self.textX.setPos(xCXmax+70,yCXmax+60)
+                dataF=gaussian_filter(self.data,5)
+                (self.xc,self.yc)=pylab.unravel_index(dataF.argmax(),self.data.shape) #take the max ndimage.measurements.center_of_mass(dataF)#
+                self.vLine.setPos(self.xc)
+                self.hLine.setPos(self.yc)
             
-            yCYmax=np.amax(coupeYnorm) # max
+                
+            dataCross=self.data[int(self.xc),int(self.yc)] 
+            coupeX=self.data[int(self.xc),:]
+            coupeY=self.data[:,int(self.yc)]
+            xxx=np.arange(0,int(self.dimx),1)#
+            yyy=np.arange(0,int(self.dimy),1)#
+            coupeXMax=np.max(coupeX)
+            coupeYMax=np.max(coupeY)
             
-            if yCYmax>20:
-                try:
-                    fwhmY=self.fwhm(xxx, coupeYnorm, order=3)
-                except :fwhmY=None
-                xCYmax=xxx[coupeYnorm.argmax()]
-                if fwhmY==None:
-                    self.textY.setText('',color='w')
-                else:
-                    if self.winOpt.checkBoxAxeScale.isChecked()==1:
-                        self.textY.setText('fwhm='+str(round(fwhmY*self.winOpt.stepY,2))+' um',color='w')
+            
+            if coupeXMax==0: # avoid zero
+                coupeXMax=1
+            
+            if coupeYMax==0:
+                coupeYMax=1
+                
+            if self.winOpt.checkBoxAxeScale.isChecked()==1: # scale axe on 
+                self.label_Cross.setText('x='+ str(int(self.xc)*self.winOpt.stepX) + '  um'+' y=' + str(int(self.yc)*self.winOpt.stepY) +' um')
+            else :   
+                self.label_Cross.setText('x='+ str(int(self.xc)) + ' y=' + str(int(self.yc)) )
+                
+            dataCross=round(dataCross,3) # take data  value  on the cross
+            self.label_CrossValue.setText(' v.=' + str(dataCross))
+            
+            
+            coupeXnorm=(self.data.shape[0]/10)*(coupeX/coupeXMax) # normalize the curves
+            self.curve2.setData(20+self.xminR+coupeXnorm,yyy,clear=True)
+    
+              
+            coupeYnorm=(self.data.shape[1]/10)*(coupeY/coupeYMax)
+            self.curve3.setData(xxx,20+self.yminR+coupeYnorm,clear=True)
+            
+            ###  fwhm on the  X et Y curves if max  >20 counts if checked in winOpt
+            
+            
+            if self.winOpt.checkBoxFwhm.isChecked()==1: # show fwhm values on graph
+                xCXmax=np.amax(coupeXnorm) # max
+                if xCXmax>20:
+                    try :
+                        fwhmX=self.fwhm(yyy, coupeXnorm, order=3)
+                    except : fwhmX=None
+                    if fwhmX==None:
+                        self.textX.setText('')
                     else:
-                        self.textY.setText('fwhm='+str(round(fwhmY,2)),color='w')
-                        
-                self.textY.setPos(xCYmax-60,yCYmax+70)   
+                        if self.winOpt.checkBoxAxeScale.isChecked()==1:
+                            self.textX.setText('fwhm='+str(round(fwhmX*self.winOpt.stepX,2))+' um',color='w')
+                        else :
+                           self.textX.setText('fwhm='+str(round(fwhmX,2)),color='w')
+                    yCXmax=yyy[coupeXnorm.argmax()]
+                    
+                    self.textX.setPos(xCXmax+70,yCXmax+60)
+                
+                yCYmax=np.amax(coupeYnorm) # max
+                
+                if yCYmax>20:
+                    try:
+                        fwhmY=self.fwhm(xxx, coupeYnorm, order=3)
+                    except :fwhmY=None
+                    xCYmax=xxx[coupeYnorm.argmax()]
+                    if fwhmY==None:
+                        self.textY.setText('',color='w')
+                    else:
+                        if self.winOpt.checkBoxAxeScale.isChecked()==1:
+                            self.textY.setText('fwhm='+str(round(fwhmY*self.winOpt.stepY,2))+' um',color='w')
+                        else:
+                            self.textY.setText('fwhm='+str(round(fwhmY,2)),color='w')
+                            
+                    self.textY.setPos(xCYmax-60,yCYmax+70)   
     
  
     def PlotXY(self): # plot curves on the  graph
@@ -1144,6 +1175,10 @@ class SEE(QWidget) :
         
     def ScaleImg(self):
         #scale Axis px to um
+        if self.winOpt.checkBoxAxeScale.isChecked()==1:
+            self.scaleAxis="on"
+        else :
+            self.scaleAxis="off"
         self.Display(self.data)
        
     def open_widget(self,fene):
@@ -1200,6 +1235,6 @@ if __name__ == "__main__":
     
     appli = QApplication(sys.argv) 
     appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
-    e = SEE()
+    e = SEE(filter='off')
     e.show()
     appli.exec_() 
