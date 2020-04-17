@@ -33,6 +33,7 @@ class GRAPHCUT(QWidget):
         self.xc=0
         self.cutData=np.zeros(self.dimx)
         self.path=None
+        self.axisOn=False
         if conf==None:
             self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
         else :
@@ -176,16 +177,30 @@ class GRAPHCUT(QWidget):
                 mousePoint = self.vb.mapSceneToView(pos)
                 self.xMouse = (mousePoint.x())
                 self.yMouse= (mousePoint.y())
-                if (self.xMouse>0 and self.xMouse<self.dimx-1):
-                        self.xc = int(self.xMouse)
-                        self.yc= self.cutData[self.xc]
-                        self.vLine.setPos(self.xc)
-                        self.hLine.setPos(self.yc) # the cross move only in the graph    
-                        self.affiCross()
+                if self.axisOn==True:
+                
+                    if (self.xMouse>0 and self.xMouse<len(self.axis)):  # the cross move only in the graph
+                            self.xc =(self.xMouse)
+                            self.yc= (self.yMouse)
+                            self.vLine.setPos(self.xc)
+                            self.hLine.setPos(self.yc)     
+                            self.affiCross()
+                else :     
+                    if (self.xMouse>0 and self.xMouse<self.dimx-1): # the cross move only in the graph
+                            self.xc = int(self.xMouse)
+                            self.yc= self.cutData[self.xc]
+                            self.vLine.setPos(self.xc)
+                            self.hLine.setPos(self.yc)     
+                            self.affiCross()
     
     def affiCross(self):
+        
         if self.checkBoxPlot.isChecked()==1 :
-            self.label_Cross.setText('x='+ str(int(self.xc)) + ' y=' + str(round(self.cutData[self.xc],3)))
+            if self.axisOn==True:
+                
+                self.label_Cross.setText('x='+ str(int(self.xc)) + ' y=' + str(round(self.yc,3)))
+            else:
+                self.label_Cross.setText('x='+ str(int(self.xc)) + ' y=' + str(round(self.cutData[self.xc],3)))
         else : 
             self.label_Cross.setText('')
                 
@@ -210,22 +225,23 @@ class GRAPHCUT(QWidget):
             self.pCut.removeItem(self.vLine)
             self.pCut.removeItem(self.hLine)
     
-    
         
     def PLOT(self,cutData,axis=None,symbol=True,pen=True,label=None):
         
         self.cutData=cutData
         self.dimx=np.shape(self.cutData)[0]
         self.pen=pen
-        
+        self.axis=axis
         if self.pen ==None:
             self.symbol=symbol
             if axis==None:
                 if self.symbol==True:
                     self.pCut.plot(cutData,clear=True,symbol='t',pen=self.pen)
                 else:
+                    
                     self.pCut.plot(cutData,clear=True,pen=self.pen)
             else:
+                self.axisOn=True
                 if self.symbol==True:
                     self.pCut.plot(axis,cutData,clear=True,symbol='t',pen=self.pen)
                 else:
@@ -238,6 +254,7 @@ class GRAPHCUT(QWidget):
                 else:
                     self.pCut.plot(cutData,clear=True)
             else:
+                self.axisOn=True
                 if self.symbol==True:
                     self.pCut.plot(axis,cutData,clear=True,symbol='t')
                 else:
