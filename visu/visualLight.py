@@ -40,7 +40,7 @@ from visu.andor import SifFile
 import pathlib
 
 
-__version__='2020.04'
+__version__='2020.05'
 
 __all__=['SEELIGHT']
 
@@ -93,9 +93,7 @@ class SEELIGHT(QWidget) :
         else:
             self.aff="left"
         
-        
-      
-        print (self.name)        
+               
         
         self.nomFichier=''
         

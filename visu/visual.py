@@ -10,6 +10,7 @@ for dark style :
 pip install qdarkstyle (https://github.com/ColinDuquesnoy/QDarkStyleSheet.git)
 
 pip install pyqtgraph (https://github.com/pyqtgraph/pyqtgraph.git)
+conda install pyopengl 3D plot
 
 modified 2020/03/23 :add save tiff and save in graphCut, scale px to um
 """
@@ -38,10 +39,15 @@ from visu.winMeas import MEAS
 from visu.WinOption import OPTION
 from visu.andor import SifFile
 from visu.winFFT import WINFFT
+try :
+    from visu.Win3D import GRAPH3D
+except :
+    print ("3d not available")
+    
 import pathlib
 
 
-__version__='2020.04'
+__version__='2020.05'
 
 __all__=['SEE','runVisu']
 
@@ -62,6 +68,7 @@ class SEE(QWidget) :
         kwds :
             aff = "right" or "left" display button on the  right or on the left
             fft="on" or "off" display 1d and 2D fft 
+            plot3D 
     '''
    
     def __init__(self,file=None,path=None,**kwds):
@@ -136,6 +143,16 @@ class SEE(QWidget) :
         if self.encercled=="on":
             self.winEncercled=WINENCERCLED(conf=self.conf,name=self.name)
         
+        if "plot3d" in kwds :
+            self.plot3D=kwds["plot3d"]
+        else:
+            self.plot3D="off"
+            
+        if self.plot3D=="on":
+            
+            self.Widget3D=GRAPH3D(self.conf,name=self.name)
+        
+        
         self.winCoupe=GRAPHCUT(symbol=False,conf=self.conf,name=self.name)
         self.path=path
         self.setWindowTitle('Visualization'+'       v.'+ version)
@@ -165,14 +182,14 @@ class SEE(QWidget) :
         
         if file==None:
             # to have a gaussian picture when we start
-            self.dimy=960
-            self.dimx=1240
+            self.dimy=800
+            self.dimx=800
             # Create x and y index
             self.x = np.arange(0,self.dimx)
             self.y = np.arange(0,self.dimy)
             self.y,self.x = np.meshgrid(self.y, self.x)
             
-            self.data=twoD_Gaussian(self.x, self.y,450, 800, 600, 40, 40, 0, 10)+(50*np.random.rand(self.dimx,self.dimy)).round() 
+            self.data=twoD_Gaussian(self.x, self.y,200, 200, 600, 40, 40, 0, 10)+(50*np.random.rand(self.dimx,self.dimy)).round() 
         
             #self.data=(50*np.random.rand(self.dimx,self.dimy)).round() + 150
         else:
@@ -325,6 +342,10 @@ class SEE(QWidget) :
             menu.addAction('&Origin',self.Orig)
             self.filtreBox.setMenu(menu)
             hbox9.addWidget(self.filtreBox)
+        
+        if self.plot3D=="on":
+            self.box3d=QPushButton('3D', self)
+            hbox9.addWidget(self.box3d)
             
         self.vbox1.addLayout(hbox9)
         
@@ -472,7 +493,8 @@ class SEE(QWidget) :
             self.MeasButton.clicked.connect(self.Measurement)
         if self.fft=='on':
             self.fftButton.clicked.connect(self.fftTransform)
-        
+        if self.plot3D=="on":
+            self.box3d.clicked.connect(self.Graph3D)
         self.winOpt.closeEventVar.connect(self.ScaleImg)
         # self.winOpt.checkBoxStepY.stateChanged.connect(lambda:self.Display(self.data))
 
@@ -545,15 +567,14 @@ class SEE(QWidget) :
     def LigneChanged(self):
         # take ROI 
         self.cut=self.plotLine.getArrayRegion(self.data,self.imh)
-        print(self.plotLine.pos(),self.plotLine.listPoints())
+        
         self.linePoints=self.plotLine.listPoints()
         self.lineXo=self.linePoints[0][0]
         self.lineYo=self.linePoints[0][1]
         self.lineXf=self.linePoints[1][0]
         self.lineYf=self.linePoints[1][1]
-        print(self.lineXo,self.lineYo,self.lineXf,self.lineYf)
         self.plotLineAngle=np.arctan((self.lineYf-self.lineYo)/(self.lineXf-self.lineXo))
-        print(self.plotLineAngle)
+        
         
     def Rectangle(self)  :
         
@@ -606,6 +627,11 @@ class SEE(QWidget) :
         if self.ite=='rect':
             self.open_widget(self.winCoupe)
             self.winCoupe.PLOT(self.cut1,symbol=False)
+   
+    def Graph3D (self):
+        
+        self.open_widget(self.Widget3D)
+        self.Widget3D.Plot3D(self.data)
         
         
     def Measurement(self) :
@@ -750,7 +776,9 @@ class SEE(QWidget) :
         if self.fft=='on':        
             if self.winFFT.isWinOpen==True: # fft update
                 self.winFFT.Display(self.data)
-        
+        if self.plot3D=="on":
+            if self.Widget3D.isWinOpen==True:
+                self.Graph3D()
         
         if self.checkBoxAutoSave.isChecked()==True: ## autosave data
             self.pathAutoSave=str(self.conf.value(self.name+'/pathAutoSave'))
@@ -1172,7 +1200,7 @@ class SEE(QWidget) :
         self.Display(self.data)
         
         
-        
+          
     def ScaleImg(self):
         #scale Axis px to um
         if self.winOpt.checkBoxAxeScale.isChecked()==1:
@@ -1180,7 +1208,9 @@ class SEE(QWidget) :
         else :
             self.scaleAxis="off"
         self.Display(self.data)
-       
+    
+    
+    
     def open_widget(self,fene):
         """ open new widget 
         """
@@ -1235,6 +1265,6 @@ if __name__ == "__main__":
     
     appli = QApplication(sys.argv) 
     appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
-    e = SEE(filter='off')
+    e = SEE(file=None,path=None,plot3d='on')
     e.show()
     appli.exec_() 

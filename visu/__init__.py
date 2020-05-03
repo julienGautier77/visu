@@ -7,6 +7,8 @@ Data vizualisation
 """
 
 from visu import visual
+from visu import visualLight
+from visu.visualLight import SEELIGHT
 from visu.visual import SEE
 from visu.visual import runVisu
 from visu import andor
@@ -16,5 +18,6 @@ from visu import winspec
 from visu import winSuppE
 from visu import winFFT
 from visu import winZoom
+from visu import Win3D
 #from visu import moteurRSAI as RSAI
-__version__='2020.03'
+__version__='2020.05'
