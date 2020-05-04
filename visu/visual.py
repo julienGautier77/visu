@@ -40,7 +40,7 @@ from visu.WinOption import OPTION
 from visu.andor import SifFile
 from visu.winFFT import WINFFT
 try :
-    from visu.Win3D import GRAPH3D
+    from visu.Win3D import GRAPH3D #conda install pyopengl
 except :
     print ("3d not available")
     
@@ -88,9 +88,10 @@ class SEE(QWidget) :
         
         ### kwds definition  : 
         
-        if "confpath "in kwds :
-            self.conpath=kwds["confpath"]
+        if "confpath"in kwds :
+            self.confpath=kwds["confpath"]
             self.conf=QtCore.QSettings(self.confpath, QtCore.QSettings.IniFormat)
+            
         else:
             self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
         
@@ -107,7 +108,7 @@ class SEE(QWidget) :
         if "fft" in kwds:
             self.fft=kwds["fft"]
         else:
-            self.fft="on"
+            self.fft="off"
         
         if "meas" in kwds:
             self.meas=kwds["meas"]
@@ -289,7 +290,7 @@ class SEE(QWidget) :
         self.label_Cross=QLabel()
         #self.label_Cross.setMaximumHeight(20)
         self.label_Cross.setMaximumWidth(170)
-        self.label_Cross. setStyleSheet("font:12pt")
+        self.label_Cross.setStyleSheet("font:12pt")
         hbox6.addWidget(self.label_Cross)
         #hbox6.setSpacing(1)
         self.vbox1.addLayout(hbox5)
@@ -748,7 +749,7 @@ class SEE(QWidget) :
         else :
             self.imh.setImage(self.data.astype(float),autoLevels=False,autoDownsample=True)
         
-        self.PlotXY() #graph update
+        self.PlotXY() # graph update
                 
         if self.encercled=="on":
             if self.winEncercled.isWinOpen==True:
@@ -863,7 +864,7 @@ class SEE(QWidget) :
     def Coupe(self):
         # make  plot profile on cross
         
-        if self.checkBoxPlot.isChecked==True:
+        if self.checkBoxPlot.isChecked()==True:
             
             if self.maxGraphBox.isChecked()==True  and self.bloqKeyboard==False  : # find and fix the cross on the maximum of the image
                 
@@ -890,7 +891,7 @@ class SEE(QWidget) :
                 
             if self.winOpt.checkBoxAxeScale.isChecked()==1: # scale axe on 
                 self.label_Cross.setText('x='+ str(int(self.xc)*self.winOpt.stepX) + '  um'+' y=' + str(int(self.yc)*self.winOpt.stepY) +' um')
-            else :   
+            else : 
                 self.label_Cross.setText('x='+ str(int(self.xc)) + ' y=' + str(int(self.yc)) )
                 
             dataCross=round(dataCross,3) # take data  value  on the cross
@@ -1265,6 +1266,6 @@ if __name__ == "__main__":
     
     appli = QApplication(sys.argv) 
     appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
-    e = SEE(file=None,path=None,plot3d='on')
+    e = SEE(confpath='confVisuTest.ini',name='cam',aff='left')
     e.show()
     appli.exec_() 

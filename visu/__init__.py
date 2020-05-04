@@ -18,6 +18,9 @@ from visu import winspec
 from visu import winSuppE
 from visu import winFFT
 from visu import winZoom
-from visu import Win3D
+try:
+    from visu import Win3D
+except :
+    print('no 3D available')
 #from visu import moteurRSAI as RSAI
 __version__='2020.05'
