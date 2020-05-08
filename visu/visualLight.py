@@ -89,14 +89,19 @@ class SEELIGHT(QWidget) :
            
         
         if "aff" in kwds:
-            self.aff="right"
+            self.aff=kwds["aff"]
         else:
             self.aff="left"
         
-               
         
+        if "saveTiff" in kwds:
+            self.tiff=kwds["saveTiff"]
+        else:       
+            self.tiff=True
+            
+            
         self.nomFichier=''
-        
+        self.ite=None
         self.path=path
         self.setWindowTitle('Visualization'+'       v.'+ version)
         self.bloqKeyboard=bool((self.conf.value(self.name+"/bloqKeyboard"))  )  # block cross by keyboard
@@ -702,9 +707,9 @@ class SEELIGHT(QWidget) :
     
 
     def SaveF (self):
-        # save data  in TIFF or Text  files
+        # save data  in TIFF 
         
-        if self.winOpt.checkBoxTiff.isChecked()==True: 
+        if self.tiff==True: 
             fname=QtGui.QFileDialog.getSaveFileName(self,"Save data as TIFF",self.path)
             self.path=os.path.dirname(str(fname[0]))
             fichier=fname[0]
@@ -717,7 +722,7 @@ class SEELIGHT(QWidget) :
             img_PIL = Image.fromarray(self.data)
 
             img_PIL.save(str(fname[0])+'.TIFF',format='TIFF')
-            self.fileName.setText(fname[0]+'.TIFF') 
+            
             
         else :
             fname=QtGui.QFileDialog.getSaveFileName(self,"Save data as txt",self.path)
@@ -730,7 +735,7 @@ class SEELIGHT(QWidget) :
             self.conf.setValue(self.name+"/path",self.path)
             time.sleep(0.1)
             np.savetxt(str(fichier)+'.txt',self.data)
-            self.fileName.setText(fname[0]+'.txt')
+            
 
   
     def newDataReceived(self,data):
