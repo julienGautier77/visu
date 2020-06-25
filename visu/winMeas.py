@@ -23,9 +23,10 @@ import numpy as np
 
 class MEAS(QWidget):
     
-    def __init__(self,conf=None,name='VISU',confMot=None):
+    def __init__(self,parent=None,conf=None,name='VISU',confMot=None):
         
         super(MEAS, self).__init__()
+        self.parent=parent
         self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
         p = pathlib.Path(__file__)
         if conf==None:
@@ -170,8 +171,11 @@ class MEAS(QWidget):
         vLayout.addLayout(hLayout1)
         vLayout.addLayout(hLayout2)
         self.setLayout(vLayout)
+        
+        if self.parent is not None:
+            self.parent.newMesurment.connect(self.Display)
         self.But_reset.clicked.connect(self.Reset)
-    
+        
     def Reset(self):
         self.shoot=0
         self.table.setRowCount(0)

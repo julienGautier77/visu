@@ -52,19 +52,21 @@ class SEELIGHT(QWidget) :
         confpath :usefull if more than 2 SEE object used
         confMot usefull if RSAI motors is read
     '''
-   
-    def __init__(self,file=None,path=None,**kwds):
+    
+    #newMesurment=QtCore.pyqtSignal(object)
+    def __init__(self,parent=None,file=None,path=None,**kwds):
         
+        print('visu light')
         super(SEELIGHT, self).__init__()
         self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5()) # dark style
-        
+        self.parent=parent
         version=__version__
         p = pathlib.Path(__file__)
         sepa=os.sep
         self.icon=str(p.parent) + sepa+'icons' +sepa
          ## kwds definition:
-        if "confpath "in kwds :
-            self.conpath=kwds["confpath"]
+        if "confpath"in kwds :
+            self.confpath=kwds["confpath"]
             self.conf=QtCore.QSettings(self.confpath, QtCore.QSettings.IniFormat)
         else:
             self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
@@ -143,7 +145,6 @@ class SEELIGHT(QWidget) :
             self.data=self.OpenF(fileOpen=self.path+'/'+file)
         
         
-       
         self.Display(self.data)
        
         
@@ -322,7 +323,9 @@ class SEELIGHT(QWidget) :
         if self.meas=='on':
             self.MeasButton.clicked.connect(self.Measurement)
         
-
+        
+        
+        
     def shortcut(self):
         # keyboard shortcut
         
@@ -388,11 +391,11 @@ class SEELIGHT(QWidget) :
         #     self.winM.setFile(self.nomFichier)
         #     self.open_widget(self.winM)
         #     self.winM.Display(self.cut)
-        
-        if self.ite==None:
-            self.winM.setFile(self.nomFichier)
-            self.open_widget(self.winM)
-            self.winM.Display(self.data)
+        if self.meas=="on":
+            if self.ite==None:
+                self.winM.setFile(self.nomFichier)
+                self.open_widget(self.winM)
+                self.winM.Display(self.data)
     
 
         
@@ -400,9 +403,6 @@ class SEELIGHT(QWidget) :
     def Display(self,data):
         #  display the data and refresh all the calculated things and plots
         self.data=data
-        
-
-        
         self.p1.setXRange(0,self.dimx)
         self.p1.setYRange(0,self.dimy)
         self.p1.setAspectLocked(True,ratio=1)
@@ -410,16 +410,17 @@ class SEELIGHT(QWidget) :
             
         
         if self.checkBoxScale.isChecked()==1: # autoscale on
-           self.imh.setImage(self.data.astype(float),autoLevels=True,autoDownsample=True)
+           self.imh.setImage(self.data,autoLevels=True,autoDownsample=True)#.astype(float)
         else :
-            self.imh.setImage(self.data.astype(float),autoLevels=False,autoDownsample=True)
+            self.imh.setImage(self.data,autoLevels=False,autoDownsample=True)
         
          
 
-                
-        if self.winM.isWinOpen==True: #  measurement update
+        if self.meas=="on" :       
             
-            self.Measurement()
+            if self.winM.isWinOpen==True:
+                #self.newMesurment.emit(self.data)#  measurement update
+                self.Measurement()
                 
         
         
@@ -745,7 +746,7 @@ class SEELIGHT(QWidget) :
         self.dimx=np.shape(self.data)[0]
         self.Display(self.data)
         
-        
+       
     def open_widget(self,fene):
         """ open new widget 
         """
@@ -767,10 +768,6 @@ class SEELIGHT(QWidget) :
        
         if self.winM.isWinOpen==True:
             self.winM.close()
-        
-        
-            
-            
         
         
 

@@ -745,9 +745,9 @@ class SEE(QWidget) :
                 self.axeX.setScale(1)
                 self.axeY.setScale(1)  
                 self.axeX.showLabel(False)
-            self.imh.setImage(self.data.astype(float),autoLevels=True,autoDownsample=True)
+            self.imh.setImage(self.data,autoLevels=True,autoDownsample=True) #.astype(float)
         else :
-            self.imh.setImage(self.data.astype(float),autoLevels=False,autoDownsample=True)
+            self.imh.setImage(self.data,autoLevels=False,autoDownsample=True)
         
         self.PlotXY() # graph update
                 
