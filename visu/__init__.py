@@ -9,6 +9,7 @@ Data vizualisation
 from visu import visual
 from visu import visualLight
 from visu.visualLight import SEELIGHT
+from visu.visualLightThread import SEELIGHTTHREAD
 from visu.visual import SEE
 from visu.visual import runVisu
 from visu import andor
@@ -23,4 +24,4 @@ try:
 except :
     print('no 3D available')
 #from visu import moteurRSAI as RSAI
-__version__='2020.05'
+__version__='2020.06'
