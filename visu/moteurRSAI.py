@@ -11,7 +11,6 @@ modified on Tue Feb 27 15:49:32 2018
 #%% Imports
 import ctypes
 import time
-import pathlib
 
 try:
     from PyQt5.QtCore import QSettings
@@ -20,38 +19,51 @@ except:
 
 
 #%% DLL
+dll_file = 'DLL/PilMotTango.dll'
+#modbus_file='DLL/OpenModbus.dll'
+try:
+    #PilMot=ctypes.windll.PilMotTango # Chargement de la dll PilMotTango et OpenMD .dll
+    PilMot = ctypes.windll.LoadLibrary(dll_file)
+    #modbus=ctypes.windll.LoadLibrary(modbus_file)
+except AttributeError as s:
+    print('########################################################')
+    print("Error when loading the dll file : %s" % dll_file)
+    print("Error : %s" % s)
+    print("PilMot() is then a dummy class.")
+    print('########################################################')
+    class PilMot():
+        """ dummy class """
+        def rEtatConnexion(i):
+            return i
+        def Start(i, s):
+            return 0
+        def rPositionMot(i, j):
+            return 10.
+        def wCdeMot(i, j, k, l, m):
+            return
+        def wPositionMot(i, j, k):
+            return
+        def rEtatMoteur(i, j):
+            return 0
+        def Stop():
+            return 0
+
+#%% ENTREE
+# liste adresse IP des modules
+IP    = b"10.0.1.30\0      10.0.1.31\0      10.0.4.30\0      " 
+IPs_C = ctypes.create_string_buffer(IP, 48) # permet d avoir la liste comme demander dans la dll
+
 
 #conf = QSettings(QSettings.IniFormat, QSettings.UserScope, "configMoteur", "configMoteurRSAI")
+confRSAI = QSettings('fichiersConfig/configMoteurRSAI.ini', QSettings.IniFormat)
 
-p = pathlib.Path(__file__)
-l = p.parent / 'DLL' /'PilMotTango.dll'
-#sepa=os.sep
-#pathDLL=str(p.parent) + sepa+'DLL' +sepa
-dll_file =str(l)
-print(dll_file)# './DLL/PilMotTango.dll'
-#modbus_file='DLL/OpenModbus.dll'
 
-    #PilMot=ctypes.windll.PilMotTango # Chargement de la dll PilMotTango et OpenMD .dll
-PilMot = ctypes.windll.LoadLibrary(dll_file)
-
-IP    = b"10.0.2.30\0      10.0.2.31\0      10.0.4.30\0      " 
-IPs_C = ctypes.create_string_buffer(IP, 48) # permet d avoir la liste comme demander dans la dll
-    
 
 
 #%% Functions connections RSAI
 def startConnexion():
     """ Ouverture d'une connexion avec les racks RSAI """
     print("RSAI initialisation ...")
-    
-        #modbus=ctypes.windll.LoadLibrary(modbus_file)
-
-    
-    #%% ENTREE
-    # liste adresse IP des modules
-   
-    
-    
     argout = 0
     argoutetat = PilMot.rEtatConnexion( ctypes.c_int16(0) ) # numero equipement
     if argoutetat != 3:
@@ -86,13 +98,9 @@ class MOTORRSAI():
     def __init__(self, mot1='',parent=None):
         #super(MOTORNEWPORT, self).__init__()
         self.moteurname=mot1
-        p = pathlib.Path(__file__)
-        l = p.parent / 'fichiersConfig'/'configMoteurRSAI.ini'
-        confRSAI = QSettings(str(l), QSettings.IniFormat)
         self.numEsim=ctypes.c_int16(int(confRSAI.value(self.moteurname+'/numESim')))
         self.numMoteur=ctypes.c_int16(int(confRSAI.value(self.moteurname+'/numMoteur')) )
-        
-        
+
     def stopMotor(self): # stop le moteur motor
         """ stopMotor(motor): stop le moteur motor """
         regCde = ctypes.c_uint(8) # 8 commande pour arreter le moteur

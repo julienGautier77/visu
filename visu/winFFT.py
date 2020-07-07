@@ -167,7 +167,7 @@ class SEEFFT(QWidget) :
         self.openButton.setShortcut(QtGui.QKeySequence("Ctrl+O"))
         hbox2.addWidget(self.openButton)
         self.openButtonhbox4=QHBoxLayout()
-        self.openButton.setStyleSheet("background-color: rgb(0, 0, 0,0) ;border-color: rgb(0, 0, 0,0)")
+        self.openButton.setStyleSheet("background-color: transparent ;border-color: transparent")
         
         self.saveButton=QPushButton('Save',self)
         self.saveButton.setMaximumWidth(100)
@@ -175,7 +175,7 @@ class SEEFFT(QWidget) :
         self.saveButton.setIconSize(QtCore.QSize(50,50))
         hbox2.addWidget(self.saveButton)
         self.saveButton.setIcon(QtGui.QIcon(self.icon+"Saving.png"))
-        self.saveButton.setStyleSheet("background-color: rgb(0, 0, 0,0) ;border-color: rgb(0, 0, 0,0)")
+        self.saveButton.setStyleSheet("background-color: transparent ;border-color: transparent")
         vbox1.addLayout(hbox2)
         
         hbox3=QHBoxLayout()
