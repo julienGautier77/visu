@@ -726,9 +726,9 @@ class SEE(QWidget) :
             print('median filter')
         
         
-        
-        self.p1.setXRange(0,self.dimx)
         self.p1.setYRange(0,self.dimy)
+        self.p1.setXRange(0,self.dimx)
+        
         self.p1.setAspectLocked(True,ratio=1)
         
             
@@ -1017,8 +1017,9 @@ class SEE(QWidget) :
        
         if self.zo<=2:
             self.zo=0
-            self.p1.setXRange(0,self.dimx)
             self.p1.setYRange(0,self.dimy)
+            self.p1.setXRange(0,self.dimx)
+            
             self.xminR=0
             self.yminR=0
             self.xmaxR=self.dimx
@@ -1044,9 +1045,9 @@ class SEE(QWidget) :
             if self.ymaxR>self.dimy:
                 self.ymaxR=self.dimy 
             
-            
-            self.p1.setXRange(self.xminR,self.xmaxR)
             self.p1.setYRange(self.yminR,self.ymaxR)
+            self.p1.setXRange(self.xminR,self.xmaxR)
+            
             
         self.Coupe()
             
