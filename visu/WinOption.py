@@ -19,12 +19,13 @@ import pathlib
 class OPTION(QWidget):
     
     closeEventVar=QtCore.pyqtSignal(bool) 
-    
+    emitChangeScale=QtCore.pyqtSignal(bool) 
+    emitChangeRot=QtCore.pyqtSignal(bool)
     def __init__(self,conf=None,name='VISU'):
         
         
         
-        super(OPTION, self).__init__()
+        super().__init__()
         
         p = pathlib.Path(__file__)
         
@@ -49,7 +50,7 @@ class OPTION(QWidget):
         self.pathBg=self.conf.value(self.name+"/pathBg")
         self.actionButton()
         self.dataBgExist=False
-        
+        self.rotateValue=0
 
         
         
@@ -93,7 +94,7 @@ class OPTION(QWidget):
         
          
         self.checkBoxTiff=QCheckBox('Save as TIFF',self)
-        self.checkBoxTiff.setChecked(False)
+        self.checkBoxTiff.setChecked(True)
         hbox2.addWidget(self.checkBoxTiff)
         
         self.checkBoxDate=QCheckBox('add date',self)
@@ -151,6 +152,15 @@ class OPTION(QWidget):
         
         self.checkBoxFwhm.setChecked(False)
         hbox7.addWidget(self.checkBoxFwhm)
+        
+        labelRotate=QLabel('Img Rotation  90°:')
+        
+        
+        hbox7.addWidget(labelRotate)
+        self.rotate=QSpinBox()
+        self.rotate.setMaximum(4)
+        
+        hbox7.addWidget(self.rotate)
         vbox1.addLayout(hbox7)
         
         hMainLayout=QHBoxLayout()
@@ -166,6 +176,7 @@ class OPTION(QWidget):
         self.stepXBox.valueChanged.connect(self.stepXChange)
         self.stepYBox.valueChanged.connect(self.stepYChange)
         
+        
     def stepXChange(self) :
         self.stepX=self.stepXBox.value()
         self.conf.setValue(self.name+"/stepX",self.stepX)
@@ -174,7 +185,9 @@ class OPTION(QWidget):
     def stepYChange(self) :
         self.stepY=self.stepYBox.value()
         self.conf.setValue(self.name+"/stepY",self.stepY)
-
+        
+    def checkBoxAxeChange(self):
+        self.emitChangeScale.emit(True)
         
     def PathChanged(self) :
        
@@ -196,7 +209,10 @@ class OPTION(QWidget):
         self.tirNumberBox.setValue(self.tirNumber)
         
     
-    
+    def rotateChange(self):
+        self.rotateValue=int(self.rotate.value())
+        
+        
     def selectBg(self):
         
         fname=QtGui.QFileDialog.getOpenFileName(self,"Select a background file",self.pathBg,"Images (*.txt *.spe *.TIFF *.sif);;Text File(*.txt);;Ropper File (*.SPE);;Andor File(*.sif);; TIFF file(*.TIFF)")

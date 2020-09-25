@@ -5,6 +5,9 @@ Created on Mon Mar 18 10:50:06 2019
 Data vizualisation
 @author: juliengautier
 """
+__version__='2020.09'
+__author__='julien Gautier'
+
 
 from visu import visual
 from visu import visualLight
@@ -22,6 +25,5 @@ from visu import winZoom
 try:
     from visu import Win3D
 except :
-    print('no 3D available')
-#from visu import moteurRSAI as RSAI
-__version__='2020.06'
+    print('')
+# #from visu import moteurRSAI as RSAI

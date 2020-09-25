@@ -40,7 +40,7 @@ class WINFFT(QWidget):
     
     def __init__(self,conf=None,name='VISU'):
         
-        super(WINFFT, self).__init__()
+        super().__init__()
         self.name=name
         p = pathlib.Path(__file__)
         if conf==None:

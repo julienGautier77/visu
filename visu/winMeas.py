@@ -25,7 +25,7 @@ class MEAS(QWidget):
     
     def __init__(self,parent=None,conf=None,name='VISU',confMot=None):
         
-        super(MEAS, self).__init__()
+        super().__init__()
         self.parent=parent
         self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
         p = pathlib.Path(__file__)

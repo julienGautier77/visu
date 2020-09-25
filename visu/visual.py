@@ -42,12 +42,11 @@ from visu.winFFT import WINFFT
 try :
     from visu.Win3D import GRAPH3D #conda install pyopengl
 except :
-    print ("3d not available")
+    print ('')
     
 import pathlib
 
-
-__version__='2020.05'
+__version__='2020.09'
 
 __all__=['SEE','runVisu']
 
@@ -73,12 +72,12 @@ class SEE(QWidget) :
    
     def __init__(self,file=None,path=None,**kwds):
         
-        super(SEE, self).__init__()
+        super().__init__()
         version=__version__
-        self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5()) # dark style
+        print("data visualisation :  ",version)
         p = pathlib.Path(__file__)
         
-        
+        self.setAcceptDrops(True)
         sepa=os.sep
         self.icon=str(p.parent) + sepa+'icons' +sepa
         
@@ -95,10 +94,13 @@ class SEE(QWidget) :
         else:
             self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
         
+        
         if "name" in kwds:
             self.name=kwds["name"]
         else:
             self.name="VISU"
+            
+        
         
         if "aff" in kwds:
             self.aff=kwds["aff"]
@@ -171,7 +173,7 @@ class SEE(QWidget) :
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
         self.zo=1 # zoom initial value
         self.scaleAxis="off"
-        
+        self.plotRectZoomEtat='Zoom'
         def twoD_Gaussian(x,y, amplitude, xo, yo, sigma_x, sigma_y, theta, offset):
            xo = float(xo)
            yo = float(yo)    
@@ -224,6 +226,8 @@ class SEE(QWidget) :
         self.setStyleSheet("QCheckBox::indicator{width: 30px;height: 30px;}""QCheckBox::indicator:unchecked { image : url(%s);}""QCheckBox::indicator:checked { image:  url(%s);}""QCheckBox{font :10pt;}" % (TogOff,TogOn) )
         
         self.vbox1=QVBoxLayout() 
+        self.hbox0=QHBoxLayout()
+        self.vbox1.addLayout(self.hbox0)
         
         hbox2=QHBoxLayout()
         self.openButton=QPushButton('Open',self)
@@ -316,6 +320,7 @@ class SEE(QWidget) :
         self.checkBoxHist.setChecked(False)
         self.maxGraphBox=QCheckBox('Max',self)
         
+        
         grid_layout = QGridLayout()
         grid_layout.setVerticalSpacing(0)
         grid_layout.setHorizontalSpacing(10)
@@ -361,6 +366,9 @@ class SEE(QWidget) :
         if self.fft=='on':
             self.fftButton=QPushButton('FFT')
             hbox11.addWidget(self.fftButton)
+        self.ZoomRectButton=QPushButton('Zoom')
+        hbox11.addWidget(self.ZoomRectButton)
+        
         
         hbox10=QHBoxLayout()
         self.ligneButton=QPushButton('Line')
@@ -463,8 +471,9 @@ class SEE(QWidget) :
         #self.plotLine=pg.PolyLineROI(positions=((0,200),(200,200),(300,200)), movable=True,angle=0,pen='w')
         self.plotRect=pg.RectROI([self.xc,self.yc],[4*self.rx,self.ry],pen='g')
         self.plotCercle=pg.CircleROI([self.xc,self.yc],[80,80],pen='g')
-        
+        self.plotRectZoom=pg.RectROI([self.xc,self.yc],[4*self.rx,self.ry],pen='b')
         #self.plotRect.addScaleRotateHandle([0.5, 1], [0.5, 0.5])
+        #self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5()) # dark style
         
         
     def actionButton(self):
@@ -476,6 +485,7 @@ class SEE(QWidget) :
         self.optionAutoSave.clicked.connect(lambda:self.open_widget(self.winOpt))
         self.checkBoxColor.stateChanged.connect(self.Color)
         self.checkBoxPlot.stateChanged.connect(self.PlotXY)
+        self.checkBoxPlot.setToolTip('ctrl+b to block the cross,  ctrl+d to unblock')
         self.ro1.sigRegionChangeFinished.connect(self.roiChanged)
         self.checkBoxZoom.valueChanged.connect(self.Zoom)
         #self.checkBoxZoom.stateChanged.connect(self.Zoom)
@@ -498,7 +508,10 @@ class SEE(QWidget) :
             self.box3d.clicked.connect(self.Graph3D)
         self.winOpt.closeEventVar.connect(self.ScaleImg)
         # self.winOpt.checkBoxStepY.stateChanged.connect(lambda:self.Display(self.data))
-
+        #self.winOpt.emitChangeRot.connect(self.RotImg)
+        self.ZoomRectButton.clicked.connect(self.zoomRectAct)
+        
+        
     def shortcut(self):
         # keyboard shortcut
         
@@ -538,6 +551,8 @@ class SEE(QWidget) :
         self.shortcutDebloq.activated.connect(self.debloquer)
         self.shortcutDebloq.setContext(Qt.ShortcutContext(3))
         
+        
+        
         # mousse action:
         self.proxy=pg.SignalProxy(self.p1.scene().sigMouseMoved, rateLimit=60, slot=self.mouseMoved)
         self.p1.scene().sigMouseClicked.connect(self.mouseClick)
@@ -567,15 +582,22 @@ class SEE(QWidget) :
       
     def LigneChanged(self):
         # take ROI 
-        self.cut=self.plotLine.getArrayRegion(self.data,self.imh)
+        self.cut,coor=self.plotLine.getArrayRegion(self.data,self.imh,returnMappedCoords=True)
         
-        self.linePoints=self.plotLine.listPoints()
-        self.lineXo=self.linePoints[0][0]
-        self.lineYo=self.linePoints[0][1]
-        self.lineXf=self.linePoints[1][0]
-        self.lineYf=self.linePoints[1][1]
-        self.plotLineAngle=np.arctan((self.lineYf-self.lineYo)/(self.lineXf-self.lineXo))
-        
+        if self.winOpt.checkBoxAxeScale.isChecked()==1:
+            self.linePoints=self.plotLine.listPoints()
+            self.lineXo=self.linePoints[0][0]
+            self.lineYo=self.linePoints[0][1]
+            self.lineXf=self.linePoints[1][0]
+            self.lineYf=self.linePoints[1][1]
+            #self.plotLineAngle=np.arctan((self.lineYf-self.lineYo)/(self.lineXf-self.lineXo))
+            # print('angle',self.plotLineAngle*360/(2*3.14),self.cut.size)
+            
+            step=(self.winOpt.stepX**2*(self.lineXo-self.lineXf)**2+self.winOpt.stepY**2*(self.lineYo-self.lineYf)**2)
+            step=step**0.5/self.cut.size
+            self.absiLine=np.arange(0,(self.cut.size)*step,step)
+            
+            #print(self.absiLine)
         
     def Rectangle(self)  :
         
@@ -621,9 +643,11 @@ class SEE(QWidget) :
     def CUT(self): 
         # plot on a separated widget the ROI plot profile
         if self.ite=='line':
-            
             self.open_widget(self.winCoupe)
-            self.winCoupe.PLOT(self.cut,symbol=False)
+            if self.winOpt.checkBoxAxeScale.isChecked()==1:
+                self.winCoupe.PLOT(self.cut,axis=self.absiLine,symbol=False)
+            else:
+                self.winCoupe.PLOT(self.cut,symbol=False)
             
         if self.ite=='rect':
             self.open_widget(self.winCoupe)
@@ -694,6 +718,7 @@ class SEE(QWidget) :
         #  display the data and refresh all the calculated things and plots
         self.data=data
         
+        self.data=np.rot90(self.data,self.winOpt.rotate.value())
         if self.checkBoxBg.isChecked()==True and self.winOpt.dataBgExist==True:
             try :
                 self.data=self.data-self.winOpt.dataBg
@@ -726,10 +751,10 @@ class SEE(QWidget) :
             print('median filter')
         
         
-        self.p1.setYRange(0,self.dimy)
-        self.p1.setXRange(0,self.dimx)
+        # self.p1.setYRange(0,self.dimy)
+        # self.p1.setXRange(0,self.dimx)
         
-        self.p1.setAspectLocked(True,ratio=1)
+        # self.p1.setAspectLocked(True,ratio=1)
         
             
         if self.checkBoxScale.isChecked()==1: # color autoscale on
@@ -811,7 +836,8 @@ class SEE(QWidget) :
             self.fileName.setText(nomFichier)
     
         self.Zoom() # update zoom
-    
+        self.zoomRectupdate() # update rect
+        
     def mouseClick(self): # block the cross if mousse button clicked
         
         if self.bloqq==1:
@@ -890,7 +916,7 @@ class SEE(QWidget) :
                 coupeYMax=1
                 
             if self.winOpt.checkBoxAxeScale.isChecked()==1: # scale axe on 
-                self.label_Cross.setText('x='+ str(round(int(self.xc)*self.winOpt.stepX),2) + '  um'+' y=' + str(round(int(self.yc)*self.winOpt.stepY),2) +' um')
+                self.label_Cross.setText('x='+ str(round(int(self.xc)*self.winOpt.stepX,2)) + '  um'+' y=' + str(round(int(self.yc)*self.winOpt.stepY,2)) +' um')
             else : 
                 self.label_Cross.setText('x='+ str(int(self.xc)) + ' y=' + str(int(self.yc)) )
                 
@@ -1115,7 +1141,7 @@ class SEE(QWidget) :
         print('original')
         
     def OpenF(self,fileOpen=False):
-        #open file in txt spe TIFF sif  format
+        #open file in txt spe TIFF sif jpeg png  format
         fileOpen=fileOpen
         
         if fileOpen==False:
@@ -1134,9 +1160,10 @@ class SEE(QWidget) :
             dataSPE=SpeFile(fichier)
             data1=dataSPE.data[0]#.transpose() # first frame
             data=data1#np.flipud(data1)
-        elif ext=='.TIFF' or ext=='.tif':# tiff File
+        elif ext=='.TIFF' or ext=='.tif' or ext=='.Tiff' or ext=='.jpg' or ext=='.JPEG' or ext=='.png': # tiff File
             dat=Image.open(fichier)
             data=np.array(dat)
+            data=np.rot90(data,3)
         elif ext=='.sif': 
             sifop=SifFile()
             im=sifop.openA(fichier)
@@ -1146,7 +1173,7 @@ class SEE(QWidget) :
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Critical)
             msg.setText("Wrong file format !")
-            msg.setInformativeText("The format of the file must be : .SPE  .TIFF .sif or .txt ")
+            msg.setInformativeText("The format of the file must be : .SPE  .TIFF .sif  png jpeg or .txt ")
             msg.setWindowTitle("Warning ...")
             msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
             msg.exec_()
@@ -1201,18 +1228,55 @@ class SEE(QWidget) :
         self.dataOrg=self.data
         self.Display(self.data)
         
-        
-          
+    
+
+    
     def ScaleImg(self):
         #scale Axis px to um
         if self.winOpt.checkBoxAxeScale.isChecked()==1:
             self.scaleAxis="on"
+            self.LigneChanged()
         else :
             self.scaleAxis="off"
+        self.data=self.dataOrg
         self.Display(self.data)
     
     
-    
+    def zoomRectAct(self):
+        
+        if self.plotRectZoomEtat=="Zoom": 
+            
+            self.p1.addItem(self.plotRectZoom)
+            self.plotRectZoom.setPos([self.dimx/2,self.dimy/2])
+            self.ZoomRectButton.setText('Zoom IN')
+            self.plotRectZoomEtat="ZoomIn"
+            
+        elif self.plotRectZoomEtat=="ZoomIn":
+            self.ZoomRectButton.setText('ZoomOut')
+            self.xZoomMin=(self.plotRectZoom.pos()[0])
+            self.yZoomMin=(self.plotRectZoom.pos()[1])
+            self.xZoomMax=(self.plotRectZoom.pos()[0])+self.plotRectZoom.size()[0]
+            self.yZoomMax=(self.plotRectZoom.pos()[1])+self.plotRectZoom.size()[1]
+            self.p1.setXRange(self.xZoomMin,self.xZoomMax)
+            self.p1.setYRange(self.yZoomMin,self.yZoomMax)
+            self.p1.setAspectLocked(False)
+            self.p1.removeItem(self.plotRectZoom)
+            self.ZoomRectButton.setText('Zoom Out')
+            self.plotRectZoomEtat="ZoomOut"
+        
+        elif self.plotRectZoomEtat=="ZoomOut": 
+            self.p1.setYRange(0,self.dimy)
+            self.p1.setXRange(0,self.dimx)
+            self.ZoomRectButton.setText('Zoom ')
+            self.plotRectZoomEtat="Zoom"
+            self.p1.setAspectLocked(True,ratio=1)
+            
+    def zoomRectupdate(self):
+        if self.plotRectZoomEtat=="ZoomOut":
+            self.p1.setXRange(self.xZoomMin,self.xZoomMax)
+            self.p1.setYRange(self.yZoomMin,self.yZoomMax)
+            self.p1.setAspectLocked(False)
+        
     def open_widget(self,fene):
         """ open new widget 
         """
@@ -1227,8 +1291,19 @@ class SEE(QWidget) :
             #fene.activateWindow()
             fene.raise_()
             fene.showNormal()
+    
+    
+    def dragEnterEvent(self, e):
+        e.accept()
 
-
+        
+    def dropEvent(self, e):
+        l = []
+        for url in e.mimeData().urls():
+            l.append(str(url.toLocalFile()))
+        e.accept()
+        self.OpenF(fileOpen=l[0])
+    
     def closeEvent(self,event):
         # when the window is closed
         if self.encercled=="on":
@@ -1267,6 +1342,6 @@ if __name__ == "__main__":
     
     appli = QApplication(sys.argv) 
     appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
-    e = SEE(confpath='confVisuTest.ini',name='cam',aff='left')
+    e = SEE(aff='left')
     e.show()
     appli.exec_() 

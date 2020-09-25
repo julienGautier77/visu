@@ -17,7 +17,7 @@ import pathlib,os
 class ZOOM(QWidget):
     
     def __init__(self,symbol=True,title='Zoom'):
-        super(ZOOM, self).__init__()
+        super().__init__()
         p = pathlib.Path(__file__)
         sepa=os.sep
         self.title=title

@@ -57,7 +57,7 @@ class SEELIGHT(QWidget) :
     def __init__(self,parent=None,file=None,path=None,**kwds):
         
         print('visu light')
-        super(SEELIGHT, self).__init__()
+        super().__init__()
         self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5()) # dark style
         self.parent=parent
         version=__version__
@@ -762,7 +762,17 @@ class SEELIGHT(QWidget) :
             fene.raise_()
             fene.showNormal()
 
+    def dragEnterEvent(self, e):
+        e.accept()
 
+        
+    def dropEvent(self, e):
+        l = []
+        for url in e.mimeData().urls():
+            l.append(str(url.toLocalFile()))
+        e.accept()
+        self.OpenF(fileOpen=l[0])
+        
     def closeEvent(self,event):
         # when the window is closed
        
