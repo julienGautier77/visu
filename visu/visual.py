@@ -450,6 +450,11 @@ class SEE(QWidget) :
         self.curve2=pg.PlotCurveItem()
         self.curve3=pg.PlotCurveItem()
         
+        ## slider to open multi file
+        self.sliderImage=QSlider(Qt.Horizontal)
+        self.sliderImage.setEnabled(False)
+        self.vbox2.addWidget(self.sliderImage)
+        
         ## main layout
         hMainLayout=QHBoxLayout()
         if self.aff=='right':
@@ -487,7 +492,7 @@ class SEE(QWidget) :
         self.checkBoxPlot.stateChanged.connect(self.PlotXY)
         self.checkBoxPlot.setToolTip('ctrl+b to block the cross,  ctrl+d to unblock')
         self.ro1.sigRegionChangeFinished.connect(self.roiChanged)
-        self.checkBoxZoom.valueChanged.connect(self.Zoom)
+        self.checkBoxZoom
         #self.checkBoxZoom.stateChanged.connect(self.Zoom)
         if self.encercled=="on":
             self.energyBox.clicked.connect(self.Energ)
@@ -510,7 +515,7 @@ class SEE(QWidget) :
         # self.winOpt.checkBoxStepY.stateChanged.connect(lambda:self.Display(self.data))
         #self.winOpt.emitChangeRot.connect(self.RotImg)
         self.ZoomRectButton.clicked.connect(self.zoomRectAct)
-        
+        self.sliderImage.valueChanged.connect(self.SliderImgFct)
         
     def shortcut(self):
         # keyboard shortcut
@@ -1147,8 +1152,23 @@ class SEE(QWidget) :
         if fileOpen==False:
             
             chemin=self.conf.value(self.name+"/path")
-            fname=QtGui.QFileDialog.getOpenFileName(self,"Open File",chemin,"Images (*.txt *.spe *.TIFF *.sif *.tif);;Text File(*.txt);;Ropper File (*.SPE);;Andor File(*.sif);; TIFF file(*.TIFF)")
+            fname=QtGui.QFileDialog.getOpenFileNames(self,"Open File",chemin,"Images (*.txt *.spe *.TIFF *.sif *.tif);;Text File(*.txt);;Ropper File (*.SPE);;Andor File(*.sif);; TIFF file(*.TIFF)")
+            
             fichier=fname[0]
+            self.openedFiles=fichier
+
+            self.nbOpenedImage=len(fichier)
+            if self.nbOpenedImage==1:
+                fichier=fichier[0]
+                self.sliderImage.setEnabled(False)
+            if self.nbOpenedImage>1:
+                fichier=fichier[0]
+                self.sliderImage.setMinimum(0)
+                self.sliderImage.setMaximum(self.nbOpenedImage - 1)
+                self.sliderImage.setValue(0)
+                self.sliderImage.setEnabled(True)
+                
+                
         else:
             fichier=str(fileOpen)
             
@@ -1186,7 +1206,11 @@ class SEE(QWidget) :
     
         self.newDataReceived(data)
     
-
+    def SliderImgFct(self):
+        nbImgToOpen=int(self.sliderImage.value())
+        
+        self.OpenF(fileOpen=self.openedFiles[nbImgToOpen])
+        
     def SaveF (self):
         # save data  in TIFF or Text  files
         
@@ -1226,6 +1250,7 @@ class SEE(QWidget) :
         self.dimx=np.shape(self.data)[0]
         self.dataOrgScale=self.data
         self.dataOrg=self.data
+        
         self.Display(self.data)
         
     
