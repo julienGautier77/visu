@@ -20,7 +20,7 @@ __author__='julien Gautier'
 
 from PyQt5.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QWidget,QPushButton,QGridLayout
 from PyQt5.QtWidgets import QInputDialog,QSlider,QCheckBox,QLabel,QSizePolicy,QMenu,QMessageBox
-from PyQt5.QtWidgets import QShortcut
+from PyQt5.QtWidgets import QShortcut,QDockWidget
 from pyqtgraph.Qt import QtCore,QtGui 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIcon
@@ -39,6 +39,7 @@ from visu.winMeas import MEAS
 from visu.WinOption import OPTION
 from visu.andor import SifFile
 from visu.winFFT import WINFFT
+from visu.winMath import WINMATH
 try :
     from visu.Win3D import GRAPH3D #conda install pyopengl
 except :
@@ -76,7 +77,7 @@ class SEE(QWidget) :
         version=__version__
         print("data visualisation :  ",version)
         p = pathlib.Path(__file__)
-        
+        self.fullscreen=False
         self.setAcceptDrops(True)
         sepa=os.sep
         self.icon=str(p.parent) + sepa+'icons' +sepa
@@ -156,6 +157,14 @@ class SEE(QWidget) :
             self.Widget3D=GRAPH3D(self.conf,name=self.name)
         
         
+        if "math" in kwds:
+            self.math=kwds["math"]
+        else :
+            self.math="on"
+        
+        if self.math=="on":
+            self.winMath=WINMATH()
+        
         self.winCoupe=GRAPHCUT(symbol=False,conf=self.conf,name=self.name)
         self.path=path
         self.setWindowTitle('Visualization'+'       v.'+ version)
@@ -174,6 +183,10 @@ class SEE(QWidget) :
         self.zo=1 # zoom initial value
         self.scaleAxis="off"
         self.plotRectZoomEtat='Zoom'
+        
+        
+        
+        
         def twoD_Gaussian(x,y, amplitude, xo, yo, sigma_x, sigma_y, theta, offset):
            xo = float(xo)
            yo = float(yo)    
@@ -339,7 +352,11 @@ class SEE(QWidget) :
         if self.encercled=="on":
             self.energyBox=QPushButton('&Encercled',self)
             hbox9.addWidget(self.energyBox)
+        
             
+        if self.math=="on":
+            self.mathButton=QPushButton('Math',self)
+            hbox9.addWidget(self.mathButton)
         if self.winFilter=='on':
             self.filtreBox=QPushButton('&Filters',self)
             menu=QMenu()
@@ -395,12 +412,12 @@ class SEE(QWidget) :
         #self.winImage.ci.setContentsMargins(1,1,1,1)
         
         self.vbox2=QVBoxLayout()
-        # self.dockImage=QDockWidget(self)
+        self.dockImage=QDockWidget(self)
         
-        # self.dockImage.setWidget(self.winImage)
-        # self.dockImage.setFeatures(QDockWidget.DockWidgetFloatable)
-        #vbox2.addWidget(self.dockImage)
-        self.vbox2.addWidget(self.winImage)
+        self.dockImage.setWidget(self.winImage)
+        self.dockImage.setFeatures(QDockWidget.DockWidgetFloatable)
+        self.vbox2.addWidget(self.dockImage)
+        #self.vbox2.addWidget(self.winImage)
         self.vbox2.setContentsMargins(0,0,0,0)
         
         self.p1=self.winImage.addPlot()
@@ -476,7 +493,7 @@ class SEE(QWidget) :
         #self.plotLine=pg.PolyLineROI(positions=((0,200),(200,200),(300,200)), movable=True,angle=0,pen='w')
         self.plotRect=pg.RectROI([self.xc,self.yc],[4*self.rx,self.ry],pen='g')
         self.plotCercle=pg.CircleROI([self.xc,self.yc],[80,80],pen='g')
-        self.plotRectZoom=pg.RectROI([self.xc,self.yc],[4*self.rx,self.ry],pen='b')
+        self.plotRectZoom=pg.RectROI([self.xc,self.yc],[4*self.rx,self.ry],pen='w')
         #self.plotRect.addScaleRotateHandle([0.5, 1], [0.5, 0.5])
         #self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5()) # dark style
         
@@ -516,6 +533,19 @@ class SEE(QWidget) :
         #self.winOpt.emitChangeRot.connect(self.RotImg)
         self.ZoomRectButton.clicked.connect(self.zoomRectAct)
         self.sliderImage.valueChanged.connect(self.SliderImgFct)
+        self.dockImage.topLevelChanged.connect(self.fullScreen)
+        if self.math=="on":
+            self.mathButton.clicked.connect(lambda:self.open_widget(self.winMath))
+            self.winMath.emitApply.connect(self.newDataReceived)
+        
+        
+    def fullScreen(self):
+        if  self.fullscreen==False:
+            self.fullscreen=True
+            self.dockImage.showMaximized()
+        else :
+            self.fullscreen=False
+            self.dockImage.showNormal()
         
     def shortcut(self):
         # keyboard shortcut
@@ -1205,6 +1235,8 @@ class SEE(QWidget) :
         self.nomFichier=os.path.split(fichier)[1]
     
         self.newDataReceived(data)
+        
+    
     
     def SliderImgFct(self):
         nbImgToOpen=int(self.sliderImage.value())
@@ -1284,7 +1316,7 @@ class SEE(QWidget) :
             self.yZoomMax=(self.plotRectZoom.pos()[1])+self.plotRectZoom.size()[1]
             self.p1.setXRange(self.xZoomMin,self.xZoomMax)
             self.p1.setYRange(self.yZoomMin,self.yZoomMax)
-            self.p1.setAspectLocked(False)
+            self.p1.setAspectLocked(True)
             self.p1.removeItem(self.plotRectZoom)
             self.ZoomRectButton.setText('Zoom Out')
             self.plotRectZoomEtat="ZoomOut"
@@ -1300,7 +1332,7 @@ class SEE(QWidget) :
         if self.plotRectZoomEtat=="ZoomOut":
             self.p1.setXRange(self.xZoomMin,self.xZoomMax)
             self.p1.setYRange(self.yZoomMin,self.yZoomMax)
-            self.p1.setAspectLocked(False)
+            self.p1.setAspectLocked(True)
         
     def open_widget(self,fene):
         """ open new widget 

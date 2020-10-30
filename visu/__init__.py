@@ -22,6 +22,7 @@ from visu import winspec
 from visu import winSuppE
 from visu import winFFT
 from visu import winZoom
+from visu import winMath
 try:
     from visu import Win3D
 except :
