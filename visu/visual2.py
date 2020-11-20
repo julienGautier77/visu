@@ -629,7 +629,7 @@ class SEE2(QMainWindow) :
       
     def LigneChanged(self):
         # take ROI 
-        self.cut,coor=self.plotLine.getArrayRegion(self.data,self.imh,returnMappedCoords=True)
+        self.cut=self.plotLine.getArrayRegion(self.data,self.imh)
         
         if self.winOpt.checkBoxAxeScale.isChecked()==1:
             self.linePoints=self.plotLine.listPoints()
