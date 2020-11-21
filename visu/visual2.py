@@ -84,7 +84,7 @@ class SEE2(QMainWindow) :
         self.setAcceptDrops(True)
         sepa=os.sep
         self.icon=str(p.parent) + sepa+'icons' +sepa
-        
+        self.colorBar='flame'
         
         self.nomFichier=''
         
@@ -350,6 +350,23 @@ class SEE2(QMainWindow) :
         self.checkBoxHist.setChecked(False)
         self.checkBoxHist.triggered.connect(self.HIST)
         self.ImageMenu.addAction(self.checkBoxHist)
+        
+        self.ColorBox=QAction('&LookUp Table',self)
+        menuColor=QMenu()
+        menuColor.addAction('thermal',self.Setcolor)
+        menuColor.addAction('flame',self.Setcolor)
+        menuColor.addAction('yellowy',self.Setcolor)
+        menuColor.addAction('bipolar',self.Setcolor)
+        menuColor.addAction('spectrum',self.Setcolor)
+        menuColor.addAction('cyclic',self.Setcolor)
+        menuColor.addAction('viridis',self.Setcolor) 
+        menuColor.addAction('inferno',self.Setcolor)
+        menuColor.addAction('plasma',self.Setcolor)      
+        menuColor.addAction('magna',self.Setcolor)            
+        
+        self.ColorBox.setMenu(menuColor)
+        self.ImageMenu.addAction(self.ColorBox)
+        
         
         self.checkBoxBg=QAction('Background Substraction On',self)
         self.checkBoxBg.setCheckable(True)
@@ -1070,11 +1087,19 @@ class SEE2(QMainWindow) :
         #hist.setImageItem(imh,clear=True)
         self.hist.setHistogramRange(xmin,xmax)
     
+    def Setcolor(self):
+        action = self.sender()
+        self.colorBar=str(action.text())
+        
+        self.hist.gradient.loadPreset(self.colorBar)
+    
     def Color(self):
         """ image in colour/n&b
         """
+        
+        
         if self.checkBoxColor.isChecked()==1:
-            self.hist.gradient.loadPreset('flame')
+            self.hist.gradient.loadPreset(self.colorBar)
         else:
             self.hist.gradient.loadPreset('grey')
             
@@ -1326,6 +1351,9 @@ class SEE2(QMainWindow) :
         
         self.data=np.fliplr(self.data)
         self.Display(self.data)
+    
+  
+    
     
     def open_widget(self,fene):
         """ open new widget 
