@@ -325,7 +325,8 @@ class MEAS(QWidget):
         else :
             Posi=self.shoot
             self.label='Shoot'
-            
+        self.table.selectRow(self.shoot)
+        
         self.posMotor.append(Posi)    
         self.table.resizeColumnsToContents()
         self.labelsVert.append('%s'% self.shoot)
