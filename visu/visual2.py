@@ -139,7 +139,7 @@ class SEE2(QMainWindow) :
         if "confMot" in kwds:
             print('motor accepted')
             if self.meas=="on":
-                self.confMot=kwds["confoMot"]
+                self.confMot=kwds["confMot"]
                 self.winM=MEAS(confMot=self.confMot,conf=self.conf,name=self.name)
         else :
             if self.meas=="on":
