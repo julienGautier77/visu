@@ -7,7 +7,7 @@ Created on Wed Dec 19 11:43:05 2018
 """
 
 from PyQt5.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QWidget,QGridLayout
-from PyQt5.QtWidgets import QCheckBox,QLabel,QSizePolicy,QSpinBox
+from PyQt5.QtWidgets import QCheckBox,QLabel,QSizePolicy,QSpinBox,QPushButton
 from pyqtgraph.Qt import QtCore,QtGui 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QShortcut
@@ -54,24 +54,31 @@ class WINENCERCLED(QWidget):
         self.r1y=int(self.conf.value(self.name+"/r1y"))
         self.r2=int(self.conf.value(self.name+"/r2x"))
         self.r2=int(self.conf.value(self.name+"/r2y"))
-        self.setup()
-        self.ActionButton()
+        
         self.kE=0 # variable pour la courbe E fct du nb shoot
-        self.E=[]
+        
         self.Xec=[]
         self.Yec=[]
         self.fwhmX=100
         self.fwhmY=100
         self.setWindowIcon(QIcon('./icons/LOA.png'))
+        self.E = []
+        
+        #self.E=np.array([2,3,5])
+        self.Xec=[]
+        self.Yec=[]
+        
         # Create x and y indices
         x = np.arange(0,self.dimx)
         y = np.arange(0,self.dimy)
         y,x = np.meshgrid(y, x)
     
-        #self.data=(40*np.random.rand(self.dimx,self.dimy)).round()
-        #self.Display(self.data)
-    
-    
+        self.data=(40*np.random.rand(self.dimx,self.dimy)).round()
+        
+        self.setup()
+        self.ActionButton()
+        self.Display(self.data)
+        
     def setup(self):
         
         TogOff=self.icon+'Toggle_Off.png'
@@ -85,9 +92,13 @@ class WINENCERCLED(QWidget):
         self.setStyleSheet("QCheckBox::indicator{width: 30px;height: 30px;}""QCheckBox::indicator:unchecked { image : url(%s);}""QCheckBox::indicator:checked { image:  url(%s);}""QCheckBox{font :10pt;}" % (TogOff,TogOn) )
         
         vbox1=QVBoxLayout()
+        hbox=QHBoxLayout()
         self.checkBoxAuto=QCheckBox('Auto',self)
         self.checkBoxAuto.setChecked(True)
-        vbox1.addWidget(self.checkBoxAuto)
+        hbox.addWidget(self.checkBoxAuto)
+        self.resetButton=QPushButton('Reset',self)
+        hbox.addWidget(self.resetButton)
+        vbox1.addLayout(hbox)
         hbox0=QHBoxLayout()
         self.energieRes=QLabel('?')
         self.energieRes.setMaximumHeight(30)
@@ -231,29 +242,34 @@ class WINENCERCLED(QWidget):
         vMainLayout.addLayout(hLayout1)
         
         
-        self.winCurve = pg.GraphicsLayoutWidget()
-        self.winCurve.setContentsMargins(0,0,0,0)
+        self.winCurve=QVBoxLayout()
         
-        self.p2=self.winCurve.addPlot(1,0)
-        self.p2.setContentsMargins(0,0,0,0)
-        self.p2.setLabel('left','E1/E2',units='%')
+        
+        self.win2=pg.plot()
+        self.p2=self.win2.plot(pen='b',symbol='t',symboleSize=2,clear=True,symbolPen='b',symbolBrush='b',name="rapport")
+        self.win2.setContentsMargins(0,0,0,0)
+        self.win2.setLabel('left','E1/E2',units='%')
         self.hLineMeanE = pg.InfiniteLine(angle=0, movable=False,pen=pg.mkPen('b', width=3, style=QtCore.Qt.DashLine) ) 
-        self.p2.addItem(self.hLineMeanE, ignoreBounds=True)
+        self.win2.addItem(self.hLineMeanE, ignoreBounds=True)
         
+        self.winCurve.addWidget(self.win2)
         
-        
-        self.p3=self.winCurve.addPlot(2,0)
-        self.p3.setContentsMargins(0,0,0,0)
-        self.p3.setLabel('left','X')#,units='pixel')
+        self.win3=pg.plot()
+        self.p3=self.win3.plot(pen='r',symbol='t',symboleSize=2,clear=True,symbolPen='r',symbolBrush='r',name="x")
+        self.win3.setContentsMargins(0,0,0,0)
+        self.win3.setLabel('left','X')#,units='pixel')
         self.hLineMeanX = pg.InfiniteLine(angle=0, movable=False,pen=pg.mkPen('r', width=3, style=QtCore.Qt.DashLine))
-        self.p3.addItem(self.hLineMeanX, ignoreBounds=True)
+        self.win3.addItem(self.hLineMeanX, ignoreBounds=True)
+        self.winCurve.addWidget(self.win3)
         
-        self.p4=self.winCurve.addPlot(3,0)
-        self.p4.setLabel('left','Y')#,units='pixel')
-        self.p4.setLabel('bottom',"Shoot number")
+        
+        self.win4=pg.plot()
+        self.p4=self.win4.plot(pen='g',symbol='t',symboleSize=2,clear=True,symbolPen='g',symbolBrush='g',name="y")
+        self.win4.setLabel('left','Y')#,units='pixel')
+        self.win4.setLabel('bottom',"Shoot number")
         self.hLineMeanY = pg.InfiniteLine(angle=0, movable=False,pen=pg.mkPen('g', width=3, style=QtCore.Qt.DashLine))
-        self.p4.addItem(self.hLineMeanY, ignoreBounds=True)
-        
+        self.win4.addItem(self.hLineMeanY, ignoreBounds=True)
+        self.winCurve.addWidget(self.win4)
         
         labelMean=QLabel('<E1/E2> ')
         labelMean.setStyleSheet("color:blue;font:14pt")
@@ -298,7 +314,7 @@ class WINENCERCLED(QWidget):
         
         hLayout2=QHBoxLayout()
         
-        hLayout2.addWidget(self.winCurve)
+        hLayout2.addLayout(self.winCurve)
         hLayout2.addLayout(grid_layout2)
         
         vMainLayout.addLayout(hLayout2)
@@ -308,6 +324,7 @@ class WINENCERCLED(QWidget):
         hMainLayout.addLayout(vMainLayout)
         self.setLayout(hMainLayout)
         self.setContentsMargins(1,1,1,1)
+        
         
         
     def ActionButton(self):   
@@ -340,6 +357,7 @@ class WINENCERCLED(QWidget):
         self.vb=self.p1.vb
         
         self.checkBoxAuto.stateChanged.connect(self.AutoE)
+        self.resetButton.clicked.connect(self.Reset)
         
         
     def mouseClick(self):
@@ -430,12 +448,12 @@ class WINENCERCLED(QWidget):
         if self.checkBoxAuto.isChecked()==True:
             self.r1x=self.fwhmX/0.849
             self.r1y=self.fwhmY/0.849
-            self.r1xBox.setValue(self.r1x)
-            self.r1yBox.setValue(self.r1y)
+            self.r1xBox.setValue(int(self.r1x))
+            self.r1yBox.setValue(int(self.r1y))
             nbG=2 # ré= 2 fois r1 pour le grand cercle
             self.roi2.setSize([2*nbG*self.r1x,2*nbG*self.r1y])
             self.roi2.setPos([self.xec-nbG*self.r1x,self.yec-nbG*self.r1y])
-            self.r2Box.setValue(2*nbG*self.r1x)
+            self.r2Box.setValue(int(2*nbG*self.r1x))
             self.roi1.setSize([2*self.r1x,2*self.r1y])
             self.roi1.setPos([self.xec-self.r1x,self.yec-self.r1y])
             
@@ -447,7 +465,8 @@ class WINENCERCLED(QWidget):
         E2=self.roi2.getArrayRegion(self.data,self.imh).sum()
         self.rap=100*E1/E2
         self.energieRes.setText('%.2f %%' % self.rap)
-        self.E.append(self.rap)
+        self.E=np.append(self.E,self.rap)
+        
         Emean=np.mean(self.E)
         self.meanAff.setText('%.2f' % Emean)
         EPV=np.std(self.E)
@@ -491,12 +510,14 @@ class WINENCERCLED(QWidget):
     
     def plotGraph(self):
         
-        self.p2.plot(self.E,pen='b',symbol='t',symboleSize=2,clear=True,symbolPen='b',symbolBrush='b',name="rapport")
-        self.p2.addItem(self.hLineMeanE, ignoreBounds=True)
-        self.p3.plot(self.Xec,pen='r',symbol='t',symboleSize=2,clear=True,symbolPen='r',symbolBrush='r',name="x")
-        self.p3.addItem(self.hLineMeanX, ignoreBounds=True)
-        self.p4.plot(self.Yec,pen='g',symbol='t',symboleSize=2,clear=True,symbolPen='g',symbolBrush='g',name="y")
-        self.p4.addItem(self.hLineMeanY, ignoreBounds=True)
+        
+        
+        self.p2.setData(self.E)#,pen='b',symbol='t',symboleSize=2,clear=True,symbolPen='b',symbolBrush='b',name="rapport")
+        #self.p2.addItem(self.hLineMeanE, ignoreBounds=True)
+        self.p3.setData(self.Xec)#,pen='r',symbol='t',symboleSize=2,clear=True,symbolPen='r',symbolBrush='r',name="x")
+        #self.p3.addItem(self.hLineMeanX, ignoreBounds=True)
+        self.p4.setData(self.Yec)#,pen='g',symbol='t',symboleSize=2,clear=True,symbolPen='g',symbolBrush='g',name="y")
+        #self.p4.addItem(self.hLineMeanY, ignoreBounds=True)
     
     
     
@@ -597,6 +618,11 @@ class WINENCERCLED(QWidget):
         self.imh.setLevels([xmin, xmax- (xmax- xmin) / 10])
         #hist.setImageItem(imh,clear=True)
         self.hist.setHistogramRange(xmin,xmax)
+        
+    def Reset(self):
+        self.E = []
+        self.Xec=[]
+        self.Yec=[]
         
         
     def closeEvent(self, event):
