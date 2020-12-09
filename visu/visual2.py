@@ -129,7 +129,7 @@ class SEE2(QMainWindow) :
         
         if self.fft=='on'  :  
             self.winFFT=WINFFT(conf=self.conf,name=self.name)
-            self.winFFT1D=GRAPHCUT(symbol=False,title='FFT 1D',conf=self.conf,name=self.name)
+            self.winFFT1D=GRAPHCUT(symbol=None,title='FFT 1D',conf=self.conf,name=self.name)
           
         if "filter" in kwds:
             self.winFilter=kwds['filter']
@@ -139,7 +139,7 @@ class SEE2(QMainWindow) :
         if "confMot" in kwds:
             print('motor accepted')
             if self.meas=="on":
-                self.confMot=kwds["confMot"]
+                self.confMot=kwds["confoMot"]
                 self.winM=MEAS(confMot=self.confMot,conf=self.conf,name=self.name)
         else :
             if self.meas=="on":
@@ -168,7 +168,7 @@ class SEE2(QMainWindow) :
         if self.math=="on":
             self.winMath=WINMATH()
         
-        self.winCoupe=GRAPHCUT(symbol=False,conf=self.conf,name=self.name)
+        self.winCoupe=GRAPHCUT(symbol=None,conf=self.conf,name=self.name)
         self.path=path
         self.setWindowTitle('Visualization'+'       v.'+ version)
         self.bloqKeyboard=bool((self.conf.value(self.name+"/bloqKeyboard"))  )  # block cross by keyboard
@@ -709,13 +709,13 @@ class SEE2(QMainWindow) :
         if self.ite=='line':
             self.open_widget(self.winCoupe)
             if self.winOpt.checkBoxAxeScale.isChecked()==1:
-                self.winCoupe.PLOT(self.cut,axis=self.absiLine,symbol=False)
+                self.winCoupe.PLOT(self.cut,axis=self.absiLine,symbol=None)
             else:
-                self.winCoupe.PLOT(self.cut,symbol=False)
+                self.winCoupe.PLOT(self.cut,symbol=None)
             
         if self.ite=='rect':
             self.open_widget(self.winCoupe)
-            self.winCoupe.PLOT(self.cut1,symbol=False)
+            self.winCoupe.PLOT(self.cut1,symbol=None)
    
     def Graph3D (self):
         

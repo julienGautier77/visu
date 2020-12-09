@@ -9,26 +9,25 @@ Windows for plot
 import pyqtgraph as pg # pyqtgraph biblio permettent l'affichage 
 
 import qdarkstyle # pip install qdakstyle https://github.com/ColinDuquesnoy/QDarkStyleSheet  sur conda
-from PyQt5.QtWidgets import QApplication,QHBoxLayout,QWidget,QVBoxLayout,QCheckBox,QLabel,QPushButton,QMessageBox
-from PyQt5.QtGui import QIcon
+from PyQt5.QtWidgets import QApplication,QHBoxLayout,QAction,QWidget,QStatusBar,QMainWindow,QVBoxLayout,QCheckBox,QLabel,QPushButton,QMessageBox
+from PyQt5.QtGui import QIcon,QColorDialog
 import sys,time
 from PyQt5.QtCore import Qt
 from pyqtgraph.Qt import QtCore,QtGui 
 import numpy as np
 import pathlib,os
 
-class GRAPHCUT(QWidget):
+class GRAPHCUT(QMainWindow):
     
-    def __init__(self,symbol=True,title='Plot',conf=None,name='VISU',meas=True):
+    def __init__(self,symbol=None,title='Plot',conf=None,name='VISU',meas=False,pen='w',symbolPen='w'):
         
         super().__init__()
         p = pathlib.Path(__file__)
         sepa=os.sep
         self.title=title
         self.icon=str(p.parent) + sepa+'icons' +sepa
-        self.winPLOT = pg.GraphicsLayoutWidget()
+        
         self.isWinOpen=False
-        self.symbol=symbol
         self.dimx=10
         self.bloqq=0
         self.xc=0
@@ -41,13 +40,20 @@ class GRAPHCUT(QWidget):
         else :
             self.conf=conf
         self.name=name
-        self.setup()
+        
         self.setWindowTitle(self.title)
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
         self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
-        self.actionButton()
-        self.symbol=symbol
         
+        self.symbol=symbol
+        self.axis=None
+        self.label=None
+        self.labelY=None
+        self.symbolPen=symbolPen
+        self.symbolBrush='w'
+        self.pen=pen
+        self.setup()
+        self.actionButton()
     def setup(self):
         
         TogOff=self.icon+'Toggle_Off.png'
@@ -59,19 +65,64 @@ class GRAPHCUT(QWidget):
         
         self.setStyleSheet("QCheckBox::indicator{width: 30px;height: 30px;}""QCheckBox::indicator:unchecked { image : url(%s);}""QCheckBox::indicator:checked { image:  url(%s);}""QCheckBox{font :10pt;}" % (TogOff,TogOn) )
         
+        self.toolBar =self.addToolBar('tools')
+        menubar = self.menuBar()
+        menubar.setNativeMenuBar(False)
+        self.fileMenu = menubar.addMenu('&File')
+        self.ImageMenu = menubar.addMenu('&Plot option')
+        
+        self.AnalyseMenu = menubar.addMenu('&Analyse')
+        self.Aboutenu = menubar.addMenu('&About')
+        self.statusBar = QStatusBar()
+        self.setContentsMargins(0, 0, 0, 0)
+        
+        self.setStatusBar(self.statusBar)
+        
+        self.openAct = QAction(QtGui.QIcon(self.icon+"Open.png"), 'Open File', self)
+        self.openAct.setShortcut('Ctrl+o')
+        self.openAct.triggered.connect(self.OpenF)
+        self.toolBar.addAction(self.openAct)
+        self.fileMenu.addAction(self.openAct)
+        
+        self.saveAct=QAction(QtGui.QIcon(self.icon+"disketteSave.png"), 'Save file', self)
+        self.saveAct.setShortcut('Ctrl+s')
+        self.saveAct.triggered.connect(self.SaveF)
+        self.toolBar.addAction(self.saveAct)
+        self.fileMenu.addAction(self.saveAct)
+        
+        
         vLayout=QVBoxLayout() 
-        
-        hLayout1=QHBoxLayout()
-        self.checkBoxPlot=QCheckBox('CROSS',self)
+        hLayout1=QHBoxLayout() 
+        self.checkBoxPlot=QAction(QtGui.QIcon(self.icon+"target.png"),'Cross On (ctrl+b to block ctrl+d to deblock)',self)
+        self.checkBoxPlot.setCheckable(True)
         self.checkBoxPlot.setChecked(False)
+        self.checkBoxPlot.triggered.connect(self.PlotXY)
+        self.toolBar.addAction(self.checkBoxPlot)
+        self.AnalyseMenu.addAction(self.checkBoxPlot)
         
-        hLayout1.addWidget(self.checkBoxPlot)
+        # self.maxGraphBox=QAction('Set Cross on the max',self)
+        # self.maxGraphBox.setCheckable(True)
+        # self.maxGraphBox.setChecked(False)
+        # self.maxGraphBox.triggered.connect(self.Coupe)
+        # self.AnalyseMenu.addAction(self.maxGraphBox)
+        
+        self.actionColor=QAction('Choose line color',self)
+        self.actionColor.triggered.connect(self.setColorLine)
+        self.ImageMenu.addAction(self.actionColor)
+        
+        
+        
+        self.label_CrossValue=QLabel()
+        self.label_CrossValue.setStyleSheet("font:13pt")
         
         self.label_Cross=QLabel()
         #self.label_Cross.setMaximumHeight(20)
-        self.label_Cross.setMaximumWidth(150)
-        self.label_Cross. setStyleSheet("font:12pt")
-        hLayout1.addWidget(self.label_Cross)
+        self.label_Cross.setMaximumWidth(170)
+        self.label_Cross.setStyleSheet("font:12pt")
+        self.statusBar.addPermanentWidget(self.label_Cross)
+        self.statusBar.addPermanentWidget(self.label_CrossValue)
+        
+        
         if self.meas==True : #display mean variance pv
         
             self.label_Mean=QLabel('Mean :')
@@ -87,32 +138,18 @@ class GRAPHCUT(QWidget):
             self.label_VarianceValue=QLabel('...')
             hLayout1.addWidget(self.label_VarianceValue)
         
-        self.openButton=QPushButton('Open',self)
-        self.openButton.setIcon(QtGui.QIcon(self.icon+"Open.png"))
-        self.openButton.setIconSize(QtCore.QSize(30,30))
-        self.openButton.setStyleSheet("background-color: rgb(0, 0, 0,0) ;border-color: rgb(0, 0, 0,0)")
-        
-        self.openButton.setMaximumWidth(80)
-        self.openButton.setMaximumHeight(30)
-        self.shortcutOpen=QtGui.QShortcut(QtGui.QKeySequence("Ctrl+o"),self)
-        self.shortcutOpen.activated.connect(self.OpenF)
-        self.shortcutOpen.setContext(Qt.ShortcutContext(3))
         
         
-        hLayout1.addWidget(self.openButton)
+        self.checkBoxSymbol=QAction('Set Symbol on',self)
+        self.checkBoxSymbol.setCheckable(True)
+        self.checkBoxSymbol.setChecked(False)
+        self.ImageMenu.addAction(self.checkBoxSymbol)
+        self.checkBoxSymbol.triggered.connect(self.setSymbol)
         
-        self.saveButton=QPushButton('Save',self)
-        self.shortcutSave=QtGui.QShortcut(QtGui.QKeySequence("Ctrl+s"),self)
-        self.shortcutSave.activated.connect(self.SaveF)
-        self.shortcutSave.setContext(Qt.ShortcutContext(3))
-        self.openButton.setShortcut(QtGui.QKeySequence("Ctrl+s"))
-        self.saveButton.setMaximumWidth(80)
-        self.saveButton.setMinimumHeight(30)
-        self.saveButton.setIconSize(QtCore.QSize(30,30))
-        hLayout1.addWidget(self.saveButton)
-        self.saveButton.setIcon(QtGui.QIcon(self.icon+"Saving.png"))
-        self.saveButton.setStyleSheet("background-color: rgb(0, 0, 0,0) ;border-color: rgb(0, 0, 0,0)")
-       
+        self.checkBoxSymbolColor=QAction('Choose Symbol color',self)
+        self.ImageMenu.addAction(self.checkBoxSymbolColor)
+        self.checkBoxSymbolColor.triggered.connect(self.setColorSymbol)
+        
         
         self.vLine = pg.InfiniteLine(angle=90, movable=False,pen='y')
         self.hLine = pg.InfiniteLine(angle=0, movable=False,pen='y')
@@ -123,24 +160,33 @@ class GRAPHCUT(QWidget):
         vLayout.addLayout(hLayout1)
         
         hLayout2=QHBoxLayout()
-        hLayout2.addWidget(self.winPLOT)
+        
+        self.winImage = pg.GraphicsLayoutWidget()
+        self.winPLOT = self.winImage.addPlot()
+        
+        hLayout2.addWidget(self.winImage)
         vLayout.addLayout(hLayout2)
         
-        self.setLayout(vLayout)
-        self.pCut=self.winPLOT.addPlot(1,0)
+        #self.setLayout(vLayout)
+        
+        MainWidget=QWidget()
+        
+        MainWidget.setLayout(vLayout)
+        
+        self.setCentralWidget(MainWidget)
+        
+        
+        self.pCut=self.winPLOT.plot(symbol=self.symbol,symbolPen=self.symbolPen,symbolBrush=self.symbolBrush,pen=self.pen)
         
 #    def Display(self,cutData) :
 #        pass
         
     def actionButton(self):
-        self.checkBoxPlot.stateChanged.connect(self.PlotXY)
-         # mousse mvt
-        self.proxy=pg.SignalProxy(self.pCut.scene().sigMouseMoved, rateLimit=60, slot=self.mouseMoved)
-        self.vb=self.pCut.vb
-        self.pCut.scene().sigMouseClicked.connect(self.mouseClick)
         
-        self.openButton.clicked.connect(self.OpenF)
-        self.saveButton.clicked.connect(self.SaveF)
+         # mousse mvt
+        self.proxy=pg.SignalProxy(self.winPLOT.scene().sigMouseMoved, rateLimit=60, slot=self.mouseMoved)
+        self.vb=self.winPLOT.vb
+        self.winPLOT.scene().sigMouseClicked.connect(self.mouseClick)
         
     def OpenF(self,fileOpen=False):
 
@@ -189,11 +235,11 @@ class GRAPHCUT(QWidget):
 
         
     def mouseMoved(self,evt):
-
+        
         ## the cross mouve with the mousse mvt
         if self.checkBoxPlot.isChecked()==1 and self.bloqq==0:
             pos = evt[0]  ## using signal proxy turns original arguments into a tuple
-            if self.pCut.sceneBoundingRect().contains(pos):
+            if self.winPLOT.sceneBoundingRect().contains(pos):
                 
                 mousePoint = self.vb.mapSceneToView(pos)
                 self.xMouse = (mousePoint.x())
@@ -227,7 +273,9 @@ class GRAPHCUT(QWidget):
         else : 
             self.label_Cross.setText('')
                 
+            
     def mouseClick(self): # block the cross if mousse button clicked
+        
         if self.bloqq==1:
             self.bloqq=0
         else :
@@ -238,95 +286,69 @@ class GRAPHCUT(QWidget):
         
         if self.checkBoxPlot.isChecked()==1:
             
-            self.pCut.addItem(self.vLine, ignoreBounds=False)
-            self.pCut.addItem(self.hLine, ignoreBounds=False)
+            self.winPLOT.addItem(self.vLine, ignoreBounds=False)
+            self.winPLOT.addItem(self.hLine, ignoreBounds=False)
             self.vLine.setPos(self.xc)
             self.hLine.setPos(self.cutData[self.xc]) # the cross move only in the graph    
             
             
         else:
-            self.pCut.removeItem(self.vLine)
-            self.pCut.removeItem(self.hLine)
+            self.winPLOT.removeItem(self.vLine)
+            self.winPLOT.removeItem(self.hLine)
     
+     
+    def PLOT(self,cutData,axis=[],label=None,labelY=None):
         
-    def PLOT(self,cutData,axis=[],pen=True,symbol=True,label=None,labelY=None):
-        """
-        
-
-        Parameters
-        ----------
-        cutData : TYPE 1D array
-            DESCRIPTION. array to plot
-        
-        axis : TYPE 1D array , optional
-            DESCRIPTION. absissee array 
-            The default is None.
-        symbol : TYPE bool, optional
-            DESCRIPTION. True add symbol
-            The default is True.
-        pen : TYPE, optional
-            DESCRIPTION. The default is True.
-        label : TYPE, optional
-            DESCRIPTION. The default is None.
-        labelY : TYPE, optional
-            DESCRIPTION. The default is None.
-
-        Returns
-        -------
-        None.
-
-        """
         
         self.cutData=cutData
         self.dimx=np.shape(self.cutData)[0]
-        self.pen=pen
-        self.axis=np.array(axis)
         
-        if symbol==True:
-            self.symbol=self.symbol
+        self.axis=np.array(axis)
+        if axis==[]:
+            self.data=self.cutData
+            self.pCut.setData(self.data)
         else:
-            self.symbol=symbol
-        if self.pen ==None:
-            
-            if self.axis.any()==False:
-                if self.symbol==True:
-                    self.pCut.plot(cutData,clear=True,symbol='t',pen=self.pen)
-                else:
-                    
-                    self.pCut.plot(cutData,clear=True,pen=self.pen)
-            else:
-                self.axisOn=True
-                if self.symbol==True:
-                    self.pCut.plot(axis,cutData,clear=True,symbol='t',pen=self.pen)
-                else:
-                    self.pCut.plot(axis,cutData,clear=True,pen=self.pen)
+            self.pCut.setData(y=self.cutData,x=axis)
+    
+    
+    def CHANGEPLOT(self,cutData,axis=[],label=None,labelY=None):
+        """
+        
+
+        """
+        
+        
+        self.dimx=np.shape(self.cutData)[0]
+        
+        self.axis=np.array(axis)
+        self.label=label
+        self.labelY=labelY
+       
+       
+        
+        
+        if self.axis.any()==False:
+            self.pCut=self.winPLOT.plot(self.cutData,clear=True,symbol=self.symbol,symbolPen=self.symbolPen,symbolBrush=self.symbolBrush,pen=self.pen)
         else:
+            self.axisOn=True
+           
+            self.pCut=self.winPLOT.plot(self.cutData,axis,clear=True,symbol=self.symbol,symbolPen=self.symbolPen,symbolBrush=self.symbolBrush,pen=self.pen)
             
-            if self.axis.any()==False:
-                if self.symbol==True:
-                    self.pCut.plot(cutData,clear=True,symbol='t')
-                else:
-                    self.pCut.plot(cutData,clear=True)
-            else:
-                self.axisOn=True
-                if self.symbol==True:
-                    self.pCut.plot(axis,cutData,clear=True,symbol='t')
-                else:
-                    self.pCut.plot(axis,cutData,clear=True)
-            
+        
+        
         if label!=None:
-            self.pCut.setLabel('bottom',label)
+            self.winPLOT.setLabel('bottom',label)
         if labelY!=None:
-            self.pCut.setLabel('left',labelY)
+            self.winPLOT.setLabel('left',labelY)
         
         self.PlotXY()
         self.affiCross()
         
         if self.meas==True:
-            self.label_MeanValue.setText(str(round(np.mean(cutData),3)))
-            self.label_PVValue.setText(str(round(np.ptp(cutData),3)))
+            self.label_MeanValue.setText(str(round(np.mean(self.cutData),3)))
+            self.label_PVValue.setText(str(round(np.ptp(self.cutData),3)))
             
-            self.label_VarianceValue.setText(str(round(np.var(cutData),3)))
+            self.label_VarianceValue.setText(str(round(np.var(self.cutData),3)))
        
     def SetTITLE(self,title):
         self.setWindowTitle(title)
@@ -342,6 +364,29 @@ class GRAPHCUT(QWidget):
         e.accept()
         self.OpenF(fileOpen=l[0])
     
+    def setColorLine(self):
+        color=QColorDialog.getColor()
+        self.color=str(color.name())
+        self.pen=pg.mkPen({'color': self.color})
+        self.CHANGEPLOT(self.cutData,axis=self.axis,label=self.label,labelY=self.labelY)
+    
+    def setColorSymbol(self):
+        color=QColorDialog.getColor()
+        self.colorSymbol=str(color.name())
+        self.symbolPen=pg.mkPen({'color': self.colorSymbol})
+        self.symbolBrush=pg.mkBrush(self.colorSymbol)
+        self.CHANGEPLOT(self.cutData,axis=self.axis,label=self.label,labelY=self.labelY)
+    
+    
+    def setSymbol(self):
+        if self.checkBoxSymbol.isChecked()==1:
+            self.symbol='t'
+        else :
+            self.symbol=None
+        
+        self.CHANGEPLOT(self.cutData,axis=self.axis,label=self.label,labelY=self.labelY)
+       
+        
     def closeEvent(self, event):
         """ when closing the window
         """
@@ -354,6 +399,9 @@ if __name__ == "__main__":
     appli = QApplication(sys.argv) 
     appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
     e = GRAPHCUT()  
+    a=[2,3,7,-5]
+    b=[-2,4,5,7]
+    e.PLOT(a,b)
     e.show()
     appli.exec_()     
         

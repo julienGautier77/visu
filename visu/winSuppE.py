@@ -465,8 +465,8 @@ class WINENCERCLED(QWidget):
         E2=self.roi2.getArrayRegion(self.data,self.imh).sum()
         self.rap=100*E1/E2
         self.energieRes.setText('%.2f %%' % self.rap)
-        self.E=np.append(self.E,self.rap)
-        
+        #self.E=np.append(self.E,self.rap)
+        self.E.append(self.rap)
         Emean=np.mean(self.E)
         self.meanAff.setText('%.2f' % Emean)
         EPV=np.std(self.E)
