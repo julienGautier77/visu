@@ -19,14 +19,13 @@ import pathlib,os
 
 class GRAPHCUT(QMainWindow):
     
-    def __init__(self,symbol=None,title='Plot',conf=None,name='VISU',meas=False,pen='w',symbolPen='w'):
+    def __init__(self,symbol=None,title='Plot',conf=None,name='VISU',meas=False,pen='w',symbolPen='w',label=None,labelY=None):
         
         super().__init__()
         p = pathlib.Path(__file__)
         sepa=os.sep
         self.title=title
         self.icon=str(p.parent) + sepa+'icons' +sepa
-        
         self.isWinOpen=False
         self.dimx=10
         self.bloqq=0
@@ -47,8 +46,8 @@ class GRAPHCUT(QMainWindow):
         
         self.symbol=symbol
         self.axis=None
-        self.label=None
-        self.labelY=None
+        self.label=label
+        self.labelY=labelY
         self.symbolPen=symbolPen
         self.symbolBrush='w'
         self.pen=pen
@@ -163,7 +162,10 @@ class GRAPHCUT(QMainWindow):
         
         self.winImage = pg.GraphicsLayoutWidget()
         self.winPLOT = self.winImage.addPlot()
-        
+        if self.label!=None:
+            self.winPLOT.setLabel('bottom',self.label)
+        if self.labelY!=None:
+            self.winPLOT.setLabel('left',self.labelY)
         hLayout2.addWidget(self.winImage)
         vLayout.addLayout(hLayout2)
         
