@@ -108,13 +108,22 @@ class GRAPHCUT(QMainWindow):
         # self.maxGraphBox.triggered.connect(self.Coupe)
         # self.AnalyseMenu.addAction(self.maxGraphBox)
         
+        self.actionLigne=QAction('Set line',self)
+        self.actionLigne.triggered.connect(self.setLine)
+        self.actionLigne.setCheckable(True)
+        self.actionLigne.setChecked(True)
+        self.ImageMenu.addAction(self.actionLigne)
+        
         self.actionColor=QAction('Set line color',self)
         self.actionColor.triggered.connect(self.setColorLine)
         self.ImageMenu.addAction(self.actionColor)
         
-        self.actionLigne=QAction('Set line width',self)
-        self.actionLigne.triggered.connect(self.setWidthLine)
-        self.ImageMenu.addAction(self.actionLigne)
+        self.actionLigneWidth=QAction('Set line width',self)
+        self.actionLigneWidth.triggered.connect(self.setWidthLine)
+        self.ImageMenu.addAction(self.actionLigneWidth)
+        
+        
+        
         
         self.label_CrossValue=QLabel()
         self.label_CrossValue.setStyleSheet("font:13pt")
@@ -152,7 +161,17 @@ class GRAPHCUT(QMainWindow):
         self.ImageMenu.addAction(self.checkBoxSymbolColor)
         self.checkBoxSymbolColor.triggered.connect(self.setColorSymbol)
         
+        self.showGridX=QAction('Show X grid',self)
+        self.showGridX.setCheckable(True)
+        self.ImageMenu.addAction(self.showGridX)
+        self.showGridX.triggered.connect(self.showGrid)
         
+        self.showGridY=QAction('Show Y grid',self)
+        self.showGridY.setCheckable(True)
+        self.ImageMenu.addAction(self.showGridY)
+        self.showGridY.triggered.connect(self.showGrid)
+        
+            
         self.vLine = pg.InfiniteLine(angle=90, movable=False,pen='y')
         self.hLine = pg.InfiniteLine(angle=0, movable=False,pen='y')
     
@@ -362,6 +381,15 @@ class GRAPHCUT(QMainWindow):
         e.accept()
         self.OpenF(fileOpen=l[0])
     
+    
+    def setLine(self):
+        if self.actionLigne.isChecked()==0:
+            self.pen=None
+        else:
+            self.pen=pg.mkPen(color=self.color,width=self.ligneWidth)
+        self.CHANGEPLOT(self.cutData)
+    
+    
     def setColorLine(self):
         color=QColorDialog.getColor()
         self.color=str(color.name())
@@ -382,7 +410,10 @@ class GRAPHCUT(QMainWindow):
         self.symbolBrush=pg.mkBrush(self.colorSymbol)
         self.CHANGEPLOT(self.cutData)
     
-    
+    def showGrid(self):
+        
+        self.winPLOT.showGrid(x = self.showGridX.isChecked(), y = self.showGridY.isChecked())
+        
     def setSymbol(self):
         if self.checkBoxSymbol.isChecked()==1:
             self.symbol='t'
