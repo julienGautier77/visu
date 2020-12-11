@@ -709,13 +709,13 @@ class SEE2(QMainWindow) :
         if self.ite=='line':
             self.open_widget(self.winCoupe)
             if self.winOpt.checkBoxAxeScale.isChecked()==1:
-                self.winCoupe.PLOT(self.cut,axis=self.absiLine,symbol=None)
+                self.winCoupe.PLOT(self.cut,axis=self.absiLine,)
             else:
-                self.winCoupe.PLOT(self.cut,symbol=None)
+                self.winCoupe.PLOT(self.cut)
             
         if self.ite=='rect':
             self.open_widget(self.winCoupe)
-            self.winCoupe.PLOT(self.cut1,symbol=None)
+            self.winCoupe.PLOT(self.cut1)
    
     def Graph3D (self):
         
