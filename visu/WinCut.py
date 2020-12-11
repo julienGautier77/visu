@@ -10,7 +10,7 @@ import pyqtgraph as pg # pyqtgraph biblio permettent l'affichage
 
 import qdarkstyle # pip install qdakstyle https://github.com/ColinDuquesnoy/QDarkStyleSheet  sur conda
 from PyQt5.QtWidgets import QApplication,QHBoxLayout,QAction,QWidget,QStatusBar,QMainWindow,QVBoxLayout,QCheckBox,QLabel,QPushButton,QMessageBox
-from PyQt5.QtGui import QIcon,QColorDialog
+from PyQt5.QtGui import QIcon,QColorDialog,QInputDialog
 import sys,time
 from PyQt5.QtCore import Qt
 from pyqtgraph.Qt import QtCore,QtGui 
@@ -50,6 +50,9 @@ class GRAPHCUT(QMainWindow):
         self.labelY=labelY
         self.symbolPen=symbolPen
         self.symbolBrush='w'
+        self.ligneWidth=1
+        self.color='w'
+        
         self.pen=pen
         self.setup()
         self.actionButton()
@@ -105,11 +108,13 @@ class GRAPHCUT(QMainWindow):
         # self.maxGraphBox.triggered.connect(self.Coupe)
         # self.AnalyseMenu.addAction(self.maxGraphBox)
         
-        self.actionColor=QAction('Choose line color',self)
+        self.actionColor=QAction('Set line color',self)
         self.actionColor.triggered.connect(self.setColorLine)
         self.ImageMenu.addAction(self.actionColor)
         
-        
+        self.actionLigne=QAction('Set line width',self)
+        self.actionLigne.triggered.connect(self.setWidthLine)
+        self.ImageMenu.addAction(self.actionLigne)
         
         self.label_CrossValue=QLabel()
         self.label_CrossValue.setStyleSheet("font:13pt")
@@ -137,15 +142,13 @@ class GRAPHCUT(QMainWindow):
             self.label_VarianceValue=QLabel('...')
             hLayout1.addWidget(self.label_VarianceValue)
         
-        
-        
         self.checkBoxSymbol=QAction('Set Symbol on',self)
         self.checkBoxSymbol.setCheckable(True)
         self.checkBoxSymbol.setChecked(False)
         self.ImageMenu.addAction(self.checkBoxSymbol)
         self.checkBoxSymbol.triggered.connect(self.setSymbol)
         
-        self.checkBoxSymbolColor=QAction('Choose Symbol color',self)
+        self.checkBoxSymbolColor=QAction('Set Symbol color',self)
         self.ImageMenu.addAction(self.checkBoxSymbolColor)
         self.checkBoxSymbolColor.triggered.connect(self.setColorSymbol)
         
@@ -157,7 +160,6 @@ class GRAPHCUT(QMainWindow):
         self.hLine.setPos(0)
         
         vLayout.addLayout(hLayout1)
-        
         hLayout2=QHBoxLayout()
         
         self.winImage = pg.GraphicsLayoutWidget()
@@ -301,19 +303,20 @@ class GRAPHCUT(QMainWindow):
      
     def PLOT(self,cutData,axis=[],label=None,labelY=None):
         
-        
+        self.label=label
+        self.labelY=labelY
         self.cutData=cutData
         self.dimx=np.shape(self.cutData)[0]
         
         self.axis=np.array(axis)
-        if axis==[]:
+        if self.axis.any()==False:
             self.data=self.cutData
             self.pCut.setData(self.data)
         else:
             self.pCut.setData(y=self.cutData,x=axis)
     
     
-    def CHANGEPLOT(self,cutData,axis=[],label=None,labelY=None):
+    def CHANGEPLOT(self,cutData):
         """
         
 
@@ -322,26 +325,19 @@ class GRAPHCUT(QMainWindow):
         
         self.dimx=np.shape(self.cutData)[0]
         
-        self.axis=np.array(axis)
-        self.label=label
-        self.labelY=labelY
-       
-       
         
-        
+       
         if self.axis.any()==False:
             self.pCut=self.winPLOT.plot(self.cutData,clear=True,symbol=self.symbol,symbolPen=self.symbolPen,symbolBrush=self.symbolBrush,pen=self.pen)
         else:
             self.axisOn=True
            
-            self.pCut=self.winPLOT.plot(self.cutData,axis,clear=True,symbol=self.symbol,symbolPen=self.symbolPen,symbolBrush=self.symbolBrush,pen=self.pen)
+            self.pCut=self.winPLOT.plot(y=self.cutData,x=self.axis,clear=True,symbol=self.symbol,symbolPen=self.symbolPen,symbolBrush=self.symbolBrush,pen=self.pen)
             
-        
-        
-        if label!=None:
-            self.winPLOT.setLabel('bottom',label)
-        if labelY!=None:
-            self.winPLOT.setLabel('left',labelY)
+        if self.label!=None:
+            self.winPLOT.setLabel('bottom',self.label)
+        if self.labelY!=None:
+            self.winPLOT.setLabel('left',self.labelY)
         
         self.PlotXY()
         self.affiCross()
@@ -369,15 +365,22 @@ class GRAPHCUT(QMainWindow):
     def setColorLine(self):
         color=QColorDialog.getColor()
         self.color=str(color.name())
-        self.pen=pg.mkPen({'color': self.color})
-        self.CHANGEPLOT(self.cutData,axis=self.axis,label=self.label,labelY=self.labelY)
+        self.pen=pg.mkPen(color=self.color,width=self.ligneWidth)
+        self.CHANGEPLOT(self.cutData)
     
+    def setWidthLine(self):
+        num,ok = QInputDialog.getInt(self,"Line width","enter a width ")
+        if ok:
+            self.ligneWidth=float(num)
+            self.pen=pg.mkPen(color=self.color,width=self.ligneWidth)
+            self.CHANGEPLOT(self.cutData)
+            
     def setColorSymbol(self):
         color=QColorDialog.getColor()
         self.colorSymbol=str(color.name())
         self.symbolPen=pg.mkPen({'color': self.colorSymbol})
         self.symbolBrush=pg.mkBrush(self.colorSymbol)
-        self.CHANGEPLOT(self.cutData,axis=self.axis,label=self.label,labelY=self.labelY)
+        self.CHANGEPLOT(self.cutData)
     
     
     def setSymbol(self):
@@ -386,7 +389,7 @@ class GRAPHCUT(QMainWindow):
         else :
             self.symbol=None
         
-        self.CHANGEPLOT(self.cutData,axis=self.axis,label=self.label,labelY=self.labelY)
+        self.CHANGEPLOT(self.cutData)
        
         
     def closeEvent(self, event):
