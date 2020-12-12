@@ -52,10 +52,11 @@ class GRAPHCUT(QMainWindow):
         self.symbolBrush='w'
         self.ligneWidth=1
         self.color='w'
-        
+        self.plotRectZoomEtat="Zoom"
         self.pen=pen
         self.setup()
         self.actionButton()
+        
     def setup(self):
         
         TogOff=self.icon+'Toggle_Off.png'
@@ -171,6 +172,11 @@ class GRAPHCUT(QMainWindow):
         self.ImageMenu.addAction(self.showGridY)
         self.showGridY.triggered.connect(self.showGrid)
         
+        
+        self.ZoomRectButton=QAction(QtGui.QIcon(self.icon+"loupe.png"),'Zoom',self)
+        self.ZoomRectButton.triggered.connect(self.zoomRectAct)
+        self.toolBar.addAction(self.ZoomRectButton)
+        self.plotRectZoom=pg.RectROI([0,0],[4,4],pen='w')
             
         self.vLine = pg.InfiniteLine(angle=90, movable=False,pen='y')
         self.hLine = pg.InfiniteLine(angle=0, movable=False,pen='y')
@@ -325,27 +331,27 @@ class GRAPHCUT(QMainWindow):
         self.label=label
         self.labelY=labelY
         self.cutData=cutData
-        self.dimx=np.shape(self.cutData)[0]
-        
         self.axis=np.array(axis)
+         
+        self.dimy=max(cutData)
+        self.minY=min(cutData)
         if self.axis.any()==False:
+            self.dimx=np.shape(self.cutData)[0]
+            self.minX=0
             self.data=self.cutData
             self.pCut.setData(self.data)
         else:
+            self.dimx=max(self.axis)
+            self.minX=min(self.axis)
             self.pCut.setData(y=self.cutData,x=axis)
-    
+        self.zoomRectupdate()
     
     def CHANGEPLOT(self,cutData):
         """
         
-
         """
         
         
-        self.dimx=np.shape(self.cutData)[0]
-        
-        
-       
         if self.axis.any()==False:
             self.pCut=self.winPLOT.plot(self.cutData,clear=True,symbol=self.symbol,symbolPen=self.symbolPen,symbolBrush=self.symbolBrush,pen=self.pen)
         else:
@@ -364,7 +370,6 @@ class GRAPHCUT(QMainWindow):
         if self.meas==True:
             self.label_MeanValue.setText(str(round(np.mean(self.cutData),3)))
             self.label_PVValue.setText(str(round(np.ptp(self.cutData),3)))
-            
             self.label_VarianceValue.setText(str(round(np.var(self.cutData),3)))
        
     def SetTITLE(self,title):
@@ -422,7 +427,45 @@ class GRAPHCUT(QMainWindow):
         
         self.CHANGEPLOT(self.cutData)
        
+    
+    def zoomRectAct(self):
         
+        if self.plotRectZoomEtat=="Zoom": 
+            
+            self.winPLOT.addItem(self.plotRectZoom)
+            self.plotRectZoom.setPos([self.dimx/2,self.dimy/2])
+            self.ZoomRectButton.setIcon(QtGui.QIcon(self.icon+"zoom-in.png"))
+            self.plotRectZoomEtat="ZoomIn"
+            
+        elif self.plotRectZoomEtat=="ZoomIn":
+            self.ZoomRectButton.setIcon(QtGui.QIcon(self.icon+"zoom-out.png"))
+            self.xZoomMin=(self.plotRectZoom.pos()[0])
+            self.yZoomMin=(self.plotRectZoom.pos()[1])
+            self.xZoomMax=(self.plotRectZoom.pos()[0])+self.plotRectZoom.size()[0]
+            self.yZoomMax=(self.plotRectZoom.pos()[1])+self.plotRectZoom.size()[1]
+            self.winPLOT.setXRange(self.xZoomMin,self.xZoomMax)
+            self.winPLOT.setYRange(self.yZoomMin,self.yZoomMax)
+            #self.winPlot.setAspectLocked(True)
+            self.winPLOT.removeItem(self.plotRectZoom)
+            
+            self.plotRectZoomEtat="ZoomOut"
+        
+        elif self.plotRectZoomEtat=="ZoomOut": 
+            self.winPLOT.setYRange(self.minY,self.dimy)
+            
+            self.winPLOT.setXRange(self.minX,self.dimx)
+            self.ZoomRectButton.setIcon(QtGui.QIcon(self.icon+"loupe.png"))
+            self.plotRectZoomEtat="Zoom"
+            #self.winPlot.setAspectLocked(True,ratio=1)
+            
+    def zoomRectupdate(self):
+        if self.plotRectZoomEtat=="ZoomOut":
+            self.winPLOT.setXRange(self.xZoomMin,self.xZoomMax)
+            self.winPlot.setYRange(self.yZoomMin,self.yZoomMax)
+            #self.pwinPlot.setAspectLocked(True)   
+    
+    
+    
     def closeEvent(self, event):
         """ when closing the window
         """
