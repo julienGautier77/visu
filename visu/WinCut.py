@@ -225,7 +225,7 @@ class GRAPHCUT(QMainWindow):
         self.showGridY.triggered.connect(self.showGrid)
         
         
-        self.lockGaphAction=QAction('Lock Graph,self)
+        self.lockGaphAction=QAction('Lock Graph',self)
         self.lockGaphAction.setCheckable(True)
         self.ImageMenu.addAction(self.lockGaphAction)
         self.lockGaphAction.triggered.connect(self.lockGaph)
@@ -551,7 +551,7 @@ class GRAPHCUT(QMainWindow):
         
     def lockGaph(self):
         
-        if lockGraphAction.isChecked()
+        if lockGraphAction.isChecked():
             self.clearPlot=False
         else:
             self.clearPlot=True
