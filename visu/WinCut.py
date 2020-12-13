@@ -10,16 +10,61 @@ import pyqtgraph as pg # pyqtgraph biblio permettent l'affichage
 
 import qdarkstyle # pip install qdakstyle https://github.com/ColinDuquesnoy/QDarkStyleSheet  sur conda
 from PyQt5.QtWidgets import QApplication,QHBoxLayout,QAction,QWidget,QStatusBar,QMainWindow,QVBoxLayout,QCheckBox,QLabel,QPushButton,QMessageBox
-from PyQt5.QtGui import QIcon,QColorDialog,QInputDialog
+from PyQt5.QtGui import QIcon,QColorDialog,QInputDialog,QGridLayout,QDoubleSpinBox
 import sys,time
 from PyQt5.QtCore import Qt
 from pyqtgraph.Qt import QtCore,QtGui 
 import numpy as np
 import pathlib,os
 
+
+class WINDOWRANGE(QWidget):
+    """Samll widget to set axis range
+    """
+    def __init__(self):
+        super().__init__()
+        self.isWinOpen=False
+        self.setup()
+        
+    def setup(self):
+        hRangeBox=QHBoxLayout()
+        hRangeGrid=QGridLayout()
+        
+        labelXmin=QLabel('Xmin:')
+        self.xMinBox=QDoubleSpinBox(self)
+        hRangeGrid.addWidget(labelXmin,0,0)
+        hRangeGrid.addWidget(self.xMinBox,0,1)
+        labelXmax=QLabel('Xmax:')
+        self.xMaxBox=QDoubleSpinBox(self)
+        hRangeGrid.addWidget(labelXmax,1,0)
+        hRangeGrid.addWidget(self.xMaxBox,1,1)
+        
+        labelYmin=QLabel('Ymin:')
+        self.yMinBox=QDoubleSpinBox(self)
+        hRangeGrid.addWidget(labelYmin,2,0)
+        hRangeGrid.addWidget(self.yMinBox,2,1)
+        labelYmax=QLabel('Ymax:')
+        self.yMaxBox=QDoubleSpinBox(self)
+        hRangeGrid.addWidget(labelYmax,3,0)
+        hRangeGrid.addWidget(self.yMaxBox,3,1)
+        self.applyButton=QPushButton('Apply')
+        self.ResetButton=QPushButton('Reset')
+        hRangeGrid.addWidget(self.applyButton,4,0)
+        hRangeGrid.addWidget(self.ResetButton,4,1)
+        self.setLayout(hRangeGrid)
+
+        
+    def closeEvent(self, event):
+        """ when closing the window
+        """
+        self.isWinOpen=False
+        
+        time.sleep(0.1)
+        event.accept()
+
 class GRAPHCUT(QMainWindow):
     
-    def __init__(self,symbol=None,title='Plot',conf=None,name='VISU',meas=False,pen='w',symbolPen='w',label=None,labelY=None):
+    def __init__(self,symbol=None,title='Plot',conf=None,name='VISU',meas=False,pen='w',symbolPen='w',label=None,labelY=None,clearPlot=False):
         
         super().__init__()
         p = pathlib.Path(__file__)
@@ -54,6 +99,12 @@ class GRAPHCUT(QMainWindow):
         self.color='w'
         self.plotRectZoomEtat="Zoom"
         self.pen=pen
+        self.clearPlot=clearPlot
+        
+                
+                
+                
+        self.widgetRange=WINDOWRANGE()
         self.setup()
         self.actionButton()
         
@@ -73,8 +124,9 @@ class GRAPHCUT(QMainWindow):
         menubar.setNativeMenuBar(False)
         self.fileMenu = menubar.addMenu('&File')
         self.ImageMenu = menubar.addMenu('&Plot option')
-        
+        self.axisMenu=menubar.addMenu('&Axis option')
         self.AnalyseMenu = menubar.addMenu('&Analyse')
+        
         self.Aboutenu = menubar.addMenu('&About')
         self.statusBar = QStatusBar()
         self.setContentsMargins(0, 0, 0, 0)
@@ -173,6 +225,17 @@ class GRAPHCUT(QMainWindow):
         self.showGridY.triggered.connect(self.showGrid)
         
         
+        self.lockGaphAction=QAction('Lock Graph,self)
+        self.lockGaphAction.setCheckable(True)
+        self.ImageMenu.addAction(self.lockGaphAction)
+        self.lockGaphAction.triggered.connect(self.lockGaph)
+        
+        self.axisRange=QAction('Set Axis Range',self)
+        self.axisMenu.addAction(self.axisRange)
+        self.axisRange.triggered.connect(self.showRange)
+        
+        
+        
         self.ZoomRectButton=QAction(QtGui.QIcon(self.icon+"loupe.png"),'Zoom',self)
         self.ZoomRectButton.triggered.connect(self.zoomRectAct)
         self.toolBar.addAction(self.ZoomRectButton)
@@ -205,7 +268,7 @@ class GRAPHCUT(QMainWindow):
         self.setCentralWidget(MainWidget)
         
         
-        self.pCut=self.winPLOT.plot(symbol=self.symbol,symbolPen=self.symbolPen,symbolBrush=self.symbolBrush,pen=self.pen)
+        self.pCut=self.winPLOT.plot(symbol=self.symbol,symbolPen=self.symbolPen,symbolBrush=self.symbolBrush,pen=self.pen,clear=self.clearPlot)
         
 #    def Display(self,cutData) :
 #        pass
@@ -216,6 +279,9 @@ class GRAPHCUT(QMainWindow):
         self.proxy=pg.SignalProxy(self.winPLOT.scene().sigMouseMoved, rateLimit=60, slot=self.mouseMoved)
         self.vb=self.winPLOT.vb
         self.winPLOT.scene().sigMouseClicked.connect(self.mouseClick)
+        self.widgetRange.applyButton.clicked.connect(self.setRangeOn)
+        self.widgetRange.ResetButton.clicked.connect(self.setRangeReset)
+        
         
     def OpenF(self,fileOpen=False):
 
@@ -351,13 +417,12 @@ class GRAPHCUT(QMainWindow):
         
         """
         
-        
         if self.axis.any()==False:
-            self.pCut=self.winPLOT.plot(self.cutData,clear=True,symbol=self.symbol,symbolPen=self.symbolPen,symbolBrush=self.symbolBrush,pen=self.pen)
+            self.pCut=self.winPLOT.plot(self.cutData,clear=self.clearPlot,symbol=self.symbol,symbolPen=self.symbolPen,symbolBrush=self.symbolBrush,pen=self.pen)
         else:
             self.axisOn=True
            
-            self.pCut=self.winPLOT.plot(y=self.cutData,x=self.axis,clear=True,symbol=self.symbol,symbolPen=self.symbolPen,symbolBrush=self.symbolBrush,pen=self.pen)
+            self.pCut=self.winPLOT.plot(y=self.cutData,x=self.axis,clear=self.clearPlot,symbol=self.symbol,symbolPen=self.symbolPen,symbolBrush=self.symbolBrush,pen=self.pen)
             
         if self.label!=None:
             self.winPLOT.setLabel('bottom',self.label)
@@ -431,7 +496,6 @@ class GRAPHCUT(QMainWindow):
     def zoomRectAct(self):
         
         if self.plotRectZoomEtat=="Zoom": 
-            
             self.winPLOT.addItem(self.plotRectZoom)
             self.plotRectZoom.setPos([self.dimx/2,self.dimy/2])
             self.ZoomRectButton.setIcon(QtGui.QIcon(self.icon+"zoom-in.png"))
@@ -463,6 +527,51 @@ class GRAPHCUT(QMainWindow):
             self.winPLOT.setXRange(self.xZoomMin,self.xZoomMax)
             self.winPlot.setYRange(self.yZoomMin,self.yZoomMax)
             #self.pwinPlot.setAspectLocked(True)   
+    
+    
+    def showRange(self):
+        
+        self.open_widget(self.widgetRange)
+        
+        
+    def setRangeOn(self) :       
+        self.xZoomMin=(self.widgetRange.xMinBox.value())
+        self.yZoomMin=(self.widgetRange.yMinBox.value())
+        self.xZoomMax=(self.widgetRange.xMaxBox.value())
+        self.yZoomMax=(self.widgetRange.yMaxBox.value())
+        self.winPLOT.setXRange(self.xZoomMin,self.xZoomMax)
+        self.winPLOT.setYRange(self.yZoomMin,self.yZoomMax)
+        self.plotRectZoomEtat="Zoom"
+        
+    def setRangeReset(self) :  
+        self.winPLOT.setYRange(self.minY,self.dimy)
+        self.winPLOT.setXRange(self.minX,self.dimx)
+        self.plotRectZoomEtat="ZoomOut"
+     
+        
+    def lockGaph(self):
+        
+        if lockGraphAction.isChecked()
+            self.clearPlot=False
+        else:
+            self.clearPlot=True
+            self.CHANGEPLOT()
+            
+    def open_widget(self,fene):
+        """ open new widget 
+        """
+
+        if fene.isWinOpen==False:
+            fene.setup
+            fene.isWinOpen=True
+            
+            #fene.Display(self.data)
+            fene.show()
+        else:
+            #fene.activateWindow()
+            fene.raise_()
+            fene.showNormal()
+    
     
     
     
