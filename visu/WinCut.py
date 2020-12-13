@@ -32,19 +32,23 @@ class WINDOWRANGE(QWidget):
         
         labelXmin=QLabel('Xmin:')
         self.xMinBox=QDoubleSpinBox(self)
+        self.xMinBox.setMinimum(-100000)
         hRangeGrid.addWidget(labelXmin,0,0)
         hRangeGrid.addWidget(self.xMinBox,0,1)
         labelXmax=QLabel('Xmax:')
         self.xMaxBox=QDoubleSpinBox(self)
+        self.xMaxBox.setMaximum(100000)
         hRangeGrid.addWidget(labelXmax,1,0)
         hRangeGrid.addWidget(self.xMaxBox,1,1)
         
         labelYmin=QLabel('Ymin:')
         self.yMinBox=QDoubleSpinBox(self)
+        self.yMinBox.setMinimum(-100000)
         hRangeGrid.addWidget(labelYmin,2,0)
         hRangeGrid.addWidget(self.yMinBox,2,1)
         labelYmax=QLabel('Ymax:')
         self.yMaxBox=QDoubleSpinBox(self)
+        self.yMaxBox.setMaximum(100000)
         hRangeGrid.addWidget(labelYmax,3,0)
         hRangeGrid.addWidget(self.yMaxBox,3,1)
         self.applyButton=QPushButton('Apply')
@@ -64,7 +68,7 @@ class WINDOWRANGE(QWidget):
 
 class GRAPHCUT(QMainWindow):
     
-    def __init__(self,symbol=None,title='Plot',conf=None,name='VISU',meas=False,pen='w',symbolPen='w',label=None,labelY=None,clearPlot=False):
+    def __init__(self,symbol=None,title='Plot',conf=None,name='VISU',meas=False,pen='w',symbolPen='w',label=None,labelY=None,clearPlot=True):
         
         super().__init__()
         p = pathlib.Path(__file__)
@@ -101,8 +105,6 @@ class GRAPHCUT(QMainWindow):
         self.pen=pen
         self.clearPlot=clearPlot
         
-                
-                
                 
         self.widgetRange=WINDOWRANGE()
         self.setup()
@@ -225,10 +227,10 @@ class GRAPHCUT(QMainWindow):
         self.showGridY.triggered.connect(self.showGrid)
         
         
-        self.lockGaphAction=QAction('Lock Graph',self)
-        self.lockGaphAction.setCheckable(True)
-        self.ImageMenu.addAction(self.lockGaphAction)
-        self.lockGaphAction.triggered.connect(self.lockGaph)
+        self.lockGraphAction=QAction('Lock Graph',self)
+        self.lockGraphAction.setCheckable(True)
+        self.ImageMenu.addAction(self.lockGraphAction)
+        self.lockGraphAction.triggered.connect(self.lockGraph)
         
         self.axisRange=QAction('Set Axis Range',self)
         self.axisMenu.addAction(self.axisRange)
@@ -416,7 +418,7 @@ class GRAPHCUT(QMainWindow):
         """
         
         """
-        
+        print(self.clearPlot)
         if self.axis.any()==False:
             self.pCut=self.winPLOT.plot(self.cutData,clear=self.clearPlot,symbol=self.symbol,symbolPen=self.symbolPen,symbolBrush=self.symbolBrush,pen=self.pen)
         else:
@@ -549,13 +551,13 @@ class GRAPHCUT(QMainWindow):
         self.plotRectZoomEtat="ZoomOut"
      
         
-    def lockGaph(self):
+    def lockGraph(self):
         
-        if lockGraphAction.isChecked():
+        if self.lockGraphAction.isChecked():
             self.clearPlot=False
         else:
             self.clearPlot=True
-            self.CHANGEPLOT()
+        self.CHANGEPLOT(self.cutData)
             
     def open_widget(self,fene):
         """ open new widget 

@@ -709,7 +709,7 @@ class SEE2(QMainWindow) :
         if self.ite=='line':
             self.open_widget(self.winCoupe)
             if self.winOpt.checkBoxAxeScale.isChecked()==1:
-                self.winCoupe.PLOT(self.cut,axis=self.absiLine,)
+                self.winCoupe.PLOT(self.cut,axis=self.absiLine)
             else:
                 self.winCoupe.PLOT(self.cut)
             
