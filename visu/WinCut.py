@@ -104,7 +104,8 @@ class GRAPHCUT(QMainWindow):
         self.plotRectZoomEtat="Zoom"
         self.pen=pen
         self.clearPlot=clearPlot
-        
+        self.xLog=False
+        self.yLog=False
                 
         self.widgetRange=WINDOWRANGE()
         self.setup()
@@ -166,7 +167,9 @@ class GRAPHCUT(QMainWindow):
         self.actionLigne=QAction('Set line',self)
         self.actionLigne.triggered.connect(self.setLine)
         self.actionLigne.setCheckable(True)
-        self.actionLigne.setChecked(True)
+        if self.pen is not None:
+            self.actionLigne.setChecked(True)
+            
         self.ImageMenu.addAction(self.actionLigne)
         
         self.actionColor=QAction('Set line color',self)
@@ -208,7 +211,8 @@ class GRAPHCUT(QMainWindow):
         
         self.checkBoxSymbol=QAction('Set Symbol on',self)
         self.checkBoxSymbol.setCheckable(True)
-        self.checkBoxSymbol.setChecked(False)
+        if self.symbol is not None:
+            self.checkBoxSymbol.setChecked(True)
         self.ImageMenu.addAction(self.checkBoxSymbol)
         self.checkBoxSymbol.triggered.connect(self.setSymbol)
         
@@ -236,7 +240,15 @@ class GRAPHCUT(QMainWindow):
         self.axisMenu.addAction(self.axisRange)
         self.axisRange.triggered.connect(self.showRange)
         
+        self.logActionX=QAction('Log X',self)
+        self.axisMenu.addAction(self.logActionX)
+        self.logActionX.setCheckable(True)
+        self.logActionX.triggered.connect(self.logMode)
         
+        self.logActionY=QAction('Log Y',self)
+        self.axisMenu.addAction(self.logActionY)
+        self.logActionY.setCheckable(True)
+        self.logActionY.triggered.connect(self.logMode)
         
         self.ZoomRectButton=QAction(QtGui.QIcon(self.icon+"loupe.png"),'Zoom',self)
         self.ZoomRectButton.triggered.connect(self.zoomRectAct)
@@ -418,7 +430,7 @@ class GRAPHCUT(QMainWindow):
         """
         
         """
-        print(self.clearPlot)
+        
         if self.axis.any()==False:
             self.pCut=self.winPLOT.plot(self.cutData,clear=self.clearPlot,symbol=self.symbol,symbolPen=self.symbolPen,symbolBrush=self.symbolBrush,pen=self.pen)
         else:
@@ -459,6 +471,7 @@ class GRAPHCUT(QMainWindow):
             self.pen=None
         else:
             self.pen=pg.mkPen(color=self.color,width=self.ligneWidth)
+            
         self.CHANGEPLOT(self.cutData)
     
     
@@ -487,6 +500,7 @@ class GRAPHCUT(QMainWindow):
         self.winPLOT.showGrid(x = self.showGridX.isChecked(), y = self.showGridY.isChecked())
         
     def setSymbol(self):
+        
         if self.checkBoxSymbol.isChecked()==1:
             self.symbol='t'
         else :
@@ -558,7 +572,18 @@ class GRAPHCUT(QMainWindow):
         else:
             self.clearPlot=True
         self.CHANGEPLOT(self.cutData)
-            
+    
+    def logMode(self):
+        if self.logActionY.isChecked():
+            self.yLog=True
+        else :self.yLog=False
+        if self.logActionX.isChecked():
+            self.xLog=True
+        else : self.xLog=False
+        self.winPLOT.setLogMode(x=self.xLog, y=self.yLog)
+        self.CHANGEPLOT(self.cutData)
+        
+        
     def open_widget(self,fene):
         """ open new widget 
         """
@@ -589,8 +614,8 @@ if __name__ == "__main__":
     appli = QApplication(sys.argv) 
     appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
     e = GRAPHCUT()  
-    a=[2,3,7,-5]
-    b=[-2,4,5,7]
+    a=[2,3,7,100,1000]
+    b=[2,4,5,100,2000]
     e.PLOT(a,b)
     e.show()
     appli.exec_()     
