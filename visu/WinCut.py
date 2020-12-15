@@ -16,7 +16,7 @@ from PyQt5.QtCore import Qt
 from pyqtgraph.Qt import QtCore,QtGui 
 import numpy as np
 import pathlib,os
-
+from scipy.optimize import curve_fit
 
 class WINDOWRANGE(QWidget):
     """Samll widget to set axis range
@@ -255,6 +255,11 @@ class GRAPHCUT(QMainWindow):
         self.toolBar.addAction(self.ZoomRectButton)
         self.plotRectZoom=pg.RectROI([0,0],[4,4],pen='w')
             
+        self.fitAction=QAction('Gaussian Fit',self)
+        self.AnalyseMenu.addAction(self.fitAction)
+        self.AnalyseMenu.setCheckable(True)
+        self.AnalyseMenu.triggered.connect(self.setFit)
+        
         self.vLine = pg.InfiniteLine(angle=90, movable=False,pen='y')
         self.hLine = pg.InfiniteLine(angle=0, movable=False,pen='y')
     
@@ -584,6 +589,16 @@ class GRAPHCUT(QMainWindow):
         self.CHANGEPLOT(self.cutData)
         
         
+    def setFit(self):
+        print(self.dimx,dimy)
+        xxx=np.arange(0,int(self.dimx),1)#
+        Datafwhm,xDataMax=self.fwhm(self.cutData)
+        init_vals = [self.cudata[xDataMax], xDataMax, Datafwhm]  # for [A, mu, sigma]
+        best_vals, covar = curve_fit(self.gauss, xxx, self.cutData, p0=init_vals)
+        y_fit = self.gauss(xxx, best_vals[0], best_vals[1], best_vals[2])
+        self.pCut=self.winPLOT.plot(self.cutData,clear=False,symbol=self.symbol,symbolPen=self.symbolPen,symbolBrush=self.symbolBrush,pen=self.pen)
+        self.pCut=self.winPLOT.plot(y_fit,pen='r')
+        
     def open_widget(self,fene):
         """ open new widget 
         """
@@ -600,6 +615,33 @@ class GRAPHCUT(QMainWindow):
             fene.showNormal()
     
     
+    def fwhm(self,x, y, order=3):
+        
+        """
+            Determine full-with-half-maximum of a peaked set of points, x and y.
+            Assumes that there is only one peak present in the datasset.  The function
+            uses a spline interpolation of order k.
+        """
+        y=gaussian_filter(y,5) # filtre pour reduire le bruit
+        half_max = np.amax(y)/2
+        try:
+            s = splrep(x, y - half_max,k=order) # Find the B-spline representation of 1-D curve.
+            roots = sproot(s) # Given the knots (>=8) and coefficients of a cubic B-spline return the roots of the spline.
+        except:
+           roots=0
+           
+        if len(roots) > 2:
+            pass
+            #print( "The dataset appears to have multiple peaks, and ","thus the FWHM can't be determined.")
+        elif len(roots) < 2:
+            pass
+           # print( "No proper peaks were found in the data set; likely ","the dataset is flat (e.g. all zeros).")
+        else:
+            return np.around(abs(roots[1] - roots[0]),decimals=2),half_max
+    
+    def gauss(x, A, mu, sigma ):
+    
+        return A*numpy.exp(-(x-mu)**2/(2.*sigma**2))
     
     
     def closeEvent(self, event):
