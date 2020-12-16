@@ -17,6 +17,10 @@ from pyqtgraph.Qt import QtCore,QtGui
 import numpy as np
 import pathlib,os
 from scipy.optimize import curve_fit
+from scipy.ndimage.filters import gaussian_filter # pour la reduction du bruit
+from scipy.interpolate import splrep, sproot # pour calcul fwhm et fit 
+
+
 
 class WINDOWRANGE(QWidget):
     """Samll widget to set axis range
@@ -257,8 +261,8 @@ class GRAPHCUT(QMainWindow):
             
         self.fitAction=QAction('Gaussian Fit',self)
         self.AnalyseMenu.addAction(self.fitAction)
-        self.AnalyseMenu.setCheckable(True)
-        self.AnalyseMenu.triggered.connect(self.setFit)
+        self.fitAction.setCheckable(True)
+        self.fitAction.triggered.connect(self.setFit)
         
         self.vLine = pg.InfiniteLine(angle=90, movable=False,pen='y')
         self.hLine = pg.InfiniteLine(angle=0, movable=False,pen='y')
@@ -288,7 +292,7 @@ class GRAPHCUT(QMainWindow):
         
         
         self.pCut=self.winPLOT.plot(symbol=self.symbol,symbolPen=self.symbolPen,symbolBrush=self.symbolBrush,pen=self.pen,clear=self.clearPlot)
-        
+        self.pFit=self.winPLOT.plot(pen='r')
 #    def Display(self,cutData) :
 #        pass
         
@@ -428,9 +432,11 @@ class GRAPHCUT(QMainWindow):
         else:
             self.dimx=max(self.axis)
             self.minX=min(self.axis)
-            self.pCut.setData(y=self.cutData,x=axis)
+            self.pCut.setData(y=self.cutData,x=self.axis)
         self.zoomRectupdate()
-    
+        self.setFit()
+        
+        
     def CHANGEPLOT(self,cutData):
         """
         
@@ -447,7 +453,8 @@ class GRAPHCUT(QMainWindow):
             self.winPLOT.setLabel('bottom',self.label)
         if self.labelY!=None:
             self.winPLOT.setLabel('left',self.labelY)
-        
+            
+        self.pFit=self.winPLOT.plot(clear=self.clearPlot,pen='r')
         self.PlotXY()
         self.affiCross()
         
@@ -590,14 +597,28 @@ class GRAPHCUT(QMainWindow):
         
         
     def setFit(self):
-        print(self.dimx,dimy)
-        xxx=np.arange(0,int(self.dimx),1)#
-        Datafwhm,xDataMax=self.fwhm(self.cutData)
-        init_vals = [self.cudata[xDataMax], xDataMax, Datafwhm]  # for [A, mu, sigma]
-        best_vals, covar = curve_fit(self.gauss, xxx, self.cutData, p0=init_vals)
-        y_fit = self.gauss(xxx, best_vals[0], best_vals[1], best_vals[2])
-        self.pCut=self.winPLOT.plot(self.cutData,clear=False,symbol=self.symbol,symbolPen=self.symbolPen,symbolBrush=self.symbolBrush,pen=self.pen)
-        self.pCut=self.winPLOT.plot(y_fit,pen='r')
+        
+        if self.fitAction.isChecked():
+            if self.axis.any()==False:
+                xxx=self.axis
+            else :
+                xxx=np.arange(0,int(self.dimx),1)#
+
+            Datafwhm,xDataMax=self.fwhm(xxx,self.cutData)
+            ymaxx=self.cutData[int(xDataMax)]
+            init_vals = [ymaxx, xDataMax, Datafwhm]  # for [A, mu, sigma]
+        
+            best_vals, covar = curve_fit(self.gauss, xxx, self.cutData, p0=init_vals)
+        
+            y_fit = self.gauss(xxx, best_vals[0], best_vals[1], best_vals[2])
+            
+            self.pFit.setData(x=xxx,y=y_fit)
+            self.fitA=best_vals[0]
+            self.fitMu=best_vals[1]
+            self.fitSigma=best_vals[2]
+        else :
+             self.pFit.setData([])
+            
         
     def open_widget(self,fene):
         """ open new widget 
@@ -639,9 +660,9 @@ class GRAPHCUT(QMainWindow):
         else:
             return np.around(abs(roots[1] - roots[0]),decimals=2),half_max
     
-    def gauss(x, A, mu, sigma ):
+    def gauss(self,x, A, mu, sigma ):
     
-        return A*numpy.exp(-(x-mu)**2/(2.*sigma**2))
+        return A*np.exp(-(x-mu)**2/(2.*sigma**2))
     
     
     def closeEvent(self, event):
