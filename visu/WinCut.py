@@ -600,9 +600,10 @@ class GRAPHCUT(QMainWindow):
         
         if self.fitAction.isChecked():
             if self.axis.any()==False:
-                xxx=self.axis
+                xxx=np.arange(0,int(self.dimx),1)
             else :
-                xxx=np.arange(0,int(self.dimx),1)#
+                xxx=self.axis
+                
 
             Datafwhm,xDataMax=self.fwhm(xxx,self.cutData)
             ymaxx=self.cutData[int(xDataMax)]
@@ -645,12 +646,13 @@ class GRAPHCUT(QMainWindow):
         """
         y=gaussian_filter(y,5) # filtre pour reduire le bruit
         half_max = np.amax(y)/2
+        
         try:
             s = splrep(x, y - half_max,k=order) # Find the B-spline representation of 1-D curve.
             roots = sproot(s) # Given the knots (>=8) and coefficients of a cubic B-spline return the roots of the spline.
         except:
            roots=0
-           
+        
         if len(roots) > 2:
             pass
             #print( "The dataset appears to have multiple peaks, and ","thus the FWHM can't be determined.")
