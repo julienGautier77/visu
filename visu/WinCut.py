@@ -292,7 +292,8 @@ class GRAPHCUT(QMainWindow):
         
         
         self.pCut=self.winPLOT.plot(symbol=self.symbol,symbolPen=self.symbolPen,symbolBrush=self.symbolBrush,pen=self.pen,clear=self.clearPlot)
-        self.pFit=self.winPLOT.plot(pen='r')
+        pen=pg.mkPen(color='r',width=3)
+        self.pFit=self.winPLOT.plot(pen=pen)
 #    def Display(self,cutData) :
 #        pass
         
@@ -607,11 +608,11 @@ class GRAPHCUT(QMainWindow):
 
             Datafwhm,xDataMax=self.fwhm(xxx,self.cutData)
             ymaxx=self.cutData[int(xDataMax)]
-            init_vals = [ymaxx, xDataMax, Datafwhm]  # for [A, mu, sigma]
+            init_vals = [ymaxx, xDataMax, Datafwhm,0]  # for [A, mu, sigma]
         
             best_vals, covar = curve_fit(self.gauss, xxx, self.cutData, p0=init_vals)
         
-            y_fit = self.gauss(xxx, best_vals[0], best_vals[1], best_vals[2])
+            y_fit = self.gauss(xxx, best_vals[0], best_vals[1], best_vals[2],best_vals[3])
             
             self.pFit.setData(x=xxx,y=y_fit)
             self.fitA=best_vals[0]
@@ -662,9 +663,9 @@ class GRAPHCUT(QMainWindow):
         else:
             return np.around(abs(roots[1] - roots[0]),decimals=2),half_max
     
-    def gauss(self,x, A, mu, sigma ):
+    def gauss(self,x, A, mu, sigma,B ):
     
-        return A*np.exp(-(x-mu)**2/(2.*sigma**2))
+        return A*np.exp(-(x-mu)**2/(2.*sigma**2))+B
     
     
     def closeEvent(self, event):
