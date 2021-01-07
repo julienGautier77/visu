@@ -416,7 +416,7 @@ class GRAPHCUT(QMainWindow):
             self.winPLOT.removeItem(self.hLine)
     
      
-    def PLOT(self,cutData,axis=[],label=None,labelY=None):
+    def PLOT(self,cutData,axis=None,label=None,labelY=None):
         
         self.label=label
         self.labelY=labelY
@@ -443,11 +443,13 @@ class GRAPHCUT(QMainWindow):
         
         """
         
-        if self.axis.any()==False:
+        if self.axis is  None:
+            print('ici')
             self.pCut=self.winPLOT.plot(self.cutData,clear=self.clearPlot,symbol=self.symbol,symbolPen=self.symbolPen,symbolBrush=self.symbolBrush,pen=self.pen)
         else:
             self.axisOn=True
-           
+            print('la',self.cutData,self.axis)
+            
             self.pCut=self.winPLOT.plot(y=self.cutData,x=self.axis,clear=self.clearPlot,symbol=self.symbol,symbolPen=self.symbolPen,symbolBrush=self.symbolBrush,pen=self.pen)
             
         if self.label!=None:
@@ -455,7 +457,7 @@ class GRAPHCUT(QMainWindow):
         if self.labelY!=None:
             self.winPLOT.setLabel('left',self.labelY)
             
-        self.pFit=self.winPLOT.plot(clear=self.clearPlot,pen='r')
+        #self.pFit=self.winPLOT.plot(clear=self.clearPlot,pen='r')
         self.PlotXY()
         self.affiCross()
         
@@ -491,6 +493,7 @@ class GRAPHCUT(QMainWindow):
     def setColorLine(self):
         color=QColorDialog.getColor()
         self.color=str(color.name())
+        print(self.color,self.ligneWidth)
         self.pen=pg.mkPen(color=self.color,width=self.ligneWidth)
         self.CHANGEPLOT(self.cutData)
     
