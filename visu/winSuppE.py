@@ -513,7 +513,7 @@ class WINENCERCLED(QWidget):
     
     def plotGraph(self):
         
-        print(self.E)
+        
         
         self.p2.setData(self.E)#,pen='b',symbol='t',symboleSize=2,clear=True,symbolPen='b',symbolBrush='b',name="rapport")
         #self.p2.addItem(self.hLineMeanE, ignoreBounds=True)
