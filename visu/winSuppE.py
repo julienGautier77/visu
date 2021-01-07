@@ -245,16 +245,19 @@ class WINENCERCLED(QWidget):
         self.winCurve=QVBoxLayout()
         
         
-        self.win2=pg.plot()
+        self.win2=pg.PlotWidget()
         self.p2=self.win2.plot(pen='b',symbol='t',symboleSize=2,clear=True,symbolPen='b',symbolBrush='b',name="rapport")
         self.win2.setContentsMargins(0,0,0,0)
         self.win2.setLabel('left','E1/E2',units='%')
         self.hLineMeanE = pg.InfiniteLine(angle=0, movable=False,pen=pg.mkPen('b', width=3, style=QtCore.Qt.DashLine) ) 
         self.win2.addItem(self.hLineMeanE, ignoreBounds=True)
         
+        self.win2.addItem(self.hLineMeanE, ignoreBounds=True)
+        
+        
         self.winCurve.addWidget(self.win2)
         
-        self.win3=pg.plot()
+        self.win3=pg.PlotWidget()
         self.p3=self.win3.plot(pen='r',symbol='t',symboleSize=2,clear=True,symbolPen='r',symbolBrush='r',name="x")
         self.win3.setContentsMargins(0,0,0,0)
         self.win3.setLabel('left','X')#,units='pixel')
@@ -263,7 +266,7 @@ class WINENCERCLED(QWidget):
         self.winCurve.addWidget(self.win3)
         
         
-        self.win4=pg.plot()
+        self.win4=pg.PlotWidget()
         self.p4=self.win4.plot(pen='g',symbol='t',symboleSize=2,clear=True,symbolPen='g',symbolBrush='g',name="y")
         self.win4.setLabel('left','Y')#,units='pixel')
         self.win4.setLabel('bottom',"Shoot number")
@@ -465,8 +468,8 @@ class WINENCERCLED(QWidget):
         E2=self.roi2.getArrayRegion(self.data,self.imh).sum()
         self.rap=100*E1/E2
         self.energieRes.setText('%.2f %%' % self.rap)
-        #self.E=np.append(self.E,self.rap)
-        self.E.append(self.rap)
+        self.E=np.append(self.E,self.rap)
+        #self.E.append(self.rap)
         Emean=np.mean(self.E)
         self.meanAff.setText('%.2f' % Emean)
         EPV=np.std(self.E)
@@ -510,7 +513,7 @@ class WINENCERCLED(QWidget):
     
     def plotGraph(self):
         
-        
+        print(self.E)
         
         self.p2.setData(self.E)#,pen='b',symbol='t',symboleSize=2,clear=True,symbolPen='b',symbolBrush='b',name="rapport")
         #self.p2.addItem(self.hLineMeanE, ignoreBounds=True)
