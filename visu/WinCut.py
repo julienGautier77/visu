@@ -421,7 +421,7 @@ class GRAPHCUT(QMainWindow):
         self.label=label
         self.labelY=labelY
         self.cutData=cutData
-        
+        self.axis=axis
          
         self.dimy=max(cutData)
         self.minY=min(cutData)
