@@ -421,16 +421,17 @@ class GRAPHCUT(QMainWindow):
         self.label=label
         self.labelY=labelY
         self.cutData=cutData
-        self.axis=np.array(axis)
+        
          
         self.dimy=max(cutData)
         self.minY=min(cutData)
-        if self.axis.any()==False:
+        if self.axis is None :
             self.dimx=np.shape(self.cutData)[0]
             self.minX=0
             self.data=self.cutData
             self.pCut.setData(self.data)
         else:
+            self.axis=np.array(axis)
             self.dimx=max(self.axis)
             self.minX=min(self.axis)
             self.pCut.setData(y=self.cutData,x=self.axis)
@@ -444,11 +445,11 @@ class GRAPHCUT(QMainWindow):
         """
         
         if self.axis is  None:
-            print('ici')
+            
             self.pCut=self.winPLOT.plot(self.cutData,clear=self.clearPlot,symbol=self.symbol,symbolPen=self.symbolPen,symbolBrush=self.symbolBrush,pen=self.pen)
         else:
             self.axisOn=True
-            print('la',self.cutData,self.axis)
+            
             
             self.pCut=self.winPLOT.plot(y=self.cutData,x=self.axis,clear=self.clearPlot,symbol=self.symbol,symbolPen=self.symbolPen,symbolBrush=self.symbolBrush,pen=self.pen)
             
