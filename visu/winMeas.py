@@ -37,7 +37,7 @@ class MEAS(QWidget):
         self.name=name
         sepa=os.sep
         self.confMotPath=None
-        self.symbol=None
+        self.symbol=False
         if confMot!=None:    
             self.confMotPath=str(p.parent / "fichiersConfig")+sepa+'configMoteurRSAI.ini'
             self.motorListGui=list()
@@ -47,8 +47,9 @@ class MEAS(QWidget):
             import  visu.moteurRSAI as RSAI
             self.motorType=RSAI
             self.nbMotors=int(np.size(self.groups))
-        
-        
+            
+        self.unitChange=1
+        self.unitName='step'
         self.icon=str(p.parent) + sepa+'icons' +sepa
         self.isWinOpen=False
         self.setup()
@@ -58,14 +59,14 @@ class MEAS(QWidget):
         self.TableSauv=['file,Max,Min,x Max,y max,Sum,Mean,Size,x c.mass,y c.mass']
         
         self.path=self.conf.value(self.name+"/path")
-        self.winCoupeMax=GRAPHCUT(symbol='t',conf=self.conf,name=self.name,pen=None)
-        self.winCoupeMin=GRAPHCUT(conf=self.conf,name=self.name,pen=None,symbol='t')
-        self.winCoupeXmax=GRAPHCUT(conf=self.conf,name=self.name,pen=None,symbol='t')
-        self.winCoupeYmax=GRAPHCUT(conf=self.conf,name=self.name,pen=None,symbol='t')
-        self.winCoupeSum=GRAPHCUT(conf=self.conf,name=self.name,pen=None,symbol='t')
-        self.winCoupeMean=GRAPHCUT(conf=self.conf,name=self.name,pen=None,symbol='t')
-        self.winCoupeXcmass=GRAPHCUT(conf=self.conf,name=self.name,pen=None,symbol='t')
-        self.winCoupeYcmass=GRAPHCUT(conf=self.conf,name=self.name,pen=None,symbol='t')
+        self.winCoupeMax=GRAPHCUT(conf=self.conf,name=self.name,symbol='t',pen=None)
+        self.winCoupeMin=GRAPHCUT(conf=self.conf,name=self.name,symbol='t',pen=None)
+        self.winCoupeXmax=GRAPHCUT(conf=self.conf,name=self.name,symbol='t',pen=None)
+        self.winCoupeYmax=GRAPHCUT(conf=self.conf,name=self.name,symbol='t',pen=None)
+        self.winCoupeSum=GRAPHCUT(conf=self.conf,name=self.name,symbol='t',pen=None)
+        self.winCoupeMean=GRAPHCUT(conf=self.conf,name=self.name,symbol='t',pen=None)
+        self.winCoupeXcmass=GRAPHCUT(conf=self.conf,name=self.name,symbol='t',pen=None)
+        self.winCoupeYcmass=GRAPHCUT(conf=self.conf,name=self.name,symbol='t',pen=None)
         
         self.Maxx=[]
         self.Minn=[]
@@ -155,6 +156,16 @@ class MEAS(QWidget):
             self.motorNameBox=QComboBox()
             self.motorNameBox.addItem('Motors')
             hLayout1.addWidget(self.motorNameBox)
+            self.unitBouton=QComboBox()
+            self.unitBouton.addItem('Step')
+            self.unitBouton.addItem('um')
+            self.unitBouton.addItem('mm')
+            self.unitBouton.addItem('ps')
+            self.unitBouton.addItem('°')
+            self.unitBouton.setMaximumWidth(100)
+            self.unitBouton.setMinimumWidth(100)
+            hLayout1.addWidget(self.unitBouton)
+            self.unitBouton.currentIndexChanged.connect(self.unit) 
             for mo in range (0,self.nbMotors):
                 self.motorNameBox.addItem(self.groups[mo])
             self.table.setColumnCount(11)   
@@ -248,44 +259,44 @@ class MEAS(QWidget):
     def PlotMAX(self):
         self.open_widget(self.winCoupeMax)
         self.winCoupeMax.SetTITLE('Plot Max')
-        self.winCoupeMax.PLOT(self.Maxx,axis=self.posMotor)
+        self.winCoupeMax.PLOT(self.Maxx,axis=self.posMotor, label=self.label)
            
     def PlotMIN (self):
         self.open_widget(self.winCoupeMin)
         self.winCoupeMin.SetTITLE('Plot Min')
-        self.winCoupeMin.PLOT(self.Minn,axis=self.posMotor)
+        self.winCoupeMin.PLOT(self.Minn,axis=self.posMotor,label=self.label)
         
     
     def PlotXMAX(self):
         self.open_widget(self.winCoupeXmax)
         self.winCoupeXmax.SetTITLE('Plot  X MAX')
-        self.winCoupeXmax.PLOT(self.Xmax,axis=self.posMotor)
+        self.winCoupeXmax.PLOT(self.Xmax,axis=self.posMotor,label=self.label)
     
     def PlotYMAX(self):
         self.open_widget(self.winCoupeYmax)
         self.winCoupeYmax.SetTITLE('Plot  Y MAX')
-        self.winCoupeYmax.PLOT(self.Ymax,axis=self.posMotor)
+        self.winCoupeYmax.PLOT(self.Ymax,axis=self.posMotor,label=self.label)
      
         
     def PlotSUM(self):
         self.open_widget(self.winCoupeSum)
         self.winCoupeSum.SetTITLE('Plot Sum')
-        self.winCoupeSum.PLOT(self.Summ,axis=self.posMotor)
+        self.winCoupeSum.PLOT(self.Summ,axis=self.posMotor,label=self.label)
     
     def PlotMEAN (self):
         self.open_widget(self.winCoupeMean)
         self.winCoupeMean.SetTITLE('Plot Mean')
-        self.winCoupeMean.PLOT(self.Mean,axis=self.posMotor)
+        self.winCoupeMean.PLOT(self.Mean,axis=self.posMotor,label=self.label)
         
     def PlotXCMASS (self):
         self.open_widget(self.winCoupeXcmass)
         self.winCoupeXcmass.SetTITLE('Plot x center of mass')
-        self.winCoupeXcmass.PLOT(self.Xcmass,axis=self.posMotor)
+        self.winCoupeXcmass.PLOT(self.Xcmass,axis=self.posMotor,label=self.label)
     
     def PlotYCMASS (self):
         self.open_widget(self.winCoupeYcmass)
         self.winCoupeYcmass.SetTITLE('Plot Y center of mass')
-        self.winCoupeYcmass.PLOT(self.Xcmass,axis=self.posMotor)  
+        self.winCoupeYcmass.PLOT(self.Xcmass,axis=self.posMotor,label=self.label)    
          
     def Display(self,data):
         
@@ -318,15 +329,14 @@ class MEAS(QWidget):
                 Posi=self.shoot
                 self.label='Shoot'
             else:
-                Posi=(self.MOT.position())
-                self.label=self.motor
+                Posi=(self.MOT.position())/self.unitChange
+                self.label=self.motor+'('+self.unitName+')'
             self.table.setItem(self.shoot, 10, QTableWidgetItem( str(Posi ) ) )
             
         else :
             Posi=self.shoot
             self.label='Shoot'
-            
-        self.table.selectRow(self.shoot)   
+        self.table.selectRow(self.shoot)
         
         self.posMotor.append(Posi)    
         self.table.resizeColumnsToContents()
@@ -428,10 +438,36 @@ class MEAS(QWidget):
     def motorChange(self):
         
         self.motor=str(self.motorNameBox.currentText())
+        self.stepmotor=float(self.configMot.value(self.motor+"/stepmotor")) 
         if self.motor!='Motors':
             self.MOT=self.motorType.MOTORRSAI(self.motor)
 
-    
+    def unit(self):
+        '''
+        unit change mot foc
+        '''
+        self.indexUnit=self.unitBouton.currentIndex()
+        
+        
+        if self.indexUnit==0: #  step
+            self.unitChange=1
+            self.unitName='step'
+            
+        if self.indexUnit==1: # micron
+            self.unitChange=float((1*self.stepmotor)) 
+            self.unitName='um'
+        if self.indexUnit==2: #  mm 
+            self.unitChange=float((1000*self.stepmotor))
+            self.unitName='mm'
+        if self.indexUnit==3: #  ps  double passage : 1 microns=6fs
+            self.unitChange=float(1*self.stepmotor/0.0066666666) 
+            self.unitName='ps'
+        if self.indexUnit==4: #  en degres
+            self.unitChange=1 *self.stepmotor
+            self.unitName='°'    
+            
+        if self.unitChange==0:
+            self.unitChange=1 #avoid /0 
     
 if __name__ == "__main__":
     appli = QApplication(sys.argv) 

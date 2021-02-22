@@ -129,7 +129,7 @@ class SEE2(QMainWindow) :
         
         if self.fft=='on'  :  
             self.winFFT=WINFFT(conf=self.conf,name=self.name)
-            self.winFFT1D=GRAPHCUT(symbol=None,title='FFT 1D',conf=self.conf,name=self.name)
+            self.winFFT1D=GRAPHCUT(symbol=False,title='FFT 1D',conf=self.conf,name=self.name)
           
         if "filter" in kwds:
             self.winFilter=kwds['filter']
@@ -139,7 +139,8 @@ class SEE2(QMainWindow) :
         if "confMot" in kwds:
             print('motor accepted')
             if self.meas=="on":
-                self.confMot=kwds["confoMot"]
+                self.confMot=kwds["confMot"]
+                print(self.confMot)
                 self.winM=MEAS(confMot=self.confMot,conf=self.conf,name=self.name)
         else :
             if self.meas=="on":
@@ -168,7 +169,7 @@ class SEE2(QMainWindow) :
         if self.math=="on":
             self.winMath=WINMATH()
         
-        self.winCoupe=GRAPHCUT(symbol=None,conf=self.conf,name=self.name)
+        self.winCoupe=GRAPHCUT(symbol=False,conf=self.conf,name=self.name)
         self.path=path
         self.setWindowTitle('Visualization'+'       v.'+ version)
         self.bloqKeyboard=bool((self.conf.value(self.name+"/bloqKeyboard"))  )  # block cross by keyboard
@@ -709,13 +710,13 @@ class SEE2(QMainWindow) :
         if self.ite=='line':
             self.open_widget(self.winCoupe)
             if self.winOpt.checkBoxAxeScale.isChecked()==1:
-                self.winCoupe.PLOT(self.cut,axis=self.absiLine)
+                self.winCoupe.PLOT(self.cut,axis=self.absiLine,symbol=False)
             else:
-                self.winCoupe.PLOT(self.cut)
+                self.winCoupe.PLOT(self.cut)#,symbol=False)
             
         if self.ite=='rect':
             self.open_widget(self.winCoupe)
-            self.winCoupe.PLOT(self.cut1)
+            self.winCoupe.PLOT(self.cut1)#,symbol=False)
    
     def Graph3D (self):
         
@@ -1056,8 +1057,8 @@ class SEE2(QMainWindow) :
             self.p1.removeItem(self.textY)
             self.p1.showAxis('left',show=False)
             self.p1.showAxis('bottom',show=False)
-            self.p1.removeItem(self.textX)
-            self.p1.removeItem(self.textY)
+#            self.p1.removeItem(self.textX)
+#            self.p1.removeItem(self.textY)
             
     def paletteup(self):
         # change the color scale
@@ -1271,6 +1272,7 @@ class SEE2(QMainWindow) :
 
   
     def newDataReceived(self,data):
+        print("received")
         # Do display and save origin data when new data is  sent to  visu
         self.data=data
         if self.flipButton.isChecked()==1 and self.flipButtonVert.isChecked()==1 :
