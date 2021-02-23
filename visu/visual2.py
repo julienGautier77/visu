@@ -283,6 +283,8 @@ class SEE2(QMainWindow) :
         self.checkBoxAutoSave=QAction(QtGui.QIcon(self.icon+"diskette.png"),'AutoSave on',self)
         self.checkBoxAutoSave.setCheckable(True)
         self.checkBoxAutoSave.setChecked(False)
+        
+        self.checkBoxAutoSave.triggered.connect(self.autoSaveColor)
         self.toolBar.addAction(self.checkBoxAutoSave)
         self.fileMenu.addAction(self.checkBoxAutoSave)
         
@@ -331,7 +333,7 @@ class SEE2(QMainWindow) :
         self.statusBar.addWidget(self.labelFileName)
         self.statusBar.addWidget(self.fileName)
          
-        self.checkBoxScale=QAction(QtGui.QIcon(self.icon+"resize.png"),'Auto Scale on',self)
+        self.checkBoxScale=QAction(QtGui.QIcon(self.icon+"resize.png"),'if selected Auto Scale on',self)
         self.checkBoxScale.setCheckable(True)
         self.checkBoxScale.setChecked(True)
         self.toolBar.addAction(self.checkBoxScale)
@@ -1383,6 +1385,13 @@ class SEE2(QMainWindow) :
         e.accept()
         self.OpenF(fileOpen=l[0])
     
+    def autoSaveColor(self):
+        print("ici",self.checkBoxAutoSave.font())
+        if self.checkBoxAutoSave.isChecked()==True:
+            self.checkBoxAutoSave.setIcon(QtGui.QIcon(self.icon+"saveAutoOn.png"))
+        else :
+             self.checkBoxAutoSave.setIcon(QtGui.QIcon(self.icon+"diskette.png"))
+             
     def closeEvent(self,event):
         # when the window is closed
         if self.encercled=="on":
