@@ -6,7 +6,7 @@ It can make plot profile and data measurements analysis on live
 
 
 
-<img width="918" alt="screeCapture" src="https://user-images.githubusercontent.com/29065484/108862985-08321480-75f1-11eb-9bf3-315b547b1c25.jpg">
+<img width="400" alt="screeCapture" src="https://user-images.githubusercontent.com/29065484/108862985-08321480-75f1-11eb-9bf3-315b547b1c25.jpg">
 
 
 
