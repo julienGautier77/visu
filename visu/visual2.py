@@ -94,17 +94,16 @@ class SEE2(QMainWindow) :
         if "confpath"in kwds :
             self.confpath=kwds["confpath"]
             self.conf=QtCore.QSettings(self.confpath, QtCore.QSettings.IniFormat)
-            
+            print ('conf path visu',self.confpath,self.conf)
         else:
             self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
         
-        
+    
         if "name" in kwds:
             self.name=kwds["name"]
         else:
             self.name="VISU"
-            
-        
+
         
         if "aff" in kwds:
             self.aff=kwds["aff"]
@@ -294,7 +293,7 @@ class SEE2(QMainWindow) :
         self.fileMenu.addAction(self.optionAutoSaveAct)
         
         
-        self.checkBoxPlot=QAction(QtGui.QIcon(self.icon+"target.png"),'Cross On (ctrl+b to block ctrl+d to deblock)',self)
+        self.checkBoxPlot=QAction(QtGui.QIcon(self.icon+"target.png"),'Cross On (ctrl+b to block ctrl+d to unblock)',self)
         self.checkBoxPlot.setCheckable(True)
         self.checkBoxPlot.setChecked(False)
         self.checkBoxPlot.triggered.connect(self.PlotXY)
@@ -363,7 +362,7 @@ class SEE2(QMainWindow) :
         menuColor.addAction('viridis',self.Setcolor) 
         menuColor.addAction('inferno',self.Setcolor)
         menuColor.addAction('plasma',self.Setcolor)      
-        menuColor.addAction('magna',self.Setcolor)            
+        menuColor.addAction('magma',self.Setcolor)            
         
         self.ColorBox.setMenu(menuColor)
         self.ImageMenu.addAction(self.ColorBox)
@@ -799,7 +798,7 @@ class SEE2(QMainWindow) :
         if self.checkBoxBg.isChecked()==True and self.winOpt.dataBgExist==False:
                 msg = QMessageBox()
                 msg.setIcon(QMessageBox.Critical)
-                msg.setText("Background not soustracred !")
+                msg.setText("Background not soustracted !")
                 msg.setInformativeText("Background file not selected in options menu ")
                 msg.setWindowTitle("Warning ...")
                 msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
@@ -1413,7 +1412,7 @@ def runVisu() :
     
     appli = QApplication(sys.argv)   
     appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
-    e = visu.visual.SEE()
+    e = visu.visual2.SEE2()
     e.show()
     appli.exec_() 
 

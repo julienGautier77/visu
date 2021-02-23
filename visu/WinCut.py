@@ -498,7 +498,7 @@ class GRAPHCUT(QMainWindow):
     def setColorLine(self):
         color=QColorDialog.getColor()
         self.color=str(color.name())
-        print(self.color,self.ligneWidth)
+        
         self.pen=pg.mkPen(color=self.color,width=self.ligneWidth)
         self.CHANGEPLOT(self.cutData)
     
