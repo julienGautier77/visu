@@ -54,7 +54,7 @@ Or :
   ### To  insert in  a  code
   visu is a  QtWidgets it can be use like  a  widget :  
   from PyQt5.QtWidgets import QApplication,QWidget  
-  widgetVisu=visu.visual.SEE()   
+  widgetVisu=visu.visual2.SEE2()   
   
 -----------------------------------------
 -----------------------------------------
