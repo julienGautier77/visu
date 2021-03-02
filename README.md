@@ -31,7 +31,7 @@ It can open .spe .SPE, .sif and .TIFF files
     
 ## Installation
 *   from PyPi
-    *   pip install visu
+    *   pip install git+https://github.com/julienGautier77/visu
 
 ## Usage
 ###  to use as  it:
