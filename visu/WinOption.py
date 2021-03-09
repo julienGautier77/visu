@@ -42,8 +42,8 @@ class OPTION(QWidget):
         self.setWindowTitle('Options Auto Save & visualisation')
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
         
-        self.stepX=float(self.conf.value(self.name+"/stepX"))
-        self.stepY=float(self.conf.value(self.name+"/stepY"))
+        # self.stepX=float(self.conf.value(self.name+"/stepX"))
+        # self.stepY=float(self.conf.value(self.name+"/stepY"))
         self.shoot=int(self.conf.value(self.name+"/tirNumber"))
         self.setup()
         self.pathAutoSave=self.conf.value(self.name+"/path")
@@ -122,46 +122,46 @@ class OPTION(QWidget):
         
         vbox1.addLayout(hbox5)
         
-        hbox6=QHBoxLayout()
-        self.checkBoxAxeScale=QCheckBox('Scale Factor : ',self)
+        # hbox6=QHBoxLayout()
+        # self.checkBoxAxeScale=QCheckBox('Scale Factor : ',self)
         
-        self.checkBoxAxeScale.setChecked(False)
-        hbox6.addWidget(self.checkBoxAxeScale)
-        
-        
-        self.checkBoxStepX=QLabel('X axe (Pixel/um) : ')
-        self.stepXBox=QDoubleSpinBox()
-        self.stepXBox.setMaximum(10000)
-        self.stepXBox.setValue(self.stepX)
-        self.stepXBox.setDecimals(4)
-        hbox6.addWidget(self.checkBoxStepX)
-        hbox6.addWidget(self.stepXBox)
-        
-        self.checkBoxStepY=QLabel('Y axe (Pixel/um) : ')
-        self.stepYBox=QDoubleSpinBox()
-        self.stepYBox.setMaximum(10000)
-        self.stepYBox.setValue(self.stepY)
-        self.stepYBox.setDecimals(4)
-        hbox6.addWidget(self.checkBoxStepY)
-        hbox6.addWidget(self.stepYBox)
-        
-        vbox1.addLayout(hbox6)
-        
-        hbox7=QHBoxLayout()
-        self.checkBoxFwhm=QCheckBox('FWHM ',self)
-        
-        self.checkBoxFwhm.setChecked(False)
-        hbox7.addWidget(self.checkBoxFwhm)
-        
-        labelRotate=QLabel('Img Rotation  90°:')
+        # self.checkBoxAxeScale.setChecked(False)
+        # hbox6.addWidget(self.checkBoxAxeScale)
         
         
-        hbox7.addWidget(labelRotate)
-        self.rotate=QSpinBox()
-        self.rotate.setMaximum(4)
+        # self.checkBoxStepX=QLabel('X axe (Pixel/um) : ')
+        # self.stepXBox=QDoubleSpinBox()
+        # self.stepXBox.setMaximum(10000)
+        # self.stepXBox.setValue(self.stepX)
+        # self.stepXBox.setDecimals(4)
+        # hbox6.addWidget(self.checkBoxStepX)
+        # hbox6.addWidget(self.stepXBox)
         
-        hbox7.addWidget(self.rotate)
-        vbox1.addLayout(hbox7)
+        # self.checkBoxStepY=QLabel('Y axe (Pixel/um) : ')
+        # self.stepYBox=QDoubleSpinBox()
+        # self.stepYBox.setMaximum(10000)
+        # self.stepYBox.setValue(self.stepY)
+        # self.stepYBox.setDecimals(4)
+        # hbox6.addWidget(self.checkBoxStepY)
+        # hbox6.addWidget(self.stepYBox)
+        
+        # vbox1.addLayout(hbox6)
+        
+        # hbox7=QHBoxLayout()
+        # self.checkBoxFwhm=QCheckBox('FWHM ',self)
+        
+        # self.checkBoxFwhm.setChecked(False)
+        # hbox7.addWidget(self.checkBoxFwhm)
+        
+        # labelRotate=QLabel('Img Rotation  90°:')
+        
+        
+        # hbox7.addWidget(labelRotate)
+        # self.rotate=QSpinBox()
+        # self.rotate.setMaximum(4)
+        
+        # hbox7.addWidget(self.rotate)
+        # vbox1.addLayout(hbox7)
         
         hMainLayout=QHBoxLayout()
         hMainLayout.addLayout(vbox1)
@@ -173,21 +173,21 @@ class OPTION(QWidget):
         self.nameBox.textChanged.connect(self.nameFileChanged)
         self.tirNumberBox.valueChanged.connect(self.TirNumberChange)
         self.buttonFileBg.clicked.connect(self.selectBg)
-        self.stepXBox.valueChanged.connect(self.stepXChange)
-        self.stepYBox.valueChanged.connect(self.stepYChange)
+        # self.stepXBox.valueChanged.connect(self.stepXChange)
+        # self.stepYBox.valueChanged.connect(self.stepYChange)
         
         
-    def stepXChange(self) :
-        self.stepX=self.stepXBox.value()
-        self.conf.setValue(self.name+"/stepX",self.stepX)
+    # def stepXChange(self) :
+    #     self.stepX=self.stepXBox.value()
+    #     self.conf.setValue(self.name+"/stepX",self.stepX)
         
         
-    def stepYChange(self) :
-        self.stepY=self.stepYBox.value()
-        self.conf.setValue(self.name+"/stepY",self.stepY)
+    # def stepYChange(self) :
+    #     self.stepY=self.stepYBox.value()
+    #     self.conf.setValue(self.name+"/stepY",self.stepY)
         
-    def checkBoxAxeChange(self):
-        self.emitChangeScale.emit(True)
+    # def checkBoxAxeChange(self):
+    #     self.emitChangeScale.emit(True)
         
     def PathChanged(self) :
        
@@ -209,8 +209,8 @@ class OPTION(QWidget):
         self.tirNumberBox.setValue(self.tirNumber)
         
     
-    def rotateChange(self):
-        self.rotateValue=int(self.rotate.value())
+    # def rotateChange(self):
+    #     self.rotateValue=int(self.rotate.value())
         
         
     def selectBg(self):

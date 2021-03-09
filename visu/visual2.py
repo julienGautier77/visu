@@ -37,6 +37,7 @@ from visu.winSuppE import WINENCERCLED
 from visu.WinCut import GRAPHCUT
 from visu.winMeas import MEAS
 from visu.WinOption import OPTION
+from visu.WinPreference import PREFERENCES
 from visu.andor import SifFile
 from visu.winFFT import WINFFT
 from visu.winMath import WINMATH
@@ -146,6 +147,7 @@ class SEE2(QMainWindow) :
                 self.winM=MEAS(conf=self.conf,name=self.name)
             
         self.winOpt=OPTION(conf=self.conf,name=self.name)
+        self.winPref=PREFERENCES(conf=self.conf,name=self.name)
         
         if self.encercled=="on":
             self.winEncercled=WINENCERCLED(conf=self.conf,name=self.name)
@@ -168,7 +170,7 @@ class SEE2(QMainWindow) :
         if self.math=="on":
             self.winMath=WINMATH()
         
-        self.winCoupe=GRAPHCUT(symbol=False,conf=self.conf,name=self.name)
+        self.winCoupe=GRAPHCUT(symbol=None,conf=self.conf,name=self.name)
         self.path=path
         self.setWindowTitle('Visualization'+'       v.'+ version)
         self.bloqKeyboard=bool((self.conf.value(self.name+"/bloqKeyboard"))  )  # block cross by keyboard
@@ -294,6 +296,10 @@ class SEE2(QMainWindow) :
         self.toolBar.addAction(self.optionAutoSaveAct)
         self.fileMenu.addAction(self.optionAutoSaveAct)
         
+        self.preferenceAct=QAction('Preferences',self) #
+        self.preferenceAct.triggered.connect(lambda:self.open_widget(self.winPref))
+        
+        self.fileMenu.addAction(self.preferenceAct)
         
         self.checkBoxPlot=QAction(QtGui.QIcon(self.icon+"target.png"),'Cross On (ctrl+b to block ctrl+d to unblock)',self)
         self.checkBoxPlot.setCheckable(True)
@@ -566,7 +572,7 @@ class SEE2(QMainWindow) :
         if self.plot3D=="on":
             self.box3d.clicked.connect(self.Graph3D)
             
-        self.winOpt.closeEventVar.connect(self.ScaleImg)
+        self.winPref.closeEventVar.connect(self.ScaleImg)
         
         
         self.sliderImage.valueChanged.connect(self.SliderImgFct)
@@ -650,7 +656,7 @@ class SEE2(QMainWindow) :
         # take ROI 
         self.cut=self.plotLine.getArrayRegion(self.data,self.imh)
         
-        if self.winOpt.checkBoxAxeScale.isChecked()==1:
+        if self.winPref.checkBoxAxeScale.isChecked()==1:
             self.linePoints=self.plotLine.listPoints()
             self.lineXo=self.linePoints[0][0]
             self.lineYo=self.linePoints[0][1]
@@ -659,7 +665,7 @@ class SEE2(QMainWindow) :
             #self.plotLineAngle=np.arctan((self.lineYf-self.lineYo)/(self.lineXf-self.lineXo))
             # print('angle',self.plotLineAngle*360/(2*3.14),self.cut.size)
             
-            step=(self.winOpt.stepX**2*(self.lineXo-self.lineXf)**2+self.winOpt.stepY**2*(self.lineYo-self.lineYf)**2)
+            step=(self.winPref.stepX**2*(self.lineXo-self.lineXf)**2+self.winPref.stepY**2*(self.lineYo-self.lineYf)**2)
             step=step**0.5/self.cut.size
             self.absiLine=np.arange(0,(self.cut.size)*step,step)
             
@@ -710,8 +716,8 @@ class SEE2(QMainWindow) :
         # plot on a separated widget the ROI plot profile
         if self.ite=='line':
             self.open_widget(self.winCoupe)
-            if self.winOpt.checkBoxAxeScale.isChecked()==1:
-                self.winCoupe.PLOT(self.cut,axis=self.absiLine,symbol=False)
+            if self.winPref.checkBoxAxeScale.isChecked()==1:
+                self.winCoupe.PLOT(self.cut,axis=self.absiLine)
             else:
                 self.winCoupe.PLOT(self.cut)#,symbol=False)
             
@@ -824,13 +830,13 @@ class SEE2(QMainWindow) :
         ### color  and sacle 
         if self.checkBoxScale.isChecked()==1: # color autoscale on
             
-            if self.winOpt.checkBoxAxeScale.isChecked()==1:
-                self.axeX.setScale(self.winOpt.stepX)
-                self.axeY.setScale(self.winOpt.stepY)
+            if self.winPref.checkBoxAxeScale.isChecked()==1:
+                self.axeX.setScale(self.winPref.stepX)
+                self.axeY.setScale(self.winPref.stepY)
                 self.axeX.setLabel('um')
                 self.axeY.setLabel('um')
                 self.axeX.showLabel(True)
-            if self.winOpt.checkBoxAxeScale.isChecked()==0:
+            if self.winPref.checkBoxAxeScale.isChecked()==0:
                 self.scaleAxis="off"
                 self.axeX.setScale(1)
                 self.axeY.setScale(1)  
@@ -967,7 +973,10 @@ class SEE2(QMainWindow) :
                 self.hLine.setPos(self.yc)
             
                 
-            dataCross=self.data[int(self.xc),int(self.yc)] 
+            try :
+                dataCross=self.data[int(self.xc),int(self.yc)] 
+            except :dataCross=0  # evoid to have an error if cross if out of the image
+            
             coupeX=self.data[int(self.xc),:]
             coupeY=self.data[:,int(self.yc)]
             xxx=np.arange(0,int(self.dimx),1)#
@@ -982,8 +991,8 @@ class SEE2(QMainWindow) :
             if coupeYMax==0:
                 coupeYMax=1
                 
-            if self.winOpt.checkBoxAxeScale.isChecked()==1: # scale axe on 
-                self.label_Cross.setText('x='+ str(round(int(self.xc)*self.winOpt.stepX,2)) + '  um'+' y=' + str(round(int(self.yc)*self.winOpt.stepY,2)) +' um')
+            if self.winPref.checkBoxAxeScale.isChecked()==1: # scale axe on 
+                self.label_Cross.setText('x='+ str(round(int(self.xc)*self.winPref.stepX,2)) + '  um'+' y=' + str(round(int(self.yc)*self.winPref.stepY,2)) +' um')
             else : 
                 self.label_Cross.setText('x='+ str(int(self.xc)) + ' y=' + str(int(self.yc)) )
                 
@@ -1001,7 +1010,7 @@ class SEE2(QMainWindow) :
             ###  fwhm on the  X et Y curves if max  >20 counts if checked in winOpt
             
             
-            if self.winOpt.checkBoxFwhm.isChecked()==1: # show fwhm values on graph
+            if self.winPref.checkBoxFwhm.isChecked()==1: # show fwhm values on graph
                 xCXmax=np.amax(coupeXnorm) # max
                 if xCXmax>20:
                     try :
@@ -1010,8 +1019,8 @@ class SEE2(QMainWindow) :
                     if fwhmX==None:
                         self.textX.setText('')
                     else:
-                        if self.winOpt.checkBoxAxeScale.isChecked()==1:
-                            self.textX.setText('fwhm='+str(round(fwhmX*self.winOpt.stepX,2))+' um',color='w')
+                        if self.winPref.checkBoxAxeScale.isChecked()==1:
+                            self.textX.setText('fwhm='+str(round(fwhmX*self.winPref.stepX,2))+' um',color='w')
                         else :
                            self.textX.setText('fwhm='+str(round(fwhmX,2)),color='w')
                     yCXmax=yyy[coupeXnorm.argmax()]
@@ -1028,8 +1037,8 @@ class SEE2(QMainWindow) :
                     if fwhmY==None:
                         self.textY.setText('',color='w')
                     else:
-                        if self.winOpt.checkBoxAxeScale.isChecked()==1:
-                            self.textY.setText('fwhm='+str(round(fwhmY*self.winOpt.stepY,2))+' um',color='w')
+                        if self.winPref.checkBoxAxeScale.isChecked()==1:
+                            self.textY.setText('fwhm='+str(round(fwhmY*self.winPref.stepY,2))+' um',color='w')
                         else:
                             self.textY.setText('fwhm='+str(round(fwhmY,2)),color='w')
                             
@@ -1273,7 +1282,7 @@ class SEE2(QMainWindow) :
 
   
     def newDataReceived(self,data):
-        print("received")
+        
         # Do display and save origin data when new data is  sent to  visu
         self.data=data
         if self.flipButton.isChecked()==1 and self.flipButtonVert.isChecked()==1 :
@@ -1297,7 +1306,7 @@ class SEE2(QMainWindow) :
     
     def ScaleImg(self):
         #scale Axis px to um
-        if self.winOpt.checkBoxAxeScale.isChecked()==1:
+        if self.winPref.checkBoxAxeScale.isChecked()==1:
             self.scaleAxis="on"
             self.LigneChanged()
         else :
@@ -1386,7 +1395,7 @@ class SEE2(QMainWindow) :
         self.OpenF(fileOpen=l[0])
     
     def autoSaveColor(self):
-        print("ici",self.checkBoxAutoSave.font())
+        
         if self.checkBoxAutoSave.isChecked()==True:
             self.checkBoxAutoSave.setIcon(QtGui.QIcon(self.icon+"saveAutoOn.png"))
         else :
@@ -1404,6 +1413,8 @@ class SEE2(QMainWindow) :
                 self.winM.close()
         if self.winOpt.isWinOpen==True:
             self.winOpt.close() 
+        if self.winPref.isWinOpen==True:
+            self.winPref.close() 
         if self.fft=='on':
             if self.winFFT.isWinOpen==True:
                 self.winFFT.close()
