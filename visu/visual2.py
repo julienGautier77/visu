@@ -94,7 +94,10 @@ class SEE2(QMainWindow) :
         
         if "confpath"in kwds :
             self.confpath=kwds["confpath"]
-            self.conf=QtCore.QSettings(self.confpath, QtCore.QSettings.IniFormat)
+            if self.confpath==None:
+                self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+            else:
+                self.conf=QtCore.QSettings(self.confpath, QtCore.QSettings.IniFormat)
             print ('conf path visu',self.confpath,self.conf)
         else:
             self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
