@@ -41,6 +41,7 @@ from visu.WinPreference import PREFERENCES
 from visu.andor import SifFile
 from visu.winFFT import WINFFT
 from visu.winMath import WINMATH
+from visu.winPointing import WINPOINTING
 try :
     from visu.Win3D import GRAPH3D #conda install pyopengl
 except :
@@ -79,7 +80,7 @@ class SEE2(QMainWindow) :
         
         super().__init__()
         version=__version__
-        print("data visualisation :  ",version)
+        print("data visualisation2 :  ",version)
         p = pathlib.Path(__file__)
         self.fullscreen=False
         self.setAcceptDrops(True)
@@ -98,7 +99,7 @@ class SEE2(QMainWindow) :
                 self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
             else:
                 self.conf=QtCore.QSettings(self.confpath, QtCore.QSettings.IniFormat)
-            print ('conf path visu',self.confpath,self.conf)
+            print ('configuration path of visu : ',self.confpath)
         else:
             self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
         
@@ -178,6 +179,9 @@ class SEE2(QMainWindow) :
         self.setWindowTitle('Visualization'+'       v.'+ version)
         self.bloqKeyboard=bool((self.conf.value(self.name+"/bloqKeyboard"))  )  # block cross by keyboard
         self.bloqq=1 # block the cross by click on mouse
+        
+        self.winPointing=WINPOINTING()
+        
         
         # initialize variable : 
         self.filter='origin' # filter initial value
@@ -342,7 +346,7 @@ class SEE2(QMainWindow) :
         self.statusBar.addWidget(self.labelFileName)
         self.statusBar.addWidget(self.fileName)
          
-        self.checkBoxScale=QAction(QtGui.QIcon(self.icon+"resize.png"),'if selected Auto Scale on',self)
+        self.checkBoxScale=QAction(QtGui.QIcon(self.icon+"resize.png"),' Auto Scale on',self)
         self.checkBoxScale.setCheckable(True)
         self.checkBoxScale.setChecked(True)
         self.toolBar.addAction(self.checkBoxScale)
@@ -423,7 +427,12 @@ class SEE2(QMainWindow) :
             self.AnalyseMenu.addAction(self.fftButton)
             self.fftButton.triggered.connect(self.fftTransform)
             
-            
+         
+        self.PointingButton=QAction(QtGui.QIcon(self.icon+"recycle.png"),'Pointing',self)
+        
+        self.PointingButton.triggered.connect(self.Pointing)
+        self.AnalyseMenu.addAction(self.PointingButton)    
+        
         self.ZoomRectButton=QAction(QtGui.QIcon(self.icon+"loupe.png"),'Zoom',self)
         self.ZoomRectButton.triggered.connect(self.zoomRectAct)
         self.toolBar.addAction(self.ZoomRectButton)
@@ -762,6 +771,27 @@ class SEE2(QMainWindow) :
                 self.open_widget(self.winM)
                 self.winM.Display(self.data)
     
+    
+    def Pointing(self) :
+        
+        self.open_widget(self.winPointing)
+        
+        if self.ite=='rect':
+            self.RectChanged()
+            pData=self.cut
+        elif self.ite=='cercle':
+            self.CercChanged() 
+            pData=self.cut
+        elif self.ite==None:
+            pData=self.data
+        else :pData=self.data
+            
+            
+        if self.winPref.checkBoxAxeScale.isChecked()==1:
+                self.winPointing.Display(pData,self.winPref.stepX,self.winPref.stepX)
+        else:
+                self.winPointing.Display(pData)
+        
 
     def fftTransform(self):
         # show on a new widget fft 
@@ -864,22 +894,30 @@ class SEE2(QMainWindow) :
                 self.CUT()
             if self.ite=='cercle':
                 self.CercChanged()
-        if self.meas=="on":       
-            if self.winM.isWinOpen==True: #  measurement update
-                if self.ite=='rect':
-                    self.RectChanged()
-                    self.Measurement()
-                elif self.ite=='cercle':
-                    self.CercChanged()
-                    self.Measurement()
-                else :
-                    self.Measurement()
+                
+        if self.meas=="on": 
+            
+            if self.winM.isWinOpen==True: 
+                self.Measurement() #  measurement update
+                # if self.ite=='rect':
+                #     self.RectChanged()
+                #     self.Measurement()
+                # elif self.ite=='cercle':
+                #     self.CercChanged()
+                #     self.Measurement()
+                # else :
+                #     self.Measurement()
+                    
         if self.fft=='on':        
             if self.winFFT.isWinOpen==True: # fft update
                 self.winFFT.Display(self.data)
         if self.plot3D=="on":
             if self.Widget3D.isWinOpen==True:
                 self.Graph3D()
+        
+        if self.winPointing.isWinOpen==True:
+            self.Pointing()
+        
         ### autosave
         if self.checkBoxAutoSave.isChecked()==True: ## autosave data
             self.pathAutoSave=str(self.conf.value(self.name+'/pathAutoSave'))
@@ -979,13 +1017,20 @@ class SEE2(QMainWindow) :
             try :
                 dataCross=self.data[int(self.xc),int(self.yc)] 
             except :dataCross=0  # evoid to have an error if cross if out of the image
-            
-            coupeX=self.data[int(self.xc),:]
-            coupeY=self.data[:,int(self.yc)]
+            try :
+                coupeX=self.data[int(self.xc),:]
+                coupeY=self.data[:,int(self.yc)]
+                coupeXMax=np.max(coupeX)
+                coupeYMax=np.max(coupeY)
+            except:
+                coupeX=0
+                coupeY=0
+                coupeXMax=0
+                coupeYMax=0
+                
             xxx=np.arange(0,int(self.dimx),1)#
             yyy=np.arange(0,int(self.dimy),1)#
-            coupeXMax=np.max(coupeX)
-            coupeYMax=np.max(coupeY)
+            
             
             
             if coupeXMax==0: # avoid zero
@@ -1423,7 +1468,8 @@ class SEE2(QMainWindow) :
                 self.winFFT.close()
             if self.winFFT1D.isWinOpen==True:
                 self.winFFT1D.close()
-        
+        if self.winPointing.isWinOpen==True:
+            self.winPointing.close()
        
         
 def runVisu() :
