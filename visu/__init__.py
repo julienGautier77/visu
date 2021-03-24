@@ -5,7 +5,7 @@ Created on Mon Mar 18 10:50:06 2019
 Data vizualisation
 @author: juliengautier
 """
-__version__='2021.02'
+__version__='2021.03'
 __author__='julien Gautier'
 
 
@@ -24,6 +24,7 @@ from visu import winSuppE
 from visu import winFFT
 from visu import winZoom
 from visu import winMath
+from visu import winPointing
 try:
     from visu import Win3D
 except :
