@@ -878,7 +878,7 @@ class SEE2(QMainWindow) :
         else :
             self.imh.setImage(self.data,autoLevels=False,autoDownsample=True)
         
-        self.PlotXY() # graph update
+        self.Coupe()#self.PlotXY() # graph update
         
         ##update        
         if self.encercled=="on":
