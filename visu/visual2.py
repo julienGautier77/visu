@@ -910,6 +910,8 @@ class SEE2(QMainWindow) :
         if self.plot3D=="on":
             if self.Widget3D.isWinOpen==True:
                 self.Graph3D()
+        if self.winPointing.isWinOpen==True:
+            self.Pointing()
         ### autosave
         if self.checkBoxAutoSave.isChecked()==True: ## autosave data
             self.pathAutoSave=str(self.conf.value(self.name+'/pathAutoSave'))
@@ -1483,5 +1485,8 @@ if __name__ == "__main__":
     e = SEE2(aff='left',roiCross=True)
     e.show()
     appli.exec_() 
+
+
+
 
 
