@@ -41,6 +41,7 @@ from visu.WinPreference import PREFERENCES
 from visu.andor import SifFile
 from visu.winFFT import WINFFT
 from visu.winMath import WINMATH
+from visu.winPointing import WINPOINTING
 try :
     from visu.Win3D import GRAPH3D #conda install pyopengl
 except :
@@ -94,7 +95,12 @@ class SEE2(QMainWindow) :
         
         if "confpath"in kwds :
             self.confpath=kwds["confpath"]
-            self.conf=QtCore.QSettings(self.confpath, QtCore.QSettings.IniFormat)
+            if self.confpath==None:
+                self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+            else:
+                self.conf=QtCore.QSettings(self.confpath, QtCore.QSettings.IniFormat)
+            print ('configuration path of visu : ',self.confpath)
+            
             # print ('conf path visu',self.confpath,self.conf)
         else:
             self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
@@ -174,7 +180,8 @@ class SEE2(QMainWindow) :
         
         if self.math=="on":
             self.winMath=WINMATH()
-        
+            
+        self.winPointing=WINPOINTING()
         self.winCoupe=GRAPHCUT(symbol=None,conf=self.conf,name=self.name)
         self.path=path
         self.setWindowTitle('Visualization'+'       v.'+ version)
@@ -344,7 +351,7 @@ class SEE2(QMainWindow) :
         self.statusBar.addWidget(self.labelFileName)
         self.statusBar.addWidget(self.fileName)
          
-        self.checkBoxScale=QAction(QtGui.QIcon(self.icon+"resize.png"),'if selected Auto Scale on',self)
+        self.checkBoxScale=QAction(QtGui.QIcon(self.icon+"resize.png"),' Auto Scale on',self)
         self.checkBoxScale.setCheckable(True)
         self.checkBoxScale.setChecked(True)
         self.toolBar.addAction(self.checkBoxScale)
@@ -424,7 +431,10 @@ class SEE2(QMainWindow) :
             self.fftButton=QAction('FFT')
             self.AnalyseMenu.addAction(self.fftButton)
             self.fftButton.triggered.connect(self.fftTransform)
-            
+        
+        self.PointingButton=QAction(QtGui.QIcon(self.icon+"recycle.png"),'Pointing',self)
+        self.PointingButton.triggered.connect(self.Pointing)
+        self.AnalyseMenu.addAction(self.PointingButton)       
             
         self.ZoomRectButton=QAction(QtGui.QIcon(self.icon+"loupe.png"),'Zoom',self)
         self.ZoomRectButton.triggered.connect(self.zoomRectAct)
@@ -763,7 +773,25 @@ class SEE2(QMainWindow) :
                 self.winM.setFile(self.nomFichier)
                 self.open_widget(self.winM)
                 self.winM.Display(self.data)
-    
+    def Pointing(self) :
+
+        self.open_widget(self.winPointing)
+
+        if self.ite=='rect':
+            self.RectChanged()
+            pData=self.cut
+        elif self.ite=='cercle':
+            self.CercChanged() 
+            pData=self.cut
+        elif self.ite==None:
+            pData=self.data
+        else :pData=self.data
+
+
+        if self.winPref.checkBoxAxeScale.isChecked()==1:
+                self.winPointing.Display(pData,self.winPref.stepX,self.winPref.stepX)
+        else:
+                self.winPointing.Display(pData)
 
     def fftTransform(self):
         # show on a new widget fft 
@@ -1455,4 +1483,5 @@ if __name__ == "__main__":
     e = SEE2(aff='left',roiCross=True)
     e.show()
     appli.exec_() 
+
 
