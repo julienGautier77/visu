@@ -20,7 +20,7 @@ import pylab,os
 from scipy.ndimage.filters import gaussian_filter # pour la reduction du bruit
 from scipy.interpolate import splrep, sproot # pour calcul fwhm et fit 
 import pathlib
-
+from scipy import ndimage
 class WINPOINTING(QMainWindow):
     
     def __init__(self,conf=None,name='VISU'):
@@ -85,7 +85,7 @@ class WINPOINTING(QMainWindow):
         menubar = self.menuBar()
         menubar.setNativeMenuBar(False)
         self.fileMenu = menubar.addMenu('&File')
-        
+        self.optionMenu = menubar.addMenu('&Options')
         self.openAct = QAction(QtGui.QIcon(self.icon+"Open.png"), 'Open File', self)
         self.openAct.setShortcut('Ctrl+o')
         self.openAct.triggered.connect(self.OpenF)
@@ -103,7 +103,11 @@ class WINPOINTING(QMainWindow):
         
         self.resetButton=QAction('Reset',self)
         self.resetButton.triggered.connect(self.Reset)
-        self.fileMenu.addAction(self.resetButton)
+        self.optionMenu.addAction(self.resetButton)
+        self.centerOfMass=QAction('Center of Mass',self)
+        self.centerOfMass.setCheckable(True)
+        self.centerOfMass.setChecked(False)
+        self.optionMenu.addAction(self.centerOfMass)
         # vbox1.addLayout(hbox)
         
         
@@ -156,8 +160,6 @@ class WINPOINTING(QMainWindow):
         
         XHLayout=QHBoxLayout()
         XHLayout.addWidget(self.win3)
-        
-        
         
         
         
@@ -238,7 +240,12 @@ class WINPOINTING(QMainWindow):
         self.stepX=stepX
         self.stepY=stepY
         dataF=gaussian_filter(self.data,5)
-        (self.xec,self.yec)=pylab.unravel_index(dataF.argmax(),self.data.shape) 
+        
+        if self.centerOfMass.isChecked()==True:
+            (self.xec,self.yec)=ndimage.center_of_mass(dataF)
+            print('centre de mass')
+        else :
+            (self.xec,self.yec)=pylab.unravel_index(dataF.argmax(),self.data.shape)
         
         self.xec=self.xec*stepX
         self.yec=self.yec*stepX
@@ -272,19 +279,18 @@ class WINPOINTING(QMainWindow):
         #self.p4.addItem(self.hLineMeanY, ignoreBounds=True)
         
         if self.stepX!=1:
-            self.axeX1.setLabel("um")
-            
-        else:
-            self.axeX1.showLabel(False)
+            self.axeX1.setLabel("X(um)")
+            self.axeY3.setLabel("X(um)")
+        else : 
+            self.axeX1.setLabel("X")
+            self.axeY3.setLabel('X')
             
         if self.stepY!=1: 
-            self.axeY1.setLabel("um")
-            self.axeY3.setLabel("um")
-            self.axeY4.setLabel("um")
+            self.axeY1.setLabel("Y(um)")
+            self.axeY4.setLabel('Y(um)')
         else:
-            self.axeY1.showLabel(False)
-            self.axeY3.showLabel(False)
-            self.axeY4.showLabel(False)
+            self.axeY1.setLabel('Y')
+            self.axeY4.setLabel('Y')
             
     
         
@@ -350,7 +356,7 @@ class WINPOINTING(QMainWindow):
         self.conf.setValue(self.name+"/path",self.path)
         time.sleep(0.1)
         
-        np.savetxt(str(fichier)+'.txt',np.array(self.Xec, self.Yec).T,header="StepX:"+str(self.stepX)+"StepY:"+str(self.stepY))
+        np.savetxt(str(fichier)+'.txt',np.array(self.Xec, self.Yec).T)#,header="StepX:"+str(self.stepX)+"StepY:"+str(self.stepY))
         
     
     
