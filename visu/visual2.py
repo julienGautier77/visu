@@ -22,7 +22,7 @@ from PyQt5.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QWidget,QPushBu
 from PyQt5.QtWidgets import QInputDialog,QSlider,QCheckBox,QLabel,QSizePolicy,QMenu,QMessageBox
 from PyQt5.QtWidgets import QShortcut,QDockWidget,QToolBar,QMainWindow,QToolButton,QAction,QStatusBar
 from pyqtgraph.Qt import QtCore,QtGui 
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt,pyqtSlot
 from PyQt5.QtGui import QIcon
 import pylab
 import sys,time,os
@@ -41,7 +41,6 @@ from visu.WinPreference import PREFERENCES
 from visu.andor import SifFile
 from visu.winFFT import WINFFT
 from visu.winMath import WINMATH
-from visu.winPointing import WINPOINTING
 try :
     from visu.Win3D import GRAPH3D #conda install pyopengl
 except :
@@ -80,7 +79,7 @@ class SEE2(QMainWindow) :
         
         super().__init__()
         version=__version__
-        print("data visualisation2 :  ",version)
+        print("data visualisation :  ",version)
         p = pathlib.Path(__file__)
         self.fullscreen=False
         self.setAcceptDrops(True)
@@ -95,11 +94,8 @@ class SEE2(QMainWindow) :
         
         if "confpath"in kwds :
             self.confpath=kwds["confpath"]
-            if self.confpath==None:
-                self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
-            else:
-                self.conf=QtCore.QSettings(self.confpath, QtCore.QSettings.IniFormat)
-            print ('configuration path of visu : ',self.confpath)
+            self.conf=QtCore.QSettings(self.confpath, QtCore.QSettings.IniFormat)
+            # print ('conf path visu',self.confpath,self.conf)
         else:
             self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
         
@@ -109,7 +105,12 @@ class SEE2(QMainWindow) :
         else:
             self.name="VISU"
 
-        
+        if "roiCross" in kwds:
+            # print('ROICROSS on')
+            self.roiCross=kwds["roiCross"]
+        else :
+            self.roiCross=False
+            # print('no roicross')
         if "aff" in kwds:
             self.aff=kwds["aff"]
         else :
@@ -144,7 +145,7 @@ class SEE2(QMainWindow) :
             print('motor accepted')
             if self.meas=="on":
                 self.confMot=kwds["confMot"]
-                print(self.confMot)
+                # print(self.confMot)
                 self.winM=MEAS(confMot=self.confMot,conf=self.conf,name=self.name)
         else :
             if self.meas=="on":
@@ -179,9 +180,6 @@ class SEE2(QMainWindow) :
         self.setWindowTitle('Visualization'+'       v.'+ version)
         self.bloqKeyboard=bool((self.conf.value(self.name+"/bloqKeyboard"))  )  # block cross by keyboard
         self.bloqq=1 # block the cross by click on mouse
-        
-        self.winPointing=WINPOINTING()
-        
         
         # initialize variable : 
         self.filter='origin' # filter initial value
@@ -346,7 +344,7 @@ class SEE2(QMainWindow) :
         self.statusBar.addWidget(self.labelFileName)
         self.statusBar.addWidget(self.fileName)
          
-        self.checkBoxScale=QAction(QtGui.QIcon(self.icon+"resize.png"),' Auto Scale on',self)
+        self.checkBoxScale=QAction(QtGui.QIcon(self.icon+"resize.png"),'if selected Auto Scale on',self)
         self.checkBoxScale.setCheckable(True)
         self.checkBoxScale.setChecked(True)
         self.toolBar.addAction(self.checkBoxScale)
@@ -427,12 +425,7 @@ class SEE2(QMainWindow) :
             self.AnalyseMenu.addAction(self.fftButton)
             self.fftButton.triggered.connect(self.fftTransform)
             
-         
-        self.PointingButton=QAction(QtGui.QIcon(self.icon+"recycle.png"),'Pointing',self)
-        
-        self.PointingButton.triggered.connect(self.Pointing)
-        self.AnalyseMenu.addAction(self.PointingButton)    
-        
+            
         self.ZoomRectButton=QAction(QtGui.QIcon(self.icon+"loupe.png"),'Zoom',self)
         self.ZoomRectButton.triggered.connect(self.zoomRectAct)
         self.toolBar.addAction(self.ZoomRectButton)
@@ -505,9 +498,9 @@ class SEE2(QMainWindow) :
         self.hLine.setPos(self.yc)
        
         
-        self.ro1=pg.EllipseROI([self.xc,self.yc],[self.rx,self.ry],pen='y',movable=False,maxBounds=QtCore.QRectF(0,0,self.rx,self.ry))
+        self.ro1=pg.EllipseROI([self.xc,self.yc],[self.rx,self.ry],pen='r',movable=True)
         self.ro1.setPos([self.xc-(self.rx/2),self.yc-(self.ry/2)])
-      
+        
        
         # text for fwhm on p1
         self.textX = pg.TextItem(angle=-90) 
@@ -771,27 +764,6 @@ class SEE2(QMainWindow) :
                 self.open_widget(self.winM)
                 self.winM.Display(self.data)
     
-    
-    def Pointing(self) :
-        
-        self.open_widget(self.winPointing)
-        
-        if self.ite=='rect':
-            self.RectChanged()
-            pData=self.cut
-        elif self.ite=='cercle':
-            self.CercChanged() 
-            pData=self.cut
-        elif self.ite==None:
-            pData=self.data
-        else :pData=self.data
-            
-            
-        if self.winPref.checkBoxAxeScale.isChecked()==1:
-                self.winPointing.Display(pData,self.winPref.stepX,self.winPref.stepX)
-        else:
-                self.winPointing.Display(pData)
-        
 
     def fftTransform(self):
         # show on a new widget fft 
@@ -818,7 +790,7 @@ class SEE2(QMainWindow) :
         
 
         
-        
+    @pyqtSlot (object)   
     def Display(self,data):
         #  display the data and refresh all the calculated things and plots
         self.data=data
@@ -894,30 +866,22 @@ class SEE2(QMainWindow) :
                 self.CUT()
             if self.ite=='cercle':
                 self.CercChanged()
-                
-        if self.meas=="on": 
-            
-            if self.winM.isWinOpen==True: 
-                self.Measurement() #  measurement update
-                # if self.ite=='rect':
-                #     self.RectChanged()
-                #     self.Measurement()
-                # elif self.ite=='cercle':
-                #     self.CercChanged()
-                #     self.Measurement()
-                # else :
-                #     self.Measurement()
-                    
+        if self.meas=="on":       
+            if self.winM.isWinOpen==True: #  measurement update
+                if self.ite=='rect':
+                    self.RectChanged()
+                    self.Measurement()
+                elif self.ite=='cercle':
+                    self.CercChanged()
+                    self.Measurement()
+                else :
+                    self.Measurement()
         if self.fft=='on':        
             if self.winFFT.isWinOpen==True: # fft update
                 self.winFFT.Display(self.data)
         if self.plot3D=="on":
             if self.Widget3D.isWinOpen==True:
                 self.Graph3D()
-        
-        if self.winPointing.isWinOpen==True:
-            self.Pointing()
-        
         ### autosave
         if self.checkBoxAutoSave.isChecked()==True: ## autosave data
             self.pathAutoSave=str(self.conf.value(self.name+'/pathAutoSave'))
@@ -980,7 +944,8 @@ class SEE2(QMainWindow) :
                             self.yc= self.yMouse  
                             self.vLine.setPos(self.xc)
                             self.hLine.setPos(self.yc) # the cross move only in the graph    
-                            #self.ro1.setPos([self.xc-(self.rx/2),self.yc-(self.ry/2)])
+                            if self.roiCross==True :
+                                self.ro1.setPos([self.xc-(self.rx/2),self.yc-(self.ry/2)])
                             self.PlotXY()
                 
     def fwhm(self,x, y, order=3):
@@ -1000,7 +965,7 @@ class SEE2(QMainWindow) :
         else:
             return np.around(abs(roots[1] - roots[0]),decimals=2)
         
-        
+       
     def Coupe(self):
         # make  plot profile on cross
         
@@ -1017,20 +982,13 @@ class SEE2(QMainWindow) :
             try :
                 dataCross=self.data[int(self.xc),int(self.yc)] 
             except :dataCross=0  # evoid to have an error if cross if out of the image
-            try :
-                coupeX=self.data[int(self.xc),:]
-                coupeY=self.data[:,int(self.yc)]
-                coupeXMax=np.max(coupeX)
-                coupeYMax=np.max(coupeY)
-            except:
-                coupeX=0
-                coupeY=0
-                coupeXMax=0
-                coupeYMax=0
-                
+            
+            coupeX=self.data[int(self.xc),:]
+            coupeY=self.data[:,int(self.yc)]
             xxx=np.arange(0,int(self.dimx),1)#
             yyy=np.arange(0,int(self.dimy),1)#
-            
+            coupeXMax=np.max(coupeX)
+            coupeYMax=np.max(coupeY)
             
             
             if coupeXMax==0: # avoid zero
@@ -1105,6 +1063,8 @@ class SEE2(QMainWindow) :
             self.p1.showAxis('bottom',show=True)
             self.p1.addItem(self.textX)
             self.p1.addItem(self.textY)
+            if self.roiCross==True:
+                self.p1.addItem(self.ro1)
             self.Coupe()
         else:
             self.p1.removeItem(self.vLine)
@@ -1115,6 +1075,8 @@ class SEE2(QMainWindow) :
             self.p1.removeItem(self.textY)
             self.p1.showAxis('left',show=False)
             self.p1.showAxis('bottom',show=False)
+            if self.roiCross==True:
+                self.p1.removeItem(self.ro1)
 #            self.p1.removeItem(self.textX)
 #            self.p1.removeItem(self.textY)
             
@@ -1179,11 +1141,12 @@ class SEE2(QMainWindow) :
         self.conf.setValue(self.name+"/bloqKeyboard",bool(self.bloqKeyboard))
         self.vLine.setPen('r')
         self.hLine.setPen('r')
-        
+        self.ro1.setPen('r')
     def debloquer(self): # unblock the cross
         self.bloqKeyboard=bool(False)
         self.vLine.setPen('y')
         self.hLine.setPen('y')
+        self.ro1.setPen('y')
         self.conf.setValue(self.name+"/bloqKeyboard",bool(self.bloqKeyboard))
         
         
@@ -1328,7 +1291,7 @@ class SEE2(QMainWindow) :
             np.savetxt(str(fichier)+'.txt',self.dataS)
             self.fileName.setText(fname[0]+str(ext))
 
-  
+    @pyqtSlot (object) 
     def newDataReceived(self,data):
         
         # Do display and save origin data when new data is  sent to  visu
@@ -1468,8 +1431,7 @@ class SEE2(QMainWindow) :
                 self.winFFT.close()
             if self.winFFT1D.isWinOpen==True:
                 self.winFFT1D.close()
-        if self.winPointing.isWinOpen==True:
-            self.winPointing.close()
+        
        
         
 def runVisu() :
@@ -1490,6 +1452,7 @@ if __name__ == "__main__":
     
     appli = QApplication(sys.argv) 
     appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
-    e = SEE2(aff='left')
+    e = SEE2(aff='left',roiCross=True)
     e.show()
     appli.exec_() 
+
