@@ -21,7 +21,7 @@ It can open .spe .SPE, .sif and .TIFF files
 *   Numpy
 *   PyQt5
 *   pyqtgraph (https://github.com/pyqtgraph/pyqtgraph.git) 
-    * pip intall pyqtgraph
+    * Pip install pyqtgraph==0.11.1
 *   qdarkstyle (https://github.com/ColinDuquesnoy/QDarkStyleSheet.git)
     * pip install qdarkstyle
 *  sifread.py
