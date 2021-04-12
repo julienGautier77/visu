@@ -10,7 +10,7 @@ import pyqtgraph as pg # pyqtgraph biblio permettent l'affichage
 
 import qdarkstyle # pip install qdakstyle https://github.com/ColinDuquesnoy/QDarkStyleSheet  sur conda
 from PyQt5.QtWidgets import QApplication,QHBoxLayout,QAction,QWidget,QStatusBar,QMainWindow,QVBoxLayout,QCheckBox,QLabel,QPushButton,QMessageBox
-from PyQt5.QtGui import QIcon,QColorDialog,QInputDialog,QGridLayout,QDoubleSpinBox
+from PyQt5.QtGui import QIcon,QColorDialog,QInputDialog,QGridLayout,QDoubleSpinBox,QTableWidget,QTableWidgetItem
 import sys,time
 from PyQt5.QtCore import Qt
 from pyqtgraph.Qt import QtCore,QtGui 
@@ -31,7 +31,7 @@ class WINDOWRANGE(QWidget):
         self.setup()
         
     def setup(self):
-        hRangeBox=QHBoxLayout()
+        #hRangeBox=QHBoxLayout()
         hRangeGrid=QGridLayout()
         
         labelXmin=QLabel('Xmin:')
@@ -74,6 +74,65 @@ class WINDOWRANGE(QWidget):
         time.sleep(0.1)
         event.accept()
 
+class WINDOWMEAS(QWidget):
+    def __init__(self,title='Plot Measurement'):
+        
+        super().__init__()
+        self.isWinOpen=False
+        p = pathlib.Path(__file__)
+        sepa=os.sep
+        self.title=title
+        self.icon=str(p.parent) + sepa+'icons' +sepa
+        self.setWindowTitle(self.title)
+        self.setWindowIcon(QIcon(self.icon+'LOA.png'))
+        self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+        self.setup()
+        
+    def setup(self):
+        hLayout1=QHBoxLayout()
+        self.table=QTableWidget()
+        hLayout1.addWidget(self.table)
+        
+        self.table.setColumnCount(1)
+        self.table.setRowCount(7)
+        self.table.setVerticalHeaderLabels(('Max','Min','x max','x min','Mean','PV','Std','fit Result'))
+        self.setLayout(hLayout1)
+    
+    def Display(self,cutData,axis=None):
+        cutData=np.array(cutData)
+        Max=round(max(cutData),3)
+        Min=round(min(cutData),3)
+        Mean=np.mean(cutData)
+        PV=Max-Min
+        Std=np.std(cutData)
+        if axis==None:
+            
+            xmax=np.argmax(cutData)
+            xmin=np.argmin(cutData)
+        else :
+            
+            xmax=np.argmax(cutData)
+            xmax=axis[xmax]
+            xmin=np.argmin(cutData)
+            xmin=axis[xmin]
+        
+        
+        self.table.setItem(0, 0, QTableWidgetItem(str(Max)))
+        self.table.setItem(1, 0, QTableWidgetItem(str(Min)))
+        self.table.setItem(2, 0, QTableWidgetItem(str(xmax)))
+        self.table.setItem(3, 0, QTableWidgetItem(str(xmin)))
+        self.table.setItem(4, 0, QTableWidgetItem(str(Mean)))
+        self.table.setItem(5, 0, QTableWidgetItem(str(PV)))
+        self.table.setItem(6, 0, QTableWidgetItem(str(Std)))
+        
+    def closeEvent(self, event):
+        """ when closing the window
+        """
+        self.isWinOpen=False
+        
+        time.sleep(0.1)
+        event.accept()
+
 class GRAPHCUT(QMainWindow):
     
     def __init__(self,symbol=None,title='Plot',conf=None,name='VISU',meas=False,pen='w',symbolPen='w',label=None,labelY=None,clearPlot=True):
@@ -87,6 +146,7 @@ class GRAPHCUT(QMainWindow):
         self.dimx=10
         self.bloqq=0
         self.xc=0
+        self.measWidget=WINDOWMEAS()
         self.meas=meas
         self.cutData=np.zeros(self.dimx)
         self.path=None
@@ -165,6 +225,10 @@ class GRAPHCUT(QMainWindow):
         self.checkBoxPlot.triggered.connect(self.PlotXY)
         self.toolBar.addAction(self.checkBoxPlot)
         self.AnalyseMenu.addAction(self.checkBoxPlot)
+        
+        self.measAction=QAction('Measure')
+        self.AnalyseMenu.addAction(self.measAction)
+        self.measAction.triggered.connect(lambda:self.open_widget(self.measWidget))
         
         # self.maxGraphBox=QAction('Set Cross on the max',self)
         # self.maxGraphBox.setCheckable(True)
@@ -261,7 +325,8 @@ class GRAPHCUT(QMainWindow):
         self.ZoomRectButton=QAction(QtGui.QIcon(self.icon+"loupe.png"),'Zoom',self)
         self.ZoomRectButton.triggered.connect(self.zoomRectAct)
         self.toolBar.addAction(self.ZoomRectButton)
-        self.plotRectZoom=pg.RectROI([0,0],[4,4],pen='w')
+        
+        self.plotRectZoom=pg.RectROI([0,0],[100,100],pen='w')
             
         self.fitAction=QAction('Gaussian Fit',self)
         self.AnalyseMenu.addAction(self.fitAction)
@@ -426,7 +491,7 @@ class GRAPHCUT(QMainWindow):
         self.labelY=labelY
         self.cutData=cutData
         self.axis=axis
-         
+        
         self.dimy=max(cutData)
         self.minY=min(cutData)
         if self.axis is None :
@@ -441,7 +506,7 @@ class GRAPHCUT(QMainWindow):
             self.pCut.setData(y=self.cutData,x=self.axis)
         self.zoomRectupdate()
         self.setFit()
-        
+        self.measWidget.Display(cutData=self.cutData,axis=axis)
         
     def CHANGEPLOT(self,cutData):
         """
@@ -534,7 +599,9 @@ class GRAPHCUT(QMainWindow):
         
         if self.plotRectZoomEtat=="Zoom": 
             self.winPLOT.addItem(self.plotRectZoom)
+            
             self.plotRectZoom.setPos([self.dimx/2,self.dimy/2])
+            #self.plotRectZoom.setSize(/4,self.dimy/4)
             self.ZoomRectButton.setIcon(QtGui.QIcon(self.icon+"zoom-in.png"))
             self.plotRectZoomEtat="ZoomIn"
             
@@ -608,16 +675,22 @@ class GRAPHCUT(QMainWindow):
     def setFit(self):
         
         if self.fitAction.isChecked():
-            if self.axis.any()==False:
-                xxx=np.arange(0,int(self.dimx),1)
-            else :
-                xxx=self.axis
-                
+            
+            try :
+                if self.axis==None:
+                    xxx=np.arange(0,int(self.dimx),1)
+                else :
+                    xxx=self.axis
+            except :
+                if self.axis.any==None:
+                    xxx=np.arange(0,int(self.dimx),1)
+                else :
+                    xxx=self.axis
             try :
                 Datafwhm,xDataMax=self.fwhm(xxx,self.cutData)
                 ymaxx=self.cutData[int(xDataMax)]
             except:
-                Datafwhm,xDataMax=0,0
+                Datafwhm,xDataMax,ymaxx=0,0,0
                 
             init_vals = [ymaxx, xDataMax, Datafwhm,0]  # for [A, mu, sigma,B]
             try :
@@ -687,7 +760,10 @@ class GRAPHCUT(QMainWindow):
         self.isWinOpen=False
         time.sleep(0.1)
         event.accept()
-    
+        if self.measWidget.isWinOpen==True:
+            self.measWidget.close()
+        if self.widgetRange.isWinOpen==True:
+            self.widgetRange.close()
     
 if __name__ == "__main__":
     appli = QApplication(sys.argv) 
