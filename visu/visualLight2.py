@@ -298,12 +298,12 @@ class SEELIGHT(QMainWindow) :
         self.statusBar.addPermanentWidget(self.label_CrossValue)
         
         self.labelFileName=QLabel("File :")
-        self.labelFileName.setStyleSheet("font:12pt;")
+        self.labelFileName.setStyleSheet("font:8pt;")
         self.labelFileName.setMinimumHeight(30)
         self.labelFileName.setMaximumWidth(40)
         
         self.fileName=QLabel()
-        self.fileName.setStyleSheet("font:12pt")
+        self.fileName.setStyleSheet("font:8pt")
         self.fileName.setMaximumHeight(30)
         self.fileName.setMaximumWidth(200000)
         #self.fileName.setAlignment(Qt.AlignRight)
