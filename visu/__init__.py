@@ -11,6 +11,7 @@ __author__='julien Gautier'
 
 from visu import visual
 from visu import visualLight
+from visu import visualLigth2
 from visu.visualLight import SEELIGHT
 from visu.visualLightThread import SEELIGHTTHREAD
 from visu.visual import SEE
