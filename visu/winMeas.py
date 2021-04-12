@@ -10,7 +10,7 @@ modified 2019/08/13 : add motors RSAI position and zoom windows
 
 import qdarkstyle 
 from pyqtgraph.Qt import QtCore,QtGui 
-from PyQt5.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QPushButton
+from PyQt5.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QPushButton,QStatusBar,QAction,QMainWindow
 from PyQt5.QtWidgets import QMenu,QWidget,QTableWidget,QTableWidgetItem,QAbstractItemView,QComboBox
 import sys,time,os
 import pylab
@@ -21,7 +21,7 @@ from visu.winZoom import ZOOM
 import pathlib
 import numpy as np
 
-class MEAS(QWidget):
+class MEAS(QMainWindow):
     
     def __init__(self,parent=None,conf=None,name='VISU',confMot=None):
         
@@ -40,8 +40,8 @@ class MEAS(QWidget):
         self.symbol=False
         if confMot!=None:    
             self.confMotPath=str(p.parent / "fichiersConfig")+sepa+'configMoteurRSAI.ini'
-            self.motorListGui=list()
-            self.configMot=QtCore.QSettings(self.confMotPath, QtCore.QSettings.IniFormat)
+            
+            self.configMot=confMot#QtCore.QSettings(self.confMotPath, QtCore.QSettings.IniFormat)
             self.groups=self.configMot.childGroups()
             #print('groups',self.groups,self.confMotPath)
             import  visu.moteurRSAI as RSAI
@@ -101,47 +101,63 @@ class MEAS(QWidget):
         vLayout=QVBoxLayout()
         
         hLayout1=QHBoxLayout()
+        # self.toolBar =self.addToolBar('tools')
+        #self.setStyleSheet("{background-color: black}")
+        menubar = self.menuBar()
+        menubar.setNativeMenuBar(False)
+        self.fileMenu = menubar.addMenu('&File')
+        self.PlotMenu = menubar.addMenu('&Plot')
+        self.ZoomMenu = menubar.addMenu('&Zoom')
         
-        self.FileMenu=QPushButton('File')
-        self.FileMenu2=QPushButton('Plot')
-        self.FileMenu3=QPushButton('ZOOM')
-        hLayout1.addWidget(self.FileMenu)
-        hLayout1.addWidget(self.FileMenu2)
-        hLayout1.addWidget(self.FileMenu3)
-        menu=QMenu()
-        menu.addAction('&Open',self.openF)
-        menu.addAction('&Save',self.saveF)
-        self.FileMenu.setMenu(menu)
-        menu2=QMenu()
-        menu2.addAction('max',self.PlotMAX)
-        menu2.addAction('min',self.PlotMIN)
-        menu2.addAction('x max',self.PlotXMAX)
-        menu2.addAction('y max',self.PlotYMAX)
-        menu2.addAction('Sum',self.PlotSUM)
-        menu2.addAction('Mean',self.PlotMEAN)
+        self.Aboutenu = menubar.addMenu('&About')
         
-        menu2.addAction('x center mass',self.PlotXCMASS)
-        menu2.addAction('y center mass',self.PlotYCMASS)
+        self.setContentsMargins(0, 0, 0, 0)
+       
         
+        self.openAct = QAction(QtGui.QIcon(self.icon+"Open.png"), 'Open File', self)
+        self.openAct.setShortcut('Ctrl+o')
+        self.openAct.triggered.connect(self.openF)
         
+        self.fileMenu.addAction(self.openAct)
         
-        self.FileMenu2.setMenu(menu2)
+        self.saveAct=QAction(QtGui.QIcon(self.icon+"disketteSave.png"), 'Save file', self)
+        self.saveAct.setShortcut('Ctrl+s')
+        self.saveAct.triggered.connect(self.saveF)
         
-        menu3=QMenu()
-        menu3.addAction('max',self.ZoomMAX)
-        menu3.addAction('Sum',self.ZoomSUM)
-        menu3.addAction('Mean',self.ZoomMEAN)
-        menu3.addAction('X max',self.ZoomXmax) 
-        menu3.addAction('Y max',self.ZoomYmax)
-        menu3.addAction(' X c.of.m',self.ZoomCxmax)
-        menu3.addAction(' Y c.of.m',self.ZoomCymax)
-        
-        self.FileMenu3.setMenu(menu3)
+        self.fileMenu.addAction(self.saveAct)
         
         
         
-        self.But_reset=QPushButton('Reset')
-        hLayout1.addWidget(self.But_reset)
+        
+        
+        self.PlotMenu.addAction('max',self.PlotMAX)
+        self.PlotMenu.addAction('min',self.PlotMIN)
+        self.PlotMenu.addAction('x max',self.PlotXMAX)
+        self.PlotMenu.addAction('y max',self.PlotYMAX)
+        self.PlotMenu.addAction('Sum',self.PlotSUM)
+        self.PlotMenu.addAction('Mean',self.PlotMEAN)
+        self.PlotMenu.addAction('x center mass',self.PlotXCMASS)
+        self.PlotMenu.addAction('y center mass',self.PlotYCMASS)
+        
+        
+        
+       
+        
+        
+        self.ZoomMenu.addAction('max',self.ZoomMAX)
+        self.ZoomMenu.addAction('Sum',self.ZoomSUM)
+        self.ZoomMenu.addAction('Mean',self.ZoomMEAN)
+        self.ZoomMenu.addAction('X max',self.ZoomXmax) 
+        self.ZoomMenu.addAction('Y max',self.ZoomYmax)
+        self.ZoomMenu.addAction(' X c.of.m',self.ZoomCxmax)
+        self.ZoomMenu.addAction(' Y c.of.m',self.ZoomCymax)
+        
+        
+        
+        
+        
+        self.But_reset=QAction('Reset',self)
+        self.PlotMenu.addAction(self.But_reset)
         
         hLayout2=QHBoxLayout()
         self.table=QTableWidget()
@@ -181,11 +197,19 @@ class MEAS(QWidget):
         
         vLayout.addLayout(hLayout1)
         vLayout.addLayout(hLayout2)
-        self.setLayout(vLayout)
+        
+        MainWidget=QWidget()
+        
+        MainWidget.setLayout(vLayout)
+      
+        self.setCentralWidget(MainWidget)
+        self.setContentsMargins(1,1,1,1)
+        
+        
         
         if self.parent is not None:
             self.parent.newMesurment.connect(self.Display)
-        self.But_reset.clicked.connect(self.Reset)
+        self.But_reset.triggered.connect(self.Reset)
         
     def Reset(self):
         self.shoot=0
