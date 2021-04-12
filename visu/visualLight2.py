@@ -136,7 +136,10 @@ class SEELIGHT(QMainWindow) :
         else:
            self.meas="on" 
            
-        
+        if "toolBar" in kwds:
+            self.toolBarOn=kwds["toolBar"]
+        else:
+            self.toolBarOn=False
             
         if "confMot" in kwds:
             print('motor accepted')
@@ -230,7 +233,8 @@ class SEELIGHT(QMainWindow) :
         #self.setStyleSheet("QCheckBox::indicator{width: 30px;height: 30px;}""QCheckBox::indicator:unchecked { image : url(%s);}""QCheckBox::indicator:checked { image:  url(%s);}""QCheckBox{font :10pt;QCheckBox{background-color :red}" % (TogOff,TogOn) )
         
         
-        self.toolBar =self.addToolBar('tools')
+        
+        #self.toolBar.setOrientation(Qt.Vertical)
         #self.setStyleSheet("{background-color: black}")
         menubar = self.menuBar()
         menubar.setNativeMenuBar(False)
@@ -238,7 +242,8 @@ class SEELIGHT(QMainWindow) :
         self.ImageMenu = menubar.addMenu('&Image')
         #self.ProcessMenu = menubar.addMenu('&Process')
         self.AnalyseMenu = menubar.addMenu('&Analyse')
-        #self.Aboutenu = menubar.addMenu('&About')
+        
+        self.ZoomMenu = menubar.addMenu('&Zoom')
         self.statusBar = QStatusBar()
         self.setContentsMargins(0, 0, 0, 0)
         
@@ -290,7 +295,7 @@ class SEELIGHT(QMainWindow) :
         
         self.checkBoxPlot.setChecked(self.crossON)
         self.checkBoxPlot.triggered.connect(self.PlotXY)
-        self.toolBar.addAction(self.checkBoxPlot)
+        
         self.AnalyseMenu.addAction(self.checkBoxPlot)
         
         
@@ -320,7 +325,7 @@ class SEELIGHT(QMainWindow) :
         self.checkBoxScale=QAction(QtGui.QIcon(self.icon+"expand.png"),' Auto Scale on',self)
         self.checkBoxScale.setCheckable(True)
         self.checkBoxScale.setChecked(True)
-        self.toolBar.addAction(self.checkBoxScale)
+        
         self.ImageMenu.addAction(self.checkBoxScale)
         self.checkBoxScale.triggered.connect(self.checkBoxScaleImage)
         
@@ -328,7 +333,7 @@ class SEELIGHT(QMainWindow) :
         self.checkBoxColor.triggered.connect(self.Color)
         self.checkBoxColor.setCheckable(True) 
         self.checkBoxColor.setChecked(True)
-        self.toolBar.addAction(self.checkBoxColor)
+        
         self.ImageMenu.addAction(self.checkBoxColor)
         
     
@@ -378,9 +383,17 @@ class SEELIGHT(QMainWindow) :
             
         self.ZoomRectButton=QAction(QtGui.QIcon(self.icon+"loupe.png"),'Zoom',self)
         self.ZoomRectButton.triggered.connect(self.zoomRectAct)
-        self.toolBar.addAction(self.ZoomRectButton)
+        
+        self.ZoomMenu.addAction(self.ZoomRectButton)
         
         
+        if self.toolBarOn==True:
+            self.toolBar =self.addToolBar('tools')
+            self.toolBar.addAction(self.checkBoxPlot)
+            self.toolBar.addAction(self.checkBoxScale)
+            self.toolBar.addAction(self.checkBoxColor)
+            self.toolBar.addAction(self.ZoomRectButton)
+            self.toolBar.setMovable(False)
         self.vbox2=QVBoxLayout()
         
         self.winImage = pg.GraphicsLayoutWidget()
@@ -430,14 +443,6 @@ class SEELIGHT(QMainWindow) :
         self.hist.setImageItem(self.imh)
         self.hist.autoHistogramRange()
         self.hist.gradient.loadPreset('flame')
-        
-        
-        
-        ## slider to open multi file
-        self.sliderImage=QSlider(Qt.Horizontal)
-        self.sliderImage.setEnabled(False)
-        self.vbox2.addWidget(self.sliderImage)
-        
         
         
         hMainLayout=QHBoxLayout()
@@ -886,12 +891,6 @@ class SEELIGHT(QMainWindow) :
     
         self.newDataReceived(data)
         
-    
-    
-    def SliderImgFct(self):
-        nbImgToOpen=int(self.sliderImage.value())
-        
-        self.OpenF(fileOpen=self.openedFiles[nbImgToOpen])
         
     def SaveF (self):
         # save data  in TIFF or Text  files
@@ -1075,7 +1074,7 @@ if __name__ == "__main__":
     
     appli = QApplication(sys.argv) 
     appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
-    e = SEELIGHT(aff='left',roiCross=True,crossON=False)
+    e = SEELIGHT(aff='left',roiCross=True,crossON=False,toolBar=True)
     e.show()
     appli.exec_() 
 

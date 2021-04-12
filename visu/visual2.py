@@ -259,6 +259,7 @@ class SEE2(QMainWindow) :
         
         
         self.toolBar =self.addToolBar('tools')
+        self.toolBar.setMovable(False)
         #self.setStyleSheet("{background-color: black}")
         menubar = self.menuBar()
         menubar.setNativeMenuBar(False)
@@ -491,8 +492,8 @@ class SEE2(QMainWindow) :
         self.p1.setAspectLocked(True,ratio=1)
         self.p1.showAxis('right',show=False)
         self.p1.showAxis('top',show=False)
-        self.p1.showAxis('left',show=True)
-        self.p1.showAxis('bottom',show=True)
+        self.p1.showAxis('left',show=False)
+        self.p1.showAxis('bottom',show=False)
         
         if self.bloqKeyboard==True:
             self.vLine = pg.InfiniteLine(angle=90, movable=False,pen='r')
