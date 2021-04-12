@@ -295,7 +295,7 @@ class SEE2(QMainWindow) :
         self.fileMenu.addAction(self.saveAct)
 
         
-        self.checkBoxAutoSave=QAction(QtGui.QIcon(self.icon+"diskette.png"),'AutoSave on',self)
+        self.checkBoxAutoSave=QAction(QtGui.QIcon(self.icon+"diskette.png"),'AutoSave Off',self)
         self.checkBoxAutoSave.setCheckable(True)
         self.checkBoxAutoSave.setChecked(False)
         
@@ -304,7 +304,7 @@ class SEE2(QMainWindow) :
         self.fileMenu.addAction(self.checkBoxAutoSave)
         
         
-        self.optionAutoSaveAct=QAction(QtGui.QIcon(self.icon+"Settings.png"),'Option',self) #
+        self.optionAutoSaveAct=QAction(QtGui.QIcon(self.icon+"Settings.png"),'Options',self) #
         self.optionAutoSaveAct.triggered.connect(lambda:self.open_widget(self.winOpt))
         self.toolBar.addAction(self.optionAutoSaveAct)
         self.fileMenu.addAction(self.optionAutoSaveAct)
@@ -1163,9 +1163,11 @@ class SEE2(QMainWindow) :
         if self.checkBoxColor.isChecked()==1:
             self.checkBoxColor.setIcon(QtGui.QIcon(self.icon+"colors-icon.png"))
             self.hist.gradient.loadPreset(self.colorBar)
+            self.checkBoxColor.setText('Color On')
         else:
             self.hist.gradient.loadPreset('grey')
             self.checkBoxColor.setIcon(QtGui.QIcon(self.icon+"circleGray.png"))
+            self.checkBoxColor.setText('Gray')
             
     def roiChanged(self):
         
@@ -1184,6 +1186,7 @@ class SEE2(QMainWindow) :
         self.vLine.setPen('r')
         self.hLine.setPen('r')
         self.ro1.setPen('r')
+        
     def debloquer(self): # unblock the cross
         self.bloqKeyboard=bool(False)
         self.vLine.setPen('y')
@@ -1378,6 +1381,7 @@ class SEE2(QMainWindow) :
             
             self.ZoomRectButton.setIcon(QtGui.QIcon(self.icon+"zoom-in.png"))
             self.plotRectZoomEtat="ZoomIn"
+            self.ZoomRectButton.setText('Zoom In')
             
         elif self.plotRectZoomEtat=="ZoomIn":
             self.ZoomRectButton.setIcon(QtGui.QIcon(self.icon+"zoom-out.png"))
@@ -1390,7 +1394,7 @@ class SEE2(QMainWindow) :
             self.p1.setYRange(self.yZoomMin,self.yZoomMax)
             self.p1.setAspectLocked(False)
             self.p1.removeItem(self.plotRectZoom)
-            
+            self.ZoomRectButton.setText('Zoom Out')
             self.plotRectZoomEtat="ZoomOut"
             
         elif self.plotRectZoomEtat=="ZoomOut": 
@@ -1398,6 +1402,7 @@ class SEE2(QMainWindow) :
             self.p1.setXRange(0,self.dimx,update=True)
             #self.p1.setLimits(minXRange=0,maxXRange=self.dimx,minYRange=0,maxYRange=self.dimy,xMin=0,yMin=0,xMax=self.dimx,yMax=self.dimy)
             self.ZoomRectButton.setIcon(QtGui.QIcon(self.icon+"loupe.png"))
+            self.ZoomRectButton.setText('Zoom rect')
             self.plotRectZoomEtat="Zoom"
             self.p1.setAspectLocked(True)
             #print(self.p1.viewRange(),self.p1.viewRect())
@@ -1458,16 +1463,19 @@ class SEE2(QMainWindow) :
     def checkBoxScaleImage(self):
         if self.checkBoxScale.isChecked()==True:
             self.checkBoxScale.setIcon(QtGui.QIcon(self.icon+"expand.png"))
+            self.checkBoxScale.setText('Auto Scale On')
         else :
              self.checkBoxScale.setIcon(QtGui.QIcon(self.icon+"minimize.png"))
-    
+             self.checkBoxScale.setText('Auto Scale Off')
     
     def autoSaveColor(self):
         
         if self.checkBoxAutoSave.isChecked()==True:
             self.checkBoxAutoSave.setIcon(QtGui.QIcon(self.icon+"saveAutoOn.png"))
+            self.checkBoxAutoSave.setText('Auto Save on')
         else :
              self.checkBoxAutoSave.setIcon(QtGui.QIcon(self.icon+"diskette.png"))
+             self.checkBoxAutoSave.setText('Auto Save off')
              
     def closeEvent(self,event):
         # when the window is closed

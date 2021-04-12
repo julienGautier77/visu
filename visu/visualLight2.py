@@ -244,10 +244,10 @@ class SEELIGHT(QMainWindow) :
         self.AnalyseMenu = menubar.addMenu('&Analyse')
         
         self.ZoomMenu = menubar.addMenu('&Zoom')
-        self.statusBar = QStatusBar()
+        # self.statusBar = QStatusBar()
         self.setContentsMargins(0, 0, 0, 0)
         
-        self.setStatusBar(self.statusBar)
+        # self.setStatusBar(self.statusBar)
        
         
         self.vbox1=QVBoxLayout() 
@@ -271,7 +271,7 @@ class SEELIGHT(QMainWindow) :
         self.fileMenu.addAction(self.saveAct)
 
         
-        self.checkBoxAutoSave=QAction(QtGui.QIcon(self.icon+"diskette.png"),'AutoSave on',self)
+        self.checkBoxAutoSave=QAction(QtGui.QIcon(self.icon+"diskette.png"),'AutoSave off',self)
         self.checkBoxAutoSave.setCheckable(True)
         self.checkBoxAutoSave.setChecked(False)
         
@@ -299,28 +299,28 @@ class SEELIGHT(QMainWindow) :
         self.AnalyseMenu.addAction(self.checkBoxPlot)
         
         
-        self.label_CrossValue=QLabel()
-        self.label_CrossValue.setStyleSheet("font:13pt")
+        # self.label_CrossValue=QLabel()
+        # self.label_CrossValue.setStyleSheet("font:13pt")
         
-        self.label_Cross=QLabel()
-        #self.label_Cross.setMaximumHeight(20)
-        self.label_Cross.setMaximumWidth(170)
-        self.label_Cross.setStyleSheet("font:12pt")
-        self.statusBar.addPermanentWidget(self.label_Cross)
-        self.statusBar.addPermanentWidget(self.label_CrossValue)
+        # self.label_Cross=QLabel()
+        # #self.label_Cross.setMaximumHeight(20)
+        # self.label_Cross.setMaximumWidth(170)
+        # self.label_Cross.setStyleSheet("font:12pt")
+        # self.statusBar.addPermanentWidget(self.label_Cross)
+        # self.statusBar.addPermanentWidget(self.label_CrossValue)
         
-        self.labelFileName=QLabel("File :")
-        self.labelFileName.setStyleSheet("font:8pt;")
-        self.labelFileName.setMinimumHeight(30)
-        self.labelFileName.setMaximumWidth(40)
+        # self.labelFileName=QLabel("File :")
+        # self.labelFileName.setStyleSheet("font:8pt;")
+        # self.labelFileName.setMinimumHeight(30)
+        # self.labelFileName.setMaximumWidth(40)
         
-        self.fileName=QLabel()
-        self.fileName.setStyleSheet("font:8pt")
-        self.fileName.setMaximumHeight(30)
-        self.fileName.setMaximumWidth(200000)
-        #self.fileName.setAlignment(Qt.AlignRight)
-        self.statusBar.addWidget(self.labelFileName)
-        self.statusBar.addWidget(self.fileName)
+        # self.fileName=QLabel()
+        # self.fileName.setStyleSheet("font:8pt")
+        # self.fileName.setMaximumHeight(30)
+        # self.fileName.setMaximumWidth(200000)
+        # #self.fileName.setAlignment(Qt.AlignRight)
+        # self.statusBar.addWidget(self.labelFileName)
+        # self.statusBar.addWidget(self.fileName)
          
         self.checkBoxScale=QAction(QtGui.QIcon(self.icon+"expand.png"),' Auto Scale on',self)
         self.checkBoxScale.setCheckable(True)
@@ -699,26 +699,26 @@ class SEELIGHT(QMainWindow) :
             return np.around(abs(roots[1] - roots[0]),decimals=2)
         
        
-    def Coupe(self):
-        # make  plot profile on cross
+    # def Coupe(self):
+        # # make  plot profile on cross
         
-        if self.checkBoxPlot.isChecked()==True:
+        # if self.checkBoxPlot.isChecked()==True:
             
 
                 
-            try :
-                dataCross=self.data[int(self.xc),int(self.yc)] 
-            except :dataCross=0  # evoid to have an error if cross if out of the image
+        #     try :
+        #         dataCross=self.data[int(self.xc),int(self.yc)] 
+        #     except :dataCross=0  # evoid to have an error if cross if out of the image
             
     
                 
-            if self.winPref.checkBoxAxeScale.isChecked()==1: # scale axe on 
-                self.label_Cross.setText('x='+ str(round(int(self.xc)*self.winPref.stepX,2)) + '  um'+' y=' + str(round(int(self.yc)*self.winPref.stepY,2)) +' um')
-            else : 
-                self.label_Cross.setText('x='+ str(int(self.xc)) + ' y=' + str(int(self.yc)) )
+        #     if self.winPref.checkBoxAxeScale.isChecked()==1: # scale axe on 
+        #         self.label_Cross.setText('x='+ str(round(int(self.xc)*self.winPref.stepX,2)) + '  um'+' y=' + str(round(int(self.yc)*self.winPref.stepY,2)) +' um')
+        #     else : 
+        #         self.label_Cross.setText('x='+ str(int(self.xc)) + ' y=' + str(int(self.yc)) )
                 
-            dataCross=round(dataCross,3) # take data  value  on the cross
-            self.label_CrossValue.setText(' v.=' + str(dataCross))
+        #     dataCross=round(dataCross,3) # take data  value  on the cross
+        #     self.label_CrossValue.setText(' v.=' + str(dataCross))
             
             
  
@@ -734,15 +734,15 @@ class SEELIGHT(QMainWindow) :
            
             if self.roiCross==True:
                 self.p1.addItem(self.ro1)
-            self.Coupe()
+            # self.Coupe()
         else:
             self.p1.removeItem(self.vLine)
             self.p1.removeItem(self.hLine)
             
             self.p1.showAxis('left',show=False)
             self.p1.showAxis('bottom',show=False)
-            self.label_Cross.setText('')
-            self.label_CrossValue.setText('')
+            # self.label_Cross.setText('')
+            # self.label_CrossValue.setText('')
             if self.roiCross==True:
                 self.p1.removeItem(self.ro1)
 
@@ -789,8 +789,10 @@ class SEELIGHT(QMainWindow) :
         if self.checkBoxColor.isChecked()==1:
             self.checkBoxColor.setIcon(QtGui.QIcon(self.icon+"colors-icon.png"))
             self.hist.gradient.loadPreset(self.colorBar)
+            self.checkBoxColor.setText('Color on')
         else:
             self.hist.gradient.loadPreset('grey')
+            self.checkBoxColor.setText('Grey')
             self.checkBoxColor.setIcon(QtGui.QIcon(self.icon+"circleGray.png"))
             
     def roiChanged(self):
@@ -968,6 +970,7 @@ class SEELIGHT(QMainWindow) :
             self.plotRectZoom.setPos([self.xc-1*self.rx,self.yc-1*self.ry])
             self.ZoomRectButton.setIcon(QtGui.QIcon(self.icon+"zoom-in.png"))
             self.plotRectZoomEtat="ZoomIn"
+            self.ZoomRectButton.setText('Zoom In')
             
         elif self.plotRectZoomEtat=="ZoomIn":
             self.ZoomRectButton.setIcon(QtGui.QIcon(self.icon+"zoom-out.png"))
@@ -979,7 +982,7 @@ class SEELIGHT(QMainWindow) :
             self.p1.setYRange(self.yZoomMin,self.yZoomMax)
             self.p1.setAspectLocked(False)
             self.p1.removeItem(self.plotRectZoom)
-            
+            self.ZoomRectButton.setText('Zoom Out')
             self.plotRectZoomEtat="ZoomOut"
             
         elif self.plotRectZoomEtat=="ZoomOut": 
@@ -987,9 +990,10 @@ class SEELIGHT(QMainWindow) :
             self.p1.setXRange(0,self.dimx)
             self.ZoomRectButton.setIcon(QtGui.QIcon(self.icon+"loupe.png"))
             self.plotRectZoomEtat="Zoom"
+            self.ZoomRectButton.setText('Zoom Selection')
             self.p1.setAspectLocked(True)
         
-        self.Coupe()  
+        # self.Coupe()  
         
     def zoomRectupdate(self):
         if self.plotRectZoomEtat=="ZoomOut":
@@ -1032,17 +1036,19 @@ class SEELIGHT(QMainWindow) :
     def checkBoxScaleImage(self):
         if self.checkBoxScale.isChecked()==True:
             self.checkBoxScale.setIcon(QtGui.QIcon(self.icon+"expand.png"))
+            self.checkBoxScale.setText('Àuto Scale  On')
         else :
              self.checkBoxScale.setIcon(QtGui.QIcon(self.icon+"minimize.png"))
-    
+             self.checkBoxScale.setText('Àuto Scale  Off')
     
     def autoSaveColor(self):
         
         if self.checkBoxAutoSave.isChecked()==True:
             self.checkBoxAutoSave.setIcon(QtGui.QIcon(self.icon+"saveAutoOn.png"))
+            self.checkBoxAutoSave.setText('Auto Save On')
         else :
              self.checkBoxAutoSave.setIcon(QtGui.QIcon(self.icon+"diskette.png"))
-             
+             self.checkBoxAutoSave.setText('Auto Save Off')
     def closeEvent(self,event):
         # when the window is closed
         
