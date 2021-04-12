@@ -115,7 +115,7 @@ class SEELIGHT(QMainWindow) :
             # print('ROICROSS on')
             self.roiCross=kwds["roiCross"]
         else :
-            self.roiCross=False
+            self.roiCross=True
             # print('no roicross')
        
         if "aff" in kwds:
