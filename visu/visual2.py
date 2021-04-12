@@ -42,6 +42,7 @@ from visu.andor import SifFile
 from visu.winFFT import WINFFT
 from visu.winMath import WINMATH
 from visu.winPointing import WINPOINTING
+from visu import aboutWindows
 try :
     from visu.Win3D import GRAPH3D #conda install pyopengl
 except :
@@ -87,10 +88,10 @@ class SEE2(QMainWindow) :
         sepa=os.sep
         self.icon=str(p.parent) + sepa+'icons' +sepa
         self.colorBar='flame'
-        
+        self.setWindowIcon(QIcon(self.icon+'LOA.png'))
         self.nomFichier=''
         
-        
+        self.aboutWidget=aboutWindows.ABOUT()
         ### kwds definition  : 
         
         if "confpath"in kwds :
@@ -267,7 +268,11 @@ class SEE2(QMainWindow) :
         self.ImageMenu = menubar.addMenu('&Image')
         self.ProcessMenu = menubar.addMenu('&Process')
         self.AnalyseMenu = menubar.addMenu('&Analyse')
-        self.Aboutenu = menubar.addMenu('&About')
+        self.AboutMenu = menubar.addMenu('&About')
+        
+        self.aboutAction=QAction(QtGui.QIcon(self.icon+"LOA.png'"), 'About', self)
+        self.AboutMenu.addAction(self.aboutAction)
+        self.aboutAction.triggered.connect(lambda:self.open_widget(self.aboutWidget) )     
         self.statusBar = QStatusBar()
         self.setContentsMargins(0, 0, 0, 0)
         
