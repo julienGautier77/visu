@@ -185,7 +185,7 @@ class SEE2(QMainWindow) :
         self.winCoupe=GRAPHCUT(symbol=None,conf=self.conf,name=self.name)
         self.path=path
         self.setWindowTitle('Visualization'+'       v.'+ version)
-        self.bloqKeyboard=bool((self.conf.value(self.name+"/bloqKeyboard"))  )  # block cross by keyboard
+        self.bloqKeyboard=1#bool((self.conf.value(self.name+"/bloqKeyboard"))  )  # block cross by keyboard
         self.bloqq=1 # block the cross by click on mouse
         
         # initialize variable : 
@@ -509,7 +509,7 @@ class SEE2(QMainWindow) :
         self.hLine.setPos(self.yc)
        
         
-        self.ro1=pg.EllipseROI([self.xc,self.yc],[self.rx,self.ry],pen='r',movable=True)
+        self.ro1=pg.EllipseROI([self.xc,self.yc],[self.rx,self.ry],pen='r',movable=False)
         self.ro1.setPos([self.xc-(self.rx/2),self.yc-(self.ry/2)])
         
        
@@ -1372,7 +1372,9 @@ class SEE2(QMainWindow) :
         if self.plotRectZoomEtat=="Zoom": 
             
             self.p1.addItem(self.plotRectZoom)
-            self.plotRectZoom.setPos([self.dimx/2,self.dimy/2])
+            self.plotRectZoom.setSize(size=(2*self.rx,2*self.ry),center=None)
+            self.plotRectZoom.setPos([self.xc-1*self.rx,self.yc-1*self.ry])
+            
             self.ZoomRectButton.setIcon(QtGui.QIcon(self.icon+"zoom-in.png"))
             self.plotRectZoomEtat="ZoomIn"
             
@@ -1383,18 +1385,22 @@ class SEE2(QMainWindow) :
             self.xZoomMax=(self.plotRectZoom.pos()[0])+self.plotRectZoom.size()[0]
             self.yZoomMax=(self.plotRectZoom.pos()[1])+self.plotRectZoom.size()[1]
             self.p1.setXRange(self.xZoomMin,self.xZoomMax)
+            
             self.p1.setYRange(self.yZoomMin,self.yZoomMax)
-            self.p1.setAspectLocked(True)
+            self.p1.setAspectLocked(False)
             self.p1.removeItem(self.plotRectZoom)
             
             self.plotRectZoomEtat="ZoomOut"
             
         elif self.plotRectZoomEtat=="ZoomOut": 
-            self.p1.setYRange(0,self.dimy)
-            self.p1.setXRange(0,self.dimx)
+            self.p1.setYRange(0,self.dimy,update=True)
+            self.p1.setXRange(0,self.dimx,update=True)
+            #self.p1.setLimits(minXRange=0,maxXRange=self.dimx,minYRange=0,maxYRange=self.dimy,xMin=0,yMin=0,xMax=self.dimx,yMax=self.dimy)
             self.ZoomRectButton.setIcon(QtGui.QIcon(self.icon+"loupe.png"))
             self.plotRectZoomEtat="Zoom"
             self.p1.setAspectLocked(True)
+            #print(self.p1.viewRange(),self.p1.viewRect())
+            
         
         self.Coupe()  
         
