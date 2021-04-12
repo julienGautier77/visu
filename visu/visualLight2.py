@@ -110,7 +110,13 @@ class SEELIGHT(QMainWindow) :
             self.name=kwds["name"]
         else:
             self.name="VISU"
-
+        
+        if "crossON" in kwds:
+            # print('ROICROSS on')
+            self.crossON=kwds["crossON"]
+        else :
+            self.crossON=True
+        
         if "roiCross" in kwds:
             # print('ROICROSS on')
             self.roiCross=kwds["roiCross"]
@@ -281,7 +287,8 @@ class SEELIGHT(QMainWindow) :
         
         self.checkBoxPlot=QAction(QtGui.QIcon(self.icon+"target.png"),'Cross On (ctrl+b to block ctrl+d to unblock)',self)
         self.checkBoxPlot.setCheckable(True)
-        self.checkBoxPlot.setChecked(False)
+        
+        self.checkBoxPlot.setChecked(self.crossON)
         self.checkBoxPlot.triggered.connect(self.PlotXY)
         self.toolBar.addAction(self.checkBoxPlot)
         self.AnalyseMenu.addAction(self.checkBoxPlot)
@@ -417,7 +424,7 @@ class SEELIGHT(QMainWindow) :
         self.ro1.setPos([self.xc-(self.rx/2),self.yc-(self.ry/2)])
         
        
-        
+        self.PlotXY()
         #histogram
         self.hist = pg.HistogramLUTItem() 
         self.hist.setImageItem(self.imh)
@@ -1068,7 +1075,7 @@ if __name__ == "__main__":
     
     appli = QApplication(sys.argv) 
     appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
-    e = SEELIGHT(aff='left',roiCross=True)
+    e = SEELIGHT(aff='left',roiCross=True,crossON=False)
     e.show()
     appli.exec_() 
 
