@@ -351,11 +351,12 @@ class SEE2(QMainWindow) :
         self.statusBar.addWidget(self.labelFileName)
         self.statusBar.addWidget(self.fileName)
          
-        self.checkBoxScale=QAction(QtGui.QIcon(self.icon+"resize.png"),' Auto Scale on',self)
+        self.checkBoxScale=QAction(QtGui.QIcon(self.icon+"expand.png"),' Auto Scale on',self)
         self.checkBoxScale.setCheckable(True)
         self.checkBoxScale.setChecked(True)
         self.toolBar.addAction(self.checkBoxScale)
         self.ImageMenu.addAction(self.checkBoxScale)
+        self.checkBoxScale.triggered.connect(self.checkBoxScaleImage)
         
         self.checkBoxColor=QAction(QtGui.QIcon(self.icon+"colors-icon.png"),'Color on',self)
         self.checkBoxColor.triggered.connect(self.Color)
@@ -565,7 +566,7 @@ class SEE2(QMainWindow) :
         self.plotRect=pg.RectROI([self.xc,self.yc],[4*self.rx,self.ry],pen='g')
         self.plotCercle=pg.CircleROI([self.xc,self.yc],[80,80],pen='g')
         self.plotRectZoom=pg.RectROI([self.xc,self.yc],[4*self.rx,self.ry],pen='w')
-        #self.plotRect.addScaleRotateHandle([0.5, 1], [0.5, 0.5])
+        self.plotRectZoom.addScaleHandle((0,0),center=(1,1))
         #self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5()) # dark style
         
         
@@ -1007,6 +1008,8 @@ class SEE2(QMainWindow) :
                 (self.xc,self.yc)=pylab.unravel_index(dataF.argmax(),self.data.shape) #take the max ndimage.measurements.center_of_mass(dataF)#
                 self.vLine.setPos(self.xc)
                 self.hLine.setPos(self.yc)
+                if self.roiCross==True:
+                    self.ro1.setPos([self.xc-(self.rx/2),self.yc-(self.ry/2)])
             
                 
             try :
@@ -1035,13 +1038,19 @@ class SEE2(QMainWindow) :
             dataCross=round(dataCross,3) # take data  value  on the cross
             self.label_CrossValue.setText(' v.=' + str(dataCross))
             
-            
-            coupeXnorm=(self.data.shape[0]/10)*(coupeX/coupeXMax) # normalize the curves
-            self.curve2.setData(20+self.xminR+coupeXnorm,yyy,clear=True)
-    
-              
+            coupeXnorm=(self.data.shape[0]/10)*(coupeX/coupeXMax)
             coupeYnorm=(self.data.shape[1]/10)*(coupeY/coupeYMax)
-            self.curve3.setData(xxx,20+self.yminR+coupeYnorm,clear=True)
+            if self.plotRectZoomEtat=="ZoomOut": # the cut line follow the  the zoom
+               
+                self.curve2.setData(20+self.xZoomMin+coupeXnorm,yyy,clear=True)
+                self.curve3.setData(xxx,20+self.yZoomMin+coupeYnorm,clear=True)
+            
+            else :
+                 # normalize the curves
+                self.curve2.setData(20+self.xminR+coupeXnorm,yyy,clear=True)
+                self.curve3.setData(xxx,20+self.yminR+coupeYnorm,clear=True)
+                
+            
             
             ###  fwhm on the  X et Y curves if max  >20 counts if checked in winOpt
             
@@ -1105,10 +1114,11 @@ class SEE2(QMainWindow) :
             self.p1.removeItem(self.textY)
             self.p1.showAxis('left',show=False)
             self.p1.showAxis('bottom',show=False)
+            self.label_Cross.setText('')
+            self.label_CrossValue.setText('')
             if self.roiCross==True:
                 self.p1.removeItem(self.ro1)
-#            self.p1.removeItem(self.textX)
-#            self.p1.removeItem(self.textY)
+
             
     def paletteup(self):
         # change the color scale
@@ -1150,10 +1160,11 @@ class SEE2(QMainWindow) :
         
         
         if self.checkBoxColor.isChecked()==1:
+            self.checkBoxColor.setIcon(QtGui.QIcon(self.icon+"colors-icon.png"))
             self.hist.gradient.loadPreset(self.colorBar)
         else:
             self.hist.gradient.loadPreset('grey')
-            
+            self.checkBoxColor.setIcon(QtGui.QIcon(self.icon+"circleGray.png"))
             
     def roiChanged(self):
         
@@ -1377,14 +1388,16 @@ class SEE2(QMainWindow) :
             self.p1.removeItem(self.plotRectZoom)
             
             self.plotRectZoomEtat="ZoomOut"
-        
+            
         elif self.plotRectZoomEtat=="ZoomOut": 
             self.p1.setYRange(0,self.dimy)
             self.p1.setXRange(0,self.dimx)
             self.ZoomRectButton.setIcon(QtGui.QIcon(self.icon+"loupe.png"))
             self.plotRectZoomEtat="Zoom"
-            self.p1.setAspectLocked(True,ratio=1)
-            
+            self.p1.setAspectLocked(True)
+        
+        self.Coupe()  
+        
     def zoomRectupdate(self):
         if self.plotRectZoomEtat=="ZoomOut":
             self.p1.setXRange(self.xZoomMin,self.xZoomMax)
@@ -1434,6 +1447,13 @@ class SEE2(QMainWindow) :
             l.append(str(url.toLocalFile()))
         e.accept()
         self.OpenF(fileOpen=l[0])
+    
+    def checkBoxScaleImage(self):
+        if self.checkBoxScale.isChecked()==True:
+            self.checkBoxScale.setIcon(QtGui.QIcon(self.icon+"expand.png"))
+        else :
+             self.checkBoxScale.setIcon(QtGui.QIcon(self.icon+"minimize.png"))
+    
     
     def autoSaveColor(self):
         
