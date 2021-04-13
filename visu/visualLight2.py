@@ -93,7 +93,7 @@ class SEELIGHT(QMainWindow) :
         
         ### kwds definition  : 
         
-        if "confpath"in kwds :
+        if "confpath"in kwds :   #confpath path.file pour le fichier ini.
             self.confpath=kwds["confpath"]
             if self.confpath==None:
                 self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
@@ -105,6 +105,8 @@ class SEELIGHT(QMainWindow) :
         else:
             self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
         
+        if "conf"in kwds:               #conf : le QSetting
+            self.conf=kwds["conf"]
     
         if "name" in kwds:
             self.name=kwds["name"]
