@@ -30,10 +30,10 @@ class MEAS(QMainWindow):
         self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
         p = pathlib.Path(__file__)
         if conf==None:
-            
             self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
         else :
-            self.conf =conf
+            self.conf=conf
+            
         self.name=name
         sepa=os.sep
         self.confMotPath=None
@@ -47,7 +47,7 @@ class MEAS(QMainWindow):
             import  visu.moteurRSAI as RSAI
             self.motorType=RSAI
             self.nbMotors=int(np.size(self.groups))
-            
+           
         self.unitChange=1
         self.unitName='step'
         self.icon=str(p.parent) + sepa+'icons' +sepa

@@ -94,7 +94,7 @@ class SEE2(QMainWindow) :
         self.aboutWidget=aboutWindows.ABOUT()
         ### kwds definition  : 
         
-        if "confpath"in kwds :
+        if "confpath"in kwds :   #confpath path.file pour le fichier ini.
             self.confpath=kwds["confpath"]
             if self.confpath==None:
                 self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
@@ -106,12 +106,18 @@ class SEE2(QMainWindow) :
         else:
             self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
         
-    
+        if "conf"in kwds:               #conf : le QSetting
+            self.conf=kwds["conf"]
+        
+        
+        
         if "name" in kwds:
             self.name=kwds["name"]
         else:
             self.name="VISU"
-
+        
+        print('name :' ,self.name)
+        
         if "roiCross" in kwds:
             # print('ROICROSS on')
             self.roiCross=kwds["roiCross"]
@@ -1522,7 +1528,10 @@ if __name__ == "__main__":
     
     appli = QApplication(sys.argv) 
     appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
-    e = SEE2(aff='left',roiCross=True)
+    pathVisu="/Users/juliengautier/Desktop/confTest.ini"
+    name="testVisu"
+    conf=QtCore.QSettings(pathVisu, QtCore.QSettings.IniFormat)
+    e = SEE2(aff='left',roiCross=True)#,conf=conf,name=name)
     e.show()
     appli.exec_() 
 
