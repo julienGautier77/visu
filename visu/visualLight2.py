@@ -933,15 +933,7 @@ class SEELIGHT(QMainWindow) :
         
         # Do display and save origin data when new data is  sent to  visu
         self.data=data
-        if self.flipButton.isChecked()==1 and self.flipButtonVert.isChecked()==1 :
-            self.data=np.flipud(self.data)
-            self.data=np.fliplr(self.data)
-        elif self.flipButton.isChecked()==1:
-            self.data=np.flipud(self.data)
-        elif self.flipButtonVert.isChecked()==1 :
-            self.data=np.fliplr(self.data)
-        else:
-            self.data=data
+       
         self.dimy=np.shape(self.data)[1]
         self.dimx=np.shape(self.data)[0]
         self.dataOrgScale=self.data
