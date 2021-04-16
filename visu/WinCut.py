@@ -95,17 +95,18 @@ class WINDOWMEAS(QWidget):
         
         self.table.setColumnCount(1)
         self.table.setRowCount(7)
-        self.table.setVerticalHeaderLabels(('Max','Min','x max','x min','Mean','PV','Std','fit Result'))
+        self.table.setVerticalHeaderLabels(('Max','Min','x max','x min','Mean','PV','Std'))
         self.setLayout(hLayout1)
     
-    def Display(self,cutData,axis=None):
+    def Display(self,cutData,axis=None,fwhm=False,axisOn=False,**kwds):
+        
         cutData=np.array(cutData)
         Max=round(max(cutData),3)
         Min=round(min(cutData),3)
         Mean=np.mean(cutData)
         PV=Max-Min
         Std=np.std(cutData)
-        if axis==None:
+        if axisOn==False:
             
             xmax=np.argmax(cutData)
             xmin=np.argmin(cutData)
@@ -116,7 +117,7 @@ class WINDOWMEAS(QWidget):
             xmin=np.argmin(cutData)
             xmin=axis[xmin]
         
-        
+        fit=kwds["fit"]
         self.table.setItem(0, 0, QTableWidgetItem(str(Max)))
         self.table.setItem(1, 0, QTableWidgetItem(str(Min)))
         self.table.setItem(2, 0, QTableWidgetItem(str(xmax)))
@@ -125,6 +126,81 @@ class WINDOWMEAS(QWidget):
         self.table.setItem(5, 0, QTableWidgetItem(str(PV)))
         self.table.setItem(6, 0, QTableWidgetItem(str(Std)))
         
+        
+        
+        if fit== True:
+            fitA=kwds["fitA"]
+            fitMu=kwds["fitMu"]
+            fitSigma=kwds["fitSigma"]
+            if fwhm==True:
+                self.table.setRowCount(11)
+                self.table.setVerticalHeaderLabels(('Max','Min','x max','x min','Mean','PV','Std','FWHM','Fit A', 'Fit Mu','Fit Sigma'))
+                self.table.setItem(8, 0, QTableWidgetItem(str(fitA)))
+                self.table.setItem(9, 0, QTableWidgetItem(str(fitMu)))
+                self.table.setItem(10, 0, QTableWidgetItem(str(fitSigma)))
+                if axisOn==False:
+                    xxx=np.arange(0,np.shape(cutData)[0])
+                else:
+                    xxx=axis
+                
+                try :  
+                    fwhmValue=self.fwhm(xxx,cutData)[0]
+                except: 
+                    fwhmValue=''
+                self.table.setItem(7, 0, QTableWidgetItem(str(fwhmValue)))
+                
+            else :
+                self.table.setRowCount(10)
+                self.table.setVerticalHeaderLabels(('Max','Min','x max','x min','Mean','PV','Std','Fit A', 'Fit Mu','Fit Sigma'))
+                self.table.setItem(7, 0, QTableWidgetItem(str(fitA)))
+                self.table.setItem(8, 0, QTableWidgetItem(str(fitMu)))
+                self.table.setItem(9, 0, QTableWidgetItem(str(fitSigma)))
+        else:
+            if fwhm==True:
+                self.table.setRowCount(8)
+                self.table.setVerticalHeaderLabels(('Max','Min','x max','x min','Mean','PV','Std','FWHM'))
+                if axisOn==False:
+                    xxx=np.arange(0,np.shape(cutData)[0])
+                else:
+                    xxx=axis
+                
+                try :  
+                    fwhmValue=self.fwhm(xxx,cutData)[0]
+                except: 
+                    fwhmValue=''
+                self.table.setItem(7, 0, QTableWidgetItem(str(fwhmValue)))
+            else :
+                self.table.setVerticalHeaderLabels(('Max','Min','x max','x min','Mean','PV','Std'))
+                self.table.setRowCount(7)
+             
+             
+    def fwhm(self,x, y, order=3):
+        
+        """
+            Determine full-with-half-maximum of a peaked set of points, x and y.
+            Assumes that there is only one peak present in the datasset.  The function
+            uses a spline interpolation of order k.
+        """
+        y=gaussian_filter(y,5) # filtre pour reduire le bruit
+        half_max = np.amax(y)/2
+        
+        try:
+            s = splrep(x, y - half_max,k=order) # Find the B-spline representation of 1-D curve.
+            roots = sproot(s) # Given the knots (>=8) and coefficients of a cubic B-spline return the roots of the spline.
+        except:
+           roots=0
+        
+        if len(roots) > 2:
+            pass
+            #print( "The dataset appears to have multiple peaks, and ","thus the FWHM can't be determined.")
+        elif len(roots) < 2:
+            pass
+           # print( "No proper peaks were found in the data set; likely ","the dataset is flat (e.g. all zeros).")
+        else:
+            return np.around(abs(roots[1] - roots[0]),decimals=2),half_max
+    
+    
+    
     def closeEvent(self, event):
         """ when closing the window
         """
@@ -174,7 +250,9 @@ class GRAPHCUT(QMainWindow):
         self.clearPlot=clearPlot
         self.xLog=False
         self.yLog=False
-                
+        self.fitA=""
+        self.fitMu=""
+        self.fitSigma=""
         self.widgetRange=WINDOWRANGE()
         self.setup()
         self.actionButton()
@@ -230,6 +308,16 @@ class GRAPHCUT(QMainWindow):
         self.AnalyseMenu.addAction(self.measAction)
         self.measAction.triggered.connect(lambda:self.open_widget(self.measWidget))
         
+        self.fwhmAction=QAction('fwhm')
+        self.fwhmAction.setCheckable(True)
+        self.fwhmAction.setChecked(False)
+        self.fwhmAction.triggered.connect(lambda:self.open_widget(self.measWidget))
+        self.fwhmAction.triggered.connect(lambda:self.measWidget.Display(cutData=self.cutData,axis=self.axis, axisOn= self.axisOn,fwhm=self.fwhmAction.isChecked(), fit=self.fit,fitA=self.fitA,fitMu=self.fitMu,fitSigma=self.fitSigma))
+       
+        self.AnalyseMenu.addAction(self.fwhmAction)
+        
+        
+        
         # self.maxGraphBox=QAction('Set Cross on the max',self)
         # self.maxGraphBox.setCheckable(True)
         # self.maxGraphBox.setChecked(False)
@@ -283,6 +371,7 @@ class GRAPHCUT(QMainWindow):
         
         self.checkBoxSymbol=QAction('Set Symbol on',self)
         self.checkBoxSymbol.setCheckable(True)
+        
         if self.symbol is not None:
             self.checkBoxSymbol.setChecked(True)
         self.ImageMenu.addAction(self.checkBoxSymbol)
@@ -332,6 +421,12 @@ class GRAPHCUT(QMainWindow):
         self.AnalyseMenu.addAction(self.fitAction)
         self.fitAction.setCheckable(True)
         self.fitAction.triggered.connect(self.setFit)
+        
+        self.fitAction.triggered.connect(lambda:self.open_widget(self.measWidget))
+        self.fitAction.triggered.connect(lambda:self.measWidget.Display(cutData=self.cutData,axis=self.axis, axisOn= self.axisOn,fwhm=self.fwhmAction.isChecked(), fit=self.fit,fitA=self.fitA,fitMu=self.fitMu,fitSigma=self.fitSigma))
+        
+        
+        
         
         self.vLine = pg.InfiniteLine(angle=90, movable=False,pen='y')
         self.hLine = pg.InfiniteLine(angle=0, movable=False,pen='y')
@@ -504,10 +599,14 @@ class GRAPHCUT(QMainWindow):
             self.dimx=max(self.axis)
             self.minX=min(self.axis)
             self.pCut.setData(y=self.cutData,x=self.axis)
+            
         self.zoomRectupdate()
         self.setFit()
-        self.measWidget.Display(cutData=self.cutData,axis=axis)
         
+        self.fit=self.fitAction.isChecked()
+        print(self.fit)
+        self.measWidget.Display(cutData=self.cutData,axis=self.axis, axisOn= self.axisOn,fwhm=self.fwhmAction.isChecked(), fit=self.fit,fitA=self.fitA,fitMu=self.fitMu,fitSigma=self.fitSigma)
+       
     def CHANGEPLOT(self,cutData):
         """
         
@@ -673,7 +772,7 @@ class GRAPHCUT(QMainWindow):
         
         
     def setFit(self):
-        
+        self.fit=self.fitAction.isChecked()
         if self.fitAction.isChecked():
             
             try :
@@ -698,12 +797,13 @@ class GRAPHCUT(QMainWindow):
         
                 y_fit = self.gauss(xxx, best_vals[0], best_vals[1], best_vals[2],best_vals[3])
             except:
-                y_fit = []
+                y_fit = [0]
                 
             self.pFit.setData(x=xxx,y=y_fit)
             self.fitA=best_vals[0]
             self.fitMu=best_vals[1]
             self.fitSigma=best_vals[2]
+            
         else :
              self.pFit.setData([])
             
@@ -749,9 +849,13 @@ class GRAPHCUT(QMainWindow):
         else:
             return np.around(abs(roots[1] - roots[0]),decimals=2),half_max
     
-    def gauss(self,x, A, mu, sigma,B ):
     
-        return A*np.exp(-(x-mu)**2/(2.*sigma**2))+B
+    
+    def gauss(self,x, A, mu, sigma,B ):
+        if sigma==0:
+            return 0
+        else :
+            return A*np.exp(-(x-mu)**2/(2.*sigma**2))+B
     
     
     def closeEvent(self, event):
