@@ -99,7 +99,7 @@ class WINDOWMEAS(QWidget):
         self.setLayout(hLayout1)
     
     def Display(self,cutData,axis=None,fwhm=False,axisOn=False,**kwds):
-        
+       
         cutData=np.array(cutData)
         Max=round(max(cutData),3)
         Min=round(min(cutData),3)
@@ -138,6 +138,7 @@ class WINDOWMEAS(QWidget):
                 self.table.setItem(8, 0, QTableWidgetItem(str(fitA)))
                 self.table.setItem(9, 0, QTableWidgetItem(str(fitMu)))
                 self.table.setItem(10, 0, QTableWidgetItem(str(fitSigma)))
+                
                 if axisOn==False:
                     xxx=np.arange(0,np.shape(cutData)[0])
                 else:
@@ -165,6 +166,7 @@ class WINDOWMEAS(QWidget):
                     xxx=axis
                 
                 try :  
+                    
                     fwhmValue=self.fwhm(xxx,cutData)[0]
                 except: 
                     fwhmValue=''
@@ -594,17 +596,19 @@ class GRAPHCUT(QMainWindow):
             self.minX=0
             self.data=self.cutData
             self.pCut.setData(self.data)
+            self.axisOn=False
         else:
             self.axis=np.array(axis)
             self.dimx=max(self.axis)
             self.minX=min(self.axis)
             self.pCut.setData(y=self.cutData,x=self.axis)
+            self.axisOn=True
             
         self.zoomRectupdate()
         self.setFit()
         
         self.fit=self.fitAction.isChecked()
-        print(self.fit)
+        
         self.measWidget.Display(cutData=self.cutData,axis=self.axis, axisOn= self.axisOn,fwhm=self.fwhmAction.isChecked(), fit=self.fit,fitA=self.fitA,fitMu=self.fitMu,fitSigma=self.fitSigma)
        
     def CHANGEPLOT(self,cutData):
