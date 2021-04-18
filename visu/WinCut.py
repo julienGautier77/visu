@@ -87,7 +87,7 @@ class WINDOWMEAS(QWidget):
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
         self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
         self.setup()
-        
+        self.setGeometry(50, 100, 200, 350)
     def setup(self):
         hLayout1=QHBoxLayout()
         self.table=QTableWidget()
@@ -103,9 +103,10 @@ class WINDOWMEAS(QWidget):
         cutData=np.array(cutData)
         Max=round(max(cutData),3)
         Min=round(min(cutData),3)
-        Mean=np.mean(cutData)
+        Mean=round(np.mean(cutData),3)
         PV=Max-Min
-        Std=np.std(cutData)
+        Std=round(np.std(cutData),3)
+        
         if axisOn==False:
             
             xmax=np.argmax(cutData)
@@ -153,9 +154,9 @@ class WINDOWMEAS(QWidget):
             else :
                 self.table.setRowCount(10)
                 self.table.setVerticalHeaderLabels(('Max','Min','x max','x min','Mean','PV','Std','Fit A', 'Fit Mu','Fit Sigma'))
-                self.table.setItem(7, 0, QTableWidgetItem(str(fitA)))
-                self.table.setItem(8, 0, QTableWidgetItem(str(fitMu)))
-                self.table.setItem(9, 0, QTableWidgetItem(str(fitSigma)))
+                self.table.setItem(7, 0, QTableWidgetItem(str(round(fitA,3))))
+                self.table.setItem(8, 0, QTableWidgetItem(str(round(fitMu,3))))
+                self.table.setItem(9, 0, QTableWidgetItem(str(round(fitSigma,3))))
         else:
             if fwhm==True:
                 self.table.setRowCount(8)
@@ -170,7 +171,7 @@ class WINDOWMEAS(QWidget):
                     fwhmValue=self.fwhm(xxx,cutData)[0]
                 except: 
                     fwhmValue=''
-                self.table.setItem(7, 0, QTableWidgetItem(str(fwhmValue)))
+                self.table.setItem(7, 0, QTableWidgetItem(str(round(fwhmValue,3))))
             else :
                 self.table.setVerticalHeaderLabels(('Max','Min','x max','x min','Mean','PV','Std'))
                 self.table.setRowCount(7)
@@ -207,7 +208,6 @@ class WINDOWMEAS(QWidget):
         """ when closing the window
         """
         self.isWinOpen=False
-        
         time.sleep(0.1)
         event.accept()
 
@@ -261,14 +261,14 @@ class GRAPHCUT(QMainWindow):
         
     def setup(self):
         
-        TogOff=self.icon+'Toggle_Off.png'
-        TogOn=self.icon+'Toggle_On.png'
-        TogOff=pathlib.Path(TogOff)
-        TogOff=pathlib.PurePosixPath(TogOff)
-        TogOn=pathlib.Path(TogOn)
-        TogOn=pathlib.PurePosixPath(TogOn)
+        # TogOff=self.icon+'Toggle_Off.png'
+        # TogOn=self.icon+'Toggle_On.png'
+        # TogOff=pathlib.Path(TogOff)
+        # TogOff=pathlib.PurePosixPath(TogOff)
+        # TogOn=pathlib.Path(TogOn)
+        # TogOn=pathlib.PurePosixPath(TogOn)
         
-        self.setStyleSheet("QCheckBox::indicator{width: 30px;height: 30px;}""QCheckBox::indicator:unchecked { image : url(%s);}""QCheckBox::indicator:checked { image:  url(%s);}""QCheckBox{font :10pt;}" % (TogOff,TogOn) )
+        #self.setStyleSheet("QCheckBox::indicator{width: 30px;height: 30px;}""QCheckBox::indicator:unchecked { image : url(%s);}""QCheckBox::indicator:checked { image:  url(%s);}""QCheckBox{font :10pt;}" % (TogOff,TogOn) )
         
         self.toolBar =self.addToolBar('tools')
         menubar = self.menuBar()
@@ -800,10 +800,11 @@ class GRAPHCUT(QMainWindow):
                 best_vals, covar = curve_fit(self.gauss, xxx, gaussian_filter(self.cutData,5), p0=init_vals)
         
                 y_fit = self.gauss(xxx, best_vals[0], best_vals[1], best_vals[2],best_vals[3])
+                self.pFit.setData(x=xxx,y=y_fit)
             except:
                 y_fit = [0]
-                
-            self.pFit.setData(x=xxx,y=y_fit)
+                #self.pFit.setData(x=0,y=0)
+            
             self.fitA=best_vals[0]
             self.fitMu=best_vals[1]
             self.fitSigma=best_vals[2]
