@@ -44,7 +44,10 @@ class MEAS(QMainWindow):
             self.configMot=confMot#QtCore.QSettings(self.confMotPath, QtCore.QSettings.IniFormat)
             self.groups=self.configMot.childGroups()
             #print('groups',self.groups,self.confMotPath)
-            import  visu.moteurRSAI as RSAI
+            try :
+                import moteurRSAI as RSAI
+            except: 
+                import  visu.moteurRSAI as RSAI
             self.motorType=RSAI
             self.nbMotors=int(np.size(self.groups))
            
