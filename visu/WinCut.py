@@ -9,10 +9,9 @@ Windows for plot
 import pyqtgraph as pg # pyqtgraph biblio permettent l'affichage 
 
 import qdarkstyle # pip install qdakstyle https://github.com/ColinDuquesnoy/QDarkStyleSheet  sur conda
-from PyQt5.QtWidgets import QApplication,QHBoxLayout,QAction,QWidget,QStatusBar,QMainWindow,QVBoxLayout,QCheckBox,QLabel,QPushButton,QMessageBox
+from PyQt5.QtWidgets import QApplication,QHBoxLayout,QAction,QWidget,QStatusBar,QMainWindow,QVBoxLayout,QLabel,QPushButton,QMessageBox
 from PyQt5.QtGui import QIcon,QColorDialog,QInputDialog,QGridLayout,QDoubleSpinBox,QTableWidget,QTableWidgetItem
 import sys,time
-from PyQt5.QtCore import Qt
 from pyqtgraph.Qt import QtCore,QtGui 
 import numpy as np
 import pathlib,os
