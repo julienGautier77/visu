@@ -23,26 +23,24 @@ import numpy as np
 
 class MEAS(QMainWindow):
     
-    def __init__(self,parent=None,conf=None,name='VISU',confMot=None):
+    def __init__(self,parent=None,conf=None,name='VISU',confMot=None,**kwds):
         
         super().__init__()
         self.parent=parent
         self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
         p = pathlib.Path(__file__)
+        sepa=os.sep
         if conf==None:
             self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
         else :
             self.conf=conf
-            
+        self.confMot=confMot   
         self.name=name
-        sepa=os.sep
-        self.confMotPath=None
+        
+        
         self.symbol=False
-        if confMot!=None:    
-            self.confMotPath=str(p.parent / "fichiersConfig")+sepa+'configMoteurRSAI.ini'
-            
-            self.configMot=confMot#QtCore.QSettings(self.confMotPath, QtCore.QSettings.IniFormat)
-            self.groups=self.configMot.childGroups()
+        if self.confMot!=None:    
+            self.groups=self.confMot.childGroups()
             #print('groups',self.groups,self.confMotPath)
             try :
                 import moteurRSAI as RSAI
@@ -171,7 +169,7 @@ class MEAS(QMainWindow):
        
         self.table.setHorizontalHeaderLabels(('File','Max','Min','x max','y max','Sum','Mean','Size','x c.mass','y c.mass'))
         
-        if self.confMotPath!=None:
+        if self.confMot!=None:
             self.motorNameBox=QComboBox()
             self.motorNameBox.addItem('Motors')
             hLayout1.addWidget(self.motorNameBox)
@@ -351,7 +349,7 @@ class MEAS(QMainWindow):
         self.table.setItem(self.shoot, 8, QTableWidgetItem( str(self.xcmass) ) )
         self.table.setItem(self.shoot, 9, QTableWidgetItem( str(self.ycmass) ) )
         
-        if self.confMotPath!=None:
+        if self.confMot!=None:
             if self.motor=='Motors':
                 Posi=self.shoot
                 self.label='Shoot'
@@ -465,7 +463,7 @@ class MEAS(QMainWindow):
     def motorChange(self):
         
         self.motor=str(self.motorNameBox.currentText())
-        self.stepmotor=float(self.configMot.value(self.motor+"/stepmotor")) 
+        self.stepmotor=float(self.confMot.value(self.motor+"/stepmotor")) 
         if self.motor!='Motors':
             self.MOT=self.motorType.MOTORRSAI(self.motor)
 
