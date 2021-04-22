@@ -731,7 +731,7 @@ class GRAPHCUT(QMainWindow):
     def zoomRectupdate(self):
         if self.plotRectZoomEtat=="ZoomOut":
             self.winPLOT.setXRange(self.xZoomMin,self.xZoomMax)
-            self.winPlot.setYRange(self.yZoomMin,self.yZoomMax)
+            self.winPLOT.setYRange(self.yZoomMin,self.yZoomMax)
             #self.pwinPlot.setAspectLocked(True)   
     
     
