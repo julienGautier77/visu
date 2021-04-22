@@ -416,7 +416,7 @@ class GRAPHCUT(QMainWindow):
         self.ZoomRectButton.triggered.connect(self.zoomRectAct)
         self.toolBar.addAction(self.ZoomRectButton)
         
-        self.plotRectZoom=pg.RectROI([0,0],[100,100],pen='w')
+        self.plotRectZoom=pg.RectROI([0,0],[100,100],pen='b')
             
         self.fitAction=QAction('Gaussian Fit',self)
         self.AnalyseMenu.addAction(self.fitAction)
@@ -700,9 +700,10 @@ class GRAPHCUT(QMainWindow):
     def zoomRectAct(self):
         
         if self.plotRectZoomEtat=="Zoom": 
+            [[xmin,xmax],[ymin,ymax]]=self.winPLOT.viewRange()
             self.winPLOT.addItem(self.plotRectZoom)
             
-            self.plotRectZoom.setPos([self.dimx/2,self.dimy/2])
+            self.plotRectZoom.setPos([xmin+(xmax-xmin)/2,ymin+(ymax-ymin)/2])
             #self.plotRectZoom.setSize(/4,self.dimy/4)
             self.ZoomRectButton.setIcon(QtGui.QIcon(self.icon+"zoom-in.png"))
             self.plotRectZoomEtat="ZoomIn"
@@ -747,12 +748,12 @@ class GRAPHCUT(QMainWindow):
         self.yZoomMax=(self.widgetRange.yMaxBox.value())
         self.winPLOT.setXRange(self.xZoomMin,self.xZoomMax)
         self.winPLOT.setYRange(self.yZoomMin,self.yZoomMax)
-        self.plotRectZoomEtat="Zoom"
+        self.plotRectZoomEtat="ZoomIn"
         
     def setRangeReset(self) :  
         self.winPLOT.setYRange(self.minY,self.dimy)
         self.winPLOT.setXRange(self.minX,self.dimx)
-        self.plotRectZoomEtat="ZoomOut"
+        self.plotRectZoomEtat="Zoom"
      
         
     def lockGraph(self):
