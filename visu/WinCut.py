@@ -629,10 +629,15 @@ class GRAPHCUT(QMainWindow):
         if self.labelY!=None:
             self.winPLOT.setLabel('left',self.labelY)
             
-        #self.pFit=self.winPLOT.plot(clear=self.clearPlot,pen='r')
+        
         self.PlotXY()
         self.affiCross()
-        
+        self.fit=self.fitAction.isChecked()
+        if self.fitAction.isChecked():
+            self.pFit=self.winPLOT.plot(pen='r')
+            self.setFit()
+            
+            
         if self.meas==True:
             self.label_MeanValue.setText(str(round(np.mean(self.cutData),3)))
             self.label_PVValue.setText(str(round(np.ptp(self.cutData),3)))
@@ -800,7 +805,9 @@ class GRAPHCUT(QMainWindow):
                 best_vals, covar = curve_fit(self.gauss, xxx, gaussian_filter(self.cutData,5), p0=init_vals)
         
                 y_fit = self.gauss(xxx, best_vals[0], best_vals[1], best_vals[2],best_vals[3])
+                
                 self.pFit.setData(x=xxx,y=y_fit)
+                
             except:
                 y_fit = [0]
                 #self.pFit.setData(x=0,y=0)
