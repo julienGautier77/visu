@@ -73,7 +73,7 @@ class OPTION(QWidget):
         
         vbox1=QVBoxLayout()
         self.buttonPath=QPushButton('Path : ')
-        self.pathBox=QTextEdit(str(self.conf.value(self.name+"/pathAutoSave")))
+        self.pathBox=QLineEdit(str(self.conf.value(self.name+"/pathAutoSave")))
         self.pathBox.setMaximumHeight(60)
         hbox1=QHBoxLayout()
         hbox1.addWidget(self.buttonPath)
@@ -114,7 +114,7 @@ class OPTION(QWidget):
         
         hbox5=QHBoxLayout()
         self.buttonFileBg=QPushButton('Select Background File : ')
-        self.fileBgBox=QTextEdit('bgfile not selected')
+        self.fileBgBox=QLineEdit('bgfile not selected')
         self.fileBgBox.setMaximumHeight(60)
         hbox5=QHBoxLayout()
         hbox5.addWidget(self.buttonFileBg)
@@ -170,24 +170,16 @@ class OPTION(QWidget):
     
     def actionButton(self):
         self.buttonPath.clicked.connect(self.PathChanged)
+        self.pathBox.textChanged.connect(self.pathTextChanged)
         self.nameBox.textChanged.connect(self.nameFileChanged)
         self.tirNumberBox.valueChanged.connect(self.TirNumberChange)
         self.buttonFileBg.clicked.connect(self.selectBg)
-        # self.stepXBox.valueChanged.connect(self.stepXChange)
-        # self.stepYBox.valueChanged.connect(self.stepYChange)
-        
-        
-    # def stepXChange(self) :
-    #     self.stepX=self.stepXBox.value()
-    #     self.conf.setValue(self.name+"/stepX",self.stepX)
-        
-        
-    # def stepYChange(self) :
-    #     self.stepY=self.stepYBox.value()
-    #     self.conf.setValue(self.name+"/stepY",self.stepY)
-        
-    # def checkBoxAxeChange(self):
-    #     self.emitChangeScale.emit(True)
+        #self.fileBgBox.textChanged.connect(self.bgTextChanged)
+    
+
+    def pathTextChanged(self):
+        self.pathAutoSave=self.pathBox.text()
+        self.conf.setValue(self.name+"/pathAutoSave",str(self.pathAutoSave))
         
     def PathChanged(self) :
        
@@ -212,7 +204,8 @@ class OPTION(QWidget):
     # def rotateChange(self):
     #     self.rotateValue=int(self.rotate.value())
         
-        
+    
+    
     def selectBg(self):
         
         fname=QtGui.QFileDialog.getOpenFileName(self,"Select a background file",self.pathBg,"Images (*.txt *.spe *.TIFF *.sif);;Text File(*.txt);;Ropper File (*.SPE);;Andor File(*.sif);; TIFF file(*.TIFF)")
