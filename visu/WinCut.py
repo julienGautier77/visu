@@ -520,6 +520,35 @@ class GRAPHCUT(QMainWindow):
         
     def mouseMoved(self,evt):
         
+        
+        if self.checkBoxPlot.isChecked()==False: # mouse mvt
+            
+            if self.bloqq==0:
+                pos = evt[0]  ## using signal proxy turns original arguments into a tuple
+                if self.winPLOT.sceneBoundingRect().contains(pos):
+                    
+                  
+                    mousePoint = self.vb.mapSceneToView(pos)
+                    
+                    self.xMouse = (mousePoint.x())
+                    self.yMouse= (mousePoint.y())
+                    if self.axisOn==True:
+                
+                        if (self.xMouse>self.axis.min()-10 and self.xMouse<self.axis.max()+10):  # the cross move only in the graph
+                            self.xMc =int(self.xMouse)
+
+                            self.yMc= self.yMouse#self.cutData[self.xc]
+                            self.label_Cross.setText('x='+ str(round((self.xMc),2)) + ' y=' + str(round(self.yMc,2)))
+                            
+                                
+                    else :     
+                        if (self.xMouse>-1 and self.xMouse<self.dimx-1): # the cross move only in the graph
+                            self.xMc = int(self.xMouse)
+                            self.yMc= self.cutData[self.xMc]
+                            self.label_Cross.setText('x='+ str(round((self.xMc),2)) + ' y=' + str(round(self.cutData[self.xMc],2)))
+                            
+        
+        
         ## the cross mouve with the mousse mvt
         if self.checkBoxPlot.isChecked()==1 and self.bloqq==0:
             pos = evt[0]  ## using signal proxy turns original arguments into a tuple
@@ -554,8 +583,8 @@ class GRAPHCUT(QMainWindow):
                 self.label_Cross.setText('x='+ str(round((self.xc),2)) + ' y=' + str(round(self.yc,2)))
             else:
                 self.label_Cross.setText('x='+ str(round((self.xc),2)) + ' y=' + str(round(self.cutData[self.xc],2)))
-        else : 
-            self.label_Cross.setText('')
+    # else : 
+        #     self.label_Cross.setText('')
                 
             
     def mouseClick(self): # block the cross if mousse button clicked
