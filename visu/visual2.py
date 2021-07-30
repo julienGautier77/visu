@@ -975,16 +975,19 @@ class SEE2(QMainWindow) :
             
     def mouseMoved(self,evt):
         if self.checkBoxPlot.isChecked()==False: 
+            
             if self.bloqq==0:
+                
                 pos = evt[0]  ## using signal proxy turns original arguments into a tuple
                 if self.p1.sceneBoundingRect().contains(pos):
-                        
+                    
                     mousePoint = self.vb.mapSceneToView(pos)
                     self.xMouse = (mousePoint.x())
                     self.yMouse= (mousePoint.y())
                     if ((self.xMouse>0 and self.xMouse<self.dimx-1) and (self.yMouse>0 and self.yMouse<self.dimy-1) ):
                         self.xc = self.xMouse
                         self.yc= self.yMouse  
+                        
                         try :
                             dataCross=self.data[int(self.xc),int(self.yc)]
                     
@@ -995,8 +998,9 @@ class SEE2(QMainWindow) :
                         if self.winPref.checkBoxAxeScale.isChecked()==1: # scale axe on 
                             self.label_Cross.setText('x='+ str(round(int(self.xc)*self.winPref.stepX,2)) + '  um'+' y=' + str(round(int(self.yc)*self.winPref.stepY,2)) +' um')
                         else : 
+                            
                             self.label_Cross.setText('x='+ str(int(self.xc)) + ' y=' + str(int(self.yc)) )
-                    
+                            
                         dataCross=round(dataCross,3) # take data  value  on the cross
                         self.label_CrossValue.setText(' v.=' + str(dataCross))
         ## the cross mouve with the mousse mvt
@@ -1131,7 +1135,24 @@ class SEE2(QMainWindow) :
                             self.textY.setText('fwhm='+str(round(fwhmY,2)),color='w')
                             
                     self.textY.setPos(xCYmax-60,yCYmax+70)   
-    
+        
+        if self.checkBoxPlot.isChecked()==False: ## write mouse value and not cross
+            
+            try :
+                dataCross=self.data[int(self.xc),int(self.yc)]
+                
+            except :
+                dataCross=0  # evoid to have an error if cross if out of the image
+                self.xc=0
+                self.yc=0
+            if self.winPref.checkBoxAxeScale.isChecked()==1: # scale axe on 
+                self.label_Cross.setText('x='+ str(round(int(self.xc)*self.winPref.stepX,2)) + '  um'+' y=' + str(round(int(self.yc)*self.winPref.stepY,2)) +' um')
+            else : 
+                        
+                self.label_Cross.setText('x='+ str(int(self.xc)) + ' y=' + str(int(self.yc)) )
+                        
+            dataCross=round(dataCross,3) # take data  value  on the cross
+            self.label_CrossValue.setText(' v.=' + str(dataCross))
  
     def PlotXY(self): # plot curves on the  graph
         
@@ -1157,8 +1178,8 @@ class SEE2(QMainWindow) :
             self.p1.removeItem(self.textY)
             self.p1.showAxis('left',show=False)
             self.p1.showAxis('bottom',show=False)
-            self.label_Cross.setText('')
-            self.label_CrossValue.setText('')
+            #self.label_Cross.setText('')
+            #self.label_CrossValue.setText('')
             if self.roiCross==True:
                 self.p1.removeItem(self.ro1)
 
