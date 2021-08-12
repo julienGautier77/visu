@@ -1049,7 +1049,7 @@ class SEE2(QMainWindow) :
             
             if self.maxGraphBox.isChecked()==True  and self.bloqKeyboard==False  : # find and fix the cross on the maximum of the image
                 
-                dataF=gaussian_filter(self.data,5)
+                dataF=gaussian_filter(self.data,3)
                 (self.xc,self.yc)=pylab.unravel_index(dataF.argmax(),self.data.shape) #take the max ndimage.measurements.center_of_mass(dataF)#
                 self.vLine.setPos(self.xc)
                 self.hLine.setPos(self.yc)
@@ -1067,8 +1067,8 @@ class SEE2(QMainWindow) :
                
             coupeX=self.data[int(self.xc),:]
             coupeY=self.data[:,int(self.yc)]
-            xxx=np.arange(0,int(self.dimx),1)#
-            yyy=np.arange(0,int(self.dimy),1)#
+            xxx=np.arange(0,int(self.dimx),1)
+            yyy=np.arange(0,int(self.dimy),1)
             coupeXMax=np.max(coupeX)
             coupeYMax=np.max(coupeY)
             
@@ -1090,7 +1090,8 @@ class SEE2(QMainWindow) :
             
             coupeXnorm=(self.data.shape[0]/10)*(coupeX/coupeXMax)
             coupeYnorm=(self.data.shape[1]/10)*(coupeY/coupeYMax)
-            if self.plotRectZoomEtat=="ZoomOut": # the cut line follow the  the zoom
+            
+            if self.plotRectZoomEtat=="ZoomOut": # the cut line follow the zoom
                
                 self.curve2.setData(20+self.xZoomMin+coupeXnorm,yyy,clear=True)
                 self.curve3.setData(xxx,20+self.yZoomMin+coupeYnorm,clear=True)
@@ -1139,23 +1140,24 @@ class SEE2(QMainWindow) :
                             
                     self.textY.setPos(xCYmax-60,yCYmax+70)   
         
-        if self.checkBoxPlot.isChecked()==False: ## write mouse value and not cross
+        if self.checkBoxPlot.isChecked()==False: ## write mouse value and not cross  value
             
             try :
                 dataCross=self.data[int(self.xc),int(self.yc)]
                 
             except :
-                dataCross=0  # evoid to have an error if cross if out of the image
+                dataCross=0  # evoid to have an error if mousse is out of the image
                 self.xc=0
                 self.yc=0
+                
             if self.winPref.checkBoxAxeScale.isChecked()==1: # scale axe on 
                 self.label_Cross.setText('x='+ str(round(int(self.xc)*self.winPref.stepX,2)) + '  um'+' y=' + str(round(int(self.yc)*self.winPref.stepY,2)) +' um')
             else : 
                         
                 self.label_Cross.setText('x='+ str(int(self.xc)) + ' y=' + str(int(self.yc)) )
                         
-            dataCross=round(dataCross,3) # take data  value  on the cross
-            self.label_CrossValue.setText(' v.=' + str(dataCross))
+            dataCross=round(dataCross,3) # take data  value  on the mousse
+            self.label_CrossValue.setText(' v.=' + str(dataCross)+self.labelValue)
  
     def PlotXY(self): # plot curves on the  graph
         
@@ -1243,7 +1245,7 @@ class SEE2(QMainWindow) :
         self.conf.setValue(self.name+"/ry",int(self.ry))
       
         
-    def bloquer(self): # block the cross
+    def bloquer(self): # block the cross by keyboard
         
         self.bloqKeyboard=bool(True)
         self.conf.setValue(self.name+"/xc",int(self.xc))# save cross postion in ini file
@@ -1298,7 +1300,7 @@ class SEE2(QMainWindow) :
         self.filter='origin'
         self.Display(self.data)
         self.filtreBox.setText('Filters')
-        print('original')
+        print('original data')
         
     def OpenF(self,fileOpen=False):
         #open file in txt spe TIFF sif jpeg png  format
@@ -1365,7 +1367,7 @@ class SEE2(QMainWindow) :
         
     
     
-    def SliderImgFct(self):
+    def SliderImgFct(self):# open multiimage
         nbImgToOpen=int(self.sliderImage.value())
         
         self.OpenF(fileOpen=self.openedFiles[nbImgToOpen])
@@ -1406,6 +1408,7 @@ class SEE2(QMainWindow) :
     def newDataReceived(self,data):
         
         # Do display and save origin data when new data is  sent to  visu
+        
         self.data=data
         if self.flipButton.isChecked()==1 and self.flipButtonVert.isChecked()==1 :
             self.data=np.flipud(self.data)
@@ -1446,7 +1449,7 @@ class SEE2(QMainWindow) :
         self.Display(self.data)
     
     
-    def zoomRectAct(self):
+    def zoomRectAct(self): #zoom fonction Display data on a range difined by a rectangular  roi
         
         if self.plotRectZoomEtat=="Zoom": 
             
@@ -1483,7 +1486,7 @@ class SEE2(QMainWindow) :
             #print(self.p1.viewRange(),self.p1.viewRect())
             
         
-        self.Coupe()  
+        self.Coupe()  #update profile line
         
     def zoomRectupdate(self):
         if self.plotRectZoomEtat=="ZoomOut":
@@ -1496,16 +1499,14 @@ class SEE2(QMainWindow) :
         #     print('ra')
             
     def flipAct (self):
-        
+        ##flip the image up/down
         self.data=np.flipud(self.data)
         self.Display(self.data)
     
     def flipVertAct (self):
-        
+        #flip the image left/right
         self.data=np.fliplr(self.data)
         self.Display(self.data)
-    
-  
     
     
     def open_widget(self,fene):
@@ -1529,6 +1530,7 @@ class SEE2(QMainWindow) :
 
         
     def dropEvent(self, e):
+        #allow to drop image in visu and open it
         l = []
         for url in e.mimeData().urls():
             l.append(str(url.toLocalFile()))
