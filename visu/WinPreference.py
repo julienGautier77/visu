@@ -117,6 +117,26 @@ class PREFERENCES(QWidget):
         hbox7.addWidget(self.rotate)
         vbox1.addLayout(hbox7)
         
+        
+        hbox8=QHBoxLayout()
+        self.checkBoxFluence=QCheckBox('Fluence ',self)
+        
+        self.checkBoxFluence.setChecked(False)
+        hbox8.addWidget(self.checkBoxFluence)
+        
+        labelEnergy=QLabel('Energy (mJ):')
+        
+        
+        hbox8.addWidget(labelEnergy)
+        self.energy=QDoubleSpinBox()
+        self.energy.setDecimals(2)
+        self.energy.setMaximum(1000)
+        self.energy.setValue(1)
+        
+        
+        hbox8.addWidget(self.energy)
+        vbox1.addLayout(hbox8)
+        
         hMainLayout=QHBoxLayout()
         hMainLayout.addLayout(vbox1)
         self.setLayout(hMainLayout)

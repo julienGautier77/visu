@@ -90,7 +90,7 @@ class SEE2(QMainWindow) :
         self.colorBar='flame'
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
         self.nomFichier=''
-        
+        self.labelValue=''
         self.aboutWidget=aboutWindows.ABOUT()
         ### kwds definition  : 
         
@@ -525,6 +525,10 @@ class SEE2(QMainWindow) :
         self.ro1.setPos([self.xc-(self.rx/2),self.yc-(self.ry/2)])
         
        
+        self.roiFluence=pg.EllipseROI([self.xc,self.yc],[self.rx,self.ry],pen='b',movable=True)
+        self.roiFluence.setPos([self.xc-(self.rx/2),self.yc-(self.ry/2)])
+       
+        
         # text for fwhm on p1
         self.textX = pg.TextItem(angle=-90) 
         self.textY = pg.TextItem()
@@ -605,7 +609,7 @@ class SEE2(QMainWindow) :
         
         self.sliderImage.valueChanged.connect(self.SliderImgFct)
         # self.dockImage.topLevelChanged.connect(self.fullScreen)
-       
+        self.roiFluence.sigRegionChangeFinished.connect(self.fluenceFct)
         
         
     def fullScreen(self):
@@ -627,21 +631,6 @@ class SEE2(QMainWindow) :
         self.shortcutPd.activated.connect(self.palettedown)
         self.shortcutPd.setContext(Qt.ShortcutContext(3))
         
-        # self.shortcutOpen=QtGui.QShortcut(QtGui.QKeySequence("Ctrl+o"),self)
-        # self.shortcutOpen.activated.connect(self.OpenF)
-        # self.shortcutOpen.setContext(Qt.ShortcutContext(3))
-        
-        # self.shortcutSave=QtGui.QShortcut(QtGui.QKeySequence("Ctrl+s"),self)
-        # self.shortcutSave.activated.connect(self.SaveF)
-        # self.shortcutSave.setContext(Qt.ShortcutContext(3))
-        
-        # self.shortcutMeas=QtGui.QShortcut(QtGui.QKeySequence('Ctrl+m'),self)
-        # self.shortcutMeas.activated.connect(self.Measurement)
-        # self.shortcutMeas.setContext(Qt.ShortcutContext(3))
-        
-        # self.shortcutCut=QtGui.QShortcut(QtGui.QKeySequence('Ctrl+k'),self)
-        # self.shortcutCut.activated.connect(self.CUT)
-        # self.shortcutCut.setContext(Qt.ShortcutContext(3))
         
         self.shortcutBloq=QtGui.QShortcut(QtGui.QKeySequence("Ctrl+b"),self)
         self.shortcutBloq.activated.connect(self.bloquer)
@@ -786,6 +775,7 @@ class SEE2(QMainWindow) :
                 self.winM.setFile(self.nomFichier)
                 self.open_widget(self.winM)
                 self.winM.Display(self.data)
+                
     def Pointing(self) :
 
         self.open_widget(self.winPointing)
@@ -868,11 +858,23 @@ class SEE2(QMainWindow) :
             self.data=median_filter(self.data,size=self.sigma)
             print('median filter')
         
-        
-        
-        
+        ### fluence 
+        if self.winPref.checkBoxFluence.isChecked()==1: # fluence on 
+           energy=self.winPref.energy.value()
+           #print('energy',energy)
+           if self.winPref.checkBoxAxeScale.isChecked()==0:  # en pixel
+               size=1#self.sizeFluenceX*self.sizeFluenceY
+               self.labelValue=' mJ/pixel2'
+           if self.winPref.checkBoxAxeScale.isChecked()==1: #en micron
+               size=1E-8*self.winPref.stepX*self.winPref.stepY
+               self.labelValue=' mJ/cm2'
+               #self.label_CrossValue.setSuffix(" %s" % "mJ/cm2")
+           enrgTot=self.roiFluence.getArrayRegion(self.data,self.imh).sum()
+           
+           self.data=1000*(self.data*energy/enrgTot)/size #(microJ/cm2)
         # self.p1.setAspectLocked(True,ratio=1)
-        
+        else :
+            self.labelValue=''
         ### color  and sacle 
         if self.checkBoxScale.isChecked()==1: # color autoscale on
             
@@ -974,7 +976,7 @@ class SEE2(QMainWindow) :
         
             
     def mouseMoved(self,evt):
-        if self.checkBoxPlot.isChecked()==False: 
+        if self.checkBoxPlot.isChecked()==False or self.bloqKeyboard==True :  # if not  cross or crossblocked by  keyboard: 
             
             if self.bloqq==0:
                 
@@ -1000,9 +1002,9 @@ class SEE2(QMainWindow) :
                         else : 
                             
                             self.label_Cross.setText('x='+ str(int(self.xc)) + ' y=' + str(int(self.yc)) )
-                            
+                        
                         dataCross=round(dataCross,3) # take data  value  on the cross
-                        self.label_CrossValue.setText(' v.=' + str(dataCross))
+                        self.label_CrossValue.setText(' v.=' + str(dataCross)+self.labelValue)
         ## the cross mouve with the mousse mvt
         if self.bloqKeyboard==False :  #mouse not  blocked by  keyboard
             if self.bloqq==0: # mouse not  blocked by mouse  click
@@ -1083,6 +1085,7 @@ class SEE2(QMainWindow) :
                 self.label_Cross.setText('x='+ str(int(self.xc)) + ' y=' + str(int(self.yc)) )
                 
             dataCross=round(dataCross,3) # take data  value  on the cross
+            
             self.label_CrossValue.setText(' v.=' + str(dataCross))
             
             coupeXnorm=(self.data.shape[0]/10)*(coupeX/coupeXMax)
@@ -1431,6 +1434,15 @@ class SEE2(QMainWindow) :
         else :
             self.scaleAxis="off"
         self.data=self.dataOrg
+        if self.winPref.checkBoxFluence.isChecked()==1: 
+            # fluence on 
+            self.p1.addItem(self.roiFluence)
+            self.fluenceFct()
+        else:
+            try :
+                self.p1.removeItem(self.roiFluence)
+            except:
+                pass
         self.Display(self.data)
     
     
@@ -1539,7 +1551,13 @@ class SEE2(QMainWindow) :
         else :
              self.checkBoxAutoSave.setIcon(QtGui.QIcon(self.icon+"diskette.png"))
              self.checkBoxAutoSave.setText('Auto Save off')
+    
              
+    def fluenceFct(self):
+        self.sizeFluenceX=self.roiFluence.size()[0]
+        self.sizeFluenceY=self.roiFluence.size()[1]
+        self.Display(self.data)
+
     def closeEvent(self,event):
         # when the window is closed
         if self.encercled=="on":
