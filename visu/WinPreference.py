@@ -39,7 +39,7 @@ class PREFERENCES(QWidget):
         self.isWinOpen=False
         self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
        
-        self.setWindowTitle('Preference visualisation')
+        self.setWindowTitle('Preferences visualisation')
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
         
         self.stepX=float(self.conf.value(self.name+"/stepX"))

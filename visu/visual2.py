@@ -421,6 +421,28 @@ class SEE2(QMainWindow) :
             self.ProcessMenu.addAction(self.mathButton)
             self.winMath.emitApply.connect(self.newDataReceived)
         
+        self.paletteupButton=QAction('Brightness   &+',self)
+        #self.paletteupButton.setShortcut('+')
+        self.ProcessMenu.addAction(self.paletteupButton)
+        self.paletteupButton.triggered.connect(self.paletteup)
+        
+        self.palettedownButton=QAction('Brightness  &-',self)
+        #self.palettedownButton.setShortcut('-')
+        self.ProcessMenu.addAction(self.palettedownButton)
+        self.palettedownButton.triggered.connect(self.palettedown)
+        
+        self.paletteautoButton=QAction('Brightness auto ',self)
+        #self.palettedautoButton.setShortcut('-')
+        self.ProcessMenu.addAction(self.paletteautoButton)
+        self.paletteautoButton.triggered.connect(self.paletteauto)
+        
+        self.contrastButton=QAction('Contrast 5%-95%',self)
+        #self.palettedautoButton.setShortcut('-')
+        self.ProcessMenu.addAction(self.contrastButton)
+        self.contrastButton.triggered.connect(self.contrast)
+        
+        
+        
         if self.winFilter=='on':
             self.filtreBox=QAction('&Filters',self)
             menu=QMenu()
@@ -623,13 +645,13 @@ class SEE2(QMainWindow) :
     def shortcut(self):
         # keyboard shortcut
         
-        self.shortcutPu=QShortcut(QtGui.QKeySequence("+"),self)
-        self.shortcutPu.activated.connect(self.paletteup)
-        self.shortcutPu.setContext(Qt.ShortcutContext(3))
+        # self.shortcutPu=QShortcut(QtGui.QKeySequence("+"),self)
+        # self.shortcutPu.activated.connect(self.paletteup)
+        # self.shortcutPu.setContext(Qt.ShortcutContext(3))
         #3: The shortcut is active when its parent widget, or any of its children has focus. default O The shortcut is active when its parent widget has focus.
-        self.shortcutPd=QtGui.QShortcut(QtGui.QKeySequence("-"),self)
-        self.shortcutPd.activated.connect(self.palettedown)
-        self.shortcutPd.setContext(Qt.ShortcutContext(3))
+        # self.shortcutPd=QtGui.QShortcut(QtGui.QKeySequence("-"),self)
+        # self.shortcutPd.activated.connect(self.palettedown)
+        # self.shortcutPd.setContext(Qt.ShortcutContext(3))
         
         
         self.shortcutBloq=QtGui.QShortcut(QtGui.QKeySequence("Ctrl+b"),self)
@@ -1216,6 +1238,34 @@ class SEE2(QMainWindow) :
         self.imh.setLevels([xmin, xmax+ (xmax- xmin) / 10])
         #hist.setImageItem(imh,clear=True)
         self.hist.setHistogramRange(xmin,xmax)
+    
+    def paletteauto(self):
+        
+        xmax=self.data.max()
+        xmin=self.data.min()
+        if xmax==xmin:
+            xmax=xmin+1
+ 
+        self.imh.setLevels([xmin, xmax])
+        self.hist.setHistogramRange(xmin,xmax)
+    
+    def contrast(self):
+        if self.ite=='rect':
+            self.cont=(self.plotRect.getArrayRegion(self.data,self.imh))
+            xmax=self.cont.max()
+            xmin=self.cont.min()
+            
+        else:
+             xmax=self.data.max()
+             xmin=self.data.min()
+        xmin=0.05*xmax
+        xmax=0.95*xmax
+        self.imh.setLevels([xmin, xmax])
+        self.hist.setHistogramRange(xmin,xmax)
+  
+        
+    
+    
     
     def Setcolor(self):
         action = self.sender()

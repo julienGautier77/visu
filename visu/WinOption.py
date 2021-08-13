@@ -122,46 +122,6 @@ class OPTION(QWidget):
         
         vbox1.addLayout(hbox5)
         
-        # hbox6=QHBoxLayout()
-        # self.checkBoxAxeScale=QCheckBox('Scale Factor : ',self)
-        
-        # self.checkBoxAxeScale.setChecked(False)
-        # hbox6.addWidget(self.checkBoxAxeScale)
-        
-        
-        # self.checkBoxStepX=QLabel('X axe (Pixel/um) : ')
-        # self.stepXBox=QDoubleSpinBox()
-        # self.stepXBox.setMaximum(10000)
-        # self.stepXBox.setValue(self.stepX)
-        # self.stepXBox.setDecimals(4)
-        # hbox6.addWidget(self.checkBoxStepX)
-        # hbox6.addWidget(self.stepXBox)
-        
-        # self.checkBoxStepY=QLabel('Y axe (Pixel/um) : ')
-        # self.stepYBox=QDoubleSpinBox()
-        # self.stepYBox.setMaximum(10000)
-        # self.stepYBox.setValue(self.stepY)
-        # self.stepYBox.setDecimals(4)
-        # hbox6.addWidget(self.checkBoxStepY)
-        # hbox6.addWidget(self.stepYBox)
-        
-        # vbox1.addLayout(hbox6)
-        
-        # hbox7=QHBoxLayout()
-        # self.checkBoxFwhm=QCheckBox('FWHM ',self)
-        
-        # self.checkBoxFwhm.setChecked(False)
-        # hbox7.addWidget(self.checkBoxFwhm)
-        
-        # labelRotate=QLabel('Img Rotation  90°:')
-        
-        
-        # hbox7.addWidget(labelRotate)
-        # self.rotate=QSpinBox()
-        # self.rotate.setMaximum(4)
-        
-        # hbox7.addWidget(self.rotate)
-        # vbox1.addLayout(hbox7)
         
         hMainLayout=QHBoxLayout()
         hMainLayout.addLayout(vbox1)
