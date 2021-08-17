@@ -26,6 +26,7 @@ from visu import winFFT
 from visu import winZoom
 from visu import winMath
 from visu import winPointing
+from visu import winHist
 try:
     from visu import Win3D
 except :

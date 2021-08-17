@@ -42,6 +42,7 @@ from visu.andor import SifFile
 from visu.winFFT import WINFFT
 from visu.winMath import WINMATH
 from visu.winPointing import WINPOINTING
+from visu.winHist import HISTORY
 from visu import aboutWindows
 try :
     from visu.Win3D import GRAPH3D #conda install pyopengl
@@ -166,6 +167,7 @@ class SEE2(QMainWindow) :
             
         self.winOpt=OPTION(conf=self.conf,name=self.name)
         self.winPref=PREFERENCES(conf=self.conf,name=self.name)
+        self.winHistory=HISTORY(self,conf=self.conf,name=self.name)
         
         if self.encercled=="on":
             self.winEncercled=WINENCERCLED(conf=self.conf,name=self.name)
@@ -320,10 +322,15 @@ class SEE2(QMainWindow) :
         self.toolBar.addAction(self.optionAutoSaveAct)
         self.fileMenu.addAction(self.optionAutoSaveAct)
         
-        self.preferenceAct=QAction('Preferences',self) #
+        self.preferenceAct=QAction(QtGui.QIcon(self.icon+"pref.png"),'Preferences',self) #
         self.preferenceAct.triggered.connect(lambda:self.open_widget(self.winPref))
         
         self.fileMenu.addAction(self.preferenceAct)
+        
+        self.historyAct=QAction(QtGui.QIcon(self.icon+"time.png"),'&History',self) #
+        self.historyAct.triggered.connect(lambda:self.open_widget(self.winHistory))
+        self.fileMenu.addAction(self.historyAct)
+        
         
         self.checkBoxPlot=QAction(QtGui.QIcon(self.icon+"target.png"),'Cross On (ctrl+b to block ctrl+d to unblock)',self)
         self.checkBoxPlot.setCheckable(True)
@@ -421,22 +428,22 @@ class SEE2(QMainWindow) :
             self.ProcessMenu.addAction(self.mathButton)
             self.winMath.emitApply.connect(self.newDataReceived)
         
-        self.paletteupButton=QAction('Brightness   &+',self)
+        self.paletteupButton=QAction(QtGui.QIcon(self.icon+"user.png"),'Brightness   &+',self)
         #self.paletteupButton.setShortcut('+')
         self.ProcessMenu.addAction(self.paletteupButton)
         self.paletteupButton.triggered.connect(self.paletteup)
         
-        self.palettedownButton=QAction('Brightness  &-',self)
+        self.palettedownButton=QAction(QtGui.QIcon(self.icon+"userM.png"),'Brightness  &-',self)
         #self.palettedownButton.setShortcut('-')
         self.ProcessMenu.addAction(self.palettedownButton)
         self.palettedownButton.triggered.connect(self.palettedown)
         
-        self.paletteautoButton=QAction('Brightness auto ',self)
+        self.paletteautoButton=QAction(QtGui.QIcon(self.icon+"robotics.png"),'Brightness auto ',self)
         #self.palettedautoButton.setShortcut('-')
         self.ProcessMenu.addAction(self.paletteautoButton)
         self.paletteautoButton.triggered.connect(self.paletteauto)
         
-        self.contrastButton=QAction('Contrast 5%-95%',self)
+        self.contrastButton=QAction(QtGui.QIcon(self.icon+"ying-yang.png"),'Contrast 5%-95%',self)
         #self.palettedautoButton.setShortcut('-')
         self.ProcessMenu.addAction(self.contrastButton)
         self.contrastButton.triggered.connect(self.contrast)
@@ -1412,7 +1419,9 @@ class SEE2(QMainWindow) :
         
         self.fileName.setText(str(fichier))
         self.nomFichier=os.path.split(fichier)[1]
-    
+        
+        self.winHistory.Display(fichier)
+        
         self.newDataReceived(data)
         
     

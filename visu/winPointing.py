@@ -18,9 +18,10 @@ import numpy as np
 import qdarkstyle # pip install qdakstyle https://github.com/ColinDuquesnoy/QDarkStyleSheet  sur conda
 import pylab,os
 from scipy.ndimage.filters import gaussian_filter # pour la reduction du bruit
-from scipy.interpolate import splrep, sproot # pour calcul fwhm et fit 
+#from scipy.interpolate import splrep, sproot # pour calcul fwhm et fit 
 import pathlib
 from scipy import ndimage
+
 class WINPOINTING(QMainWindow):
     
     def __init__(self,conf=None,name='VISU'):
@@ -98,7 +99,7 @@ class WINPOINTING(QMainWindow):
         
         self.fileMenu.addAction(self.saveAct)
         
-        # vbox1=QVBoxLayout()
+        
         XYHLayout=QHBoxLayout()
         
         self.resetButton=QAction('Reset',self)
@@ -108,15 +109,14 @@ class WINPOINTING(QMainWindow):
         self.centerOfMass.setCheckable(True)
         self.centerOfMass.setChecked(False)
         self.optionMenu.addAction(self.centerOfMass)
-        # vbox1.addLayout(hbox)
+        
         
         
         
         self.win1=pg.PlotWidget()
         self.p1=self.win1.plot(pen='w',symbol='t',symboleSize=2,clear=True,symbolPen='w',symbolBrush='w',name="XY")
         self.win1.setContentsMargins(0,0,0,0)
-        self.win1.setLabel('bottom','X')#,units='pixel')
-        self.win1.setLabel('left','Y')#,units='pixel')
+        
         
         XYHLayout.addWidget(self.win1)
         
@@ -126,6 +126,7 @@ class WINPOINTING(QMainWindow):
         self.p3=self.win3.plot(pen='r',symbol='t',symboleSize=2,clear=True,symbolPen='r',symbolBrush='r',name="x")
         self.win3.setContentsMargins(0,0,0,0)
         self.win3.setLabel('left','X')#,units='pixel')
+        self.win3.setLabel('bottom',"Shot number")
         self.hLineMeanX = pg.InfiniteLine(angle=0, movable=False,pen=pg.mkPen('r', width=3, style=QtCore.Qt.DashLine))
         self.win3.addItem(self.hLineMeanX, ignoreBounds=True)
         
@@ -156,11 +157,8 @@ class WINPOINTING(QMainWindow):
         grid_layoutX.addWidget(self.PVXAff, 2,1)
         
         
-        
-        
         XHLayout=QHBoxLayout()
         XHLayout.addWidget(self.win3)
-        
         
         
         dataxVLayout=QVBoxLayout()
@@ -170,11 +168,10 @@ class WINPOINTING(QMainWindow):
         XHLayout.addLayout(dataxVLayout)
         
         
-        
         self.win4=pg.PlotWidget()
         self.p4=self.win4.plot(pen='g',symbol='t',symboleSize=2,clear=True,symbolPen='g',symbolBrush='g',name="y")
         self.win4.setLabel('left','Y')#,units='pixel')
-        self.win4.setLabel('bottom',"Shoot number")
+        self.win4.setLabel('bottom',"Shot number")
         self.hLineMeanY = pg.InfiniteLine(angle=0, movable=False,pen=pg.mkPen('g', width=3, style=QtCore.Qt.DashLine))
         self.win4.addItem(self.hLineMeanY, ignoreBounds=True)
         
@@ -243,10 +240,11 @@ class WINPOINTING(QMainWindow):
         
         if self.centerOfMass.isChecked()==True:
             (self.xec,self.yec)=ndimage.center_of_mass(dataF)
-            print('centre de mass')
+            self.label='com'
+           
         else :
             (self.xec,self.yec)=pylab.unravel_index(dataF.argmax(),self.data.shape)
-        
+            self.label='max'
         self.xec=self.xec*stepX
         self.yec=self.yec*stepX
         
@@ -279,18 +277,18 @@ class WINPOINTING(QMainWindow):
         #self.p4.addItem(self.hLineMeanY, ignoreBounds=True)
         
         if self.stepX!=1:
-            self.axeX1.setLabel("X(um)")
-            self.axeY3.setLabel("X(um)")
+            self.axeX1.setLabel('X(um) ' +self.label)
+            self.axeY3.setLabel('X(um) '+self.label)
         else : 
-            self.axeX1.setLabel("X")
-            self.axeY3.setLabel('X')
+            self.axeX1.setLabel('X ' +self.label)
+            self.axeY3.setLabel('X ' +self.label)
             
         if self.stepY!=1: 
-            self.axeY1.setLabel("Y(um)")
-            self.axeY4.setLabel('Y(um)')
+            self.axeY1.setLabel('Y(um) '+self.label)
+            self.axeY4.setLabel('Y(um) '+self.label)
         else:
-            self.axeY1.setLabel('Y')
-            self.axeY4.setLabel('Y')
+            self.axeY1.setLabel('Y '+self.label)
+            self.axeY4.setLabel('Y '+self.label)
             
     
         
