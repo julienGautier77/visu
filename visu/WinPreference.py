@@ -9,7 +9,7 @@ Created on Wed Feb 13 16:02:40 2019
 import qdarkstyle 
 from pyqtgraph.Qt import QtCore,QtGui 
 from PyQt5.QtWidgets import QApplication,QCheckBox,QVBoxLayout,QHBoxLayout,QPushButton,QDoubleSpinBox
-from PyQt5.QtWidgets import QWidget,QLabel,QTextEdit,QSpinBox,QLineEdit,QMessageBox
+from PyQt5.QtWidgets import QWidget,QLabel,QTextEdit,QSpinBox,QLineEdit,QMessageBox,QComboBox
 from PyQt5.QtGui import QIcon
 import sys,os
 import numpy as np
@@ -136,6 +136,26 @@ class PREFERENCES(QWidget):
         
         hbox8.addWidget(self.energy)
         vbox1.addLayout(hbox8)
+        
+        
+        hbox9=QHBoxLayout()
+        
+        self.labelPlot=QLabel('Rectangular plot profile')
+        
+        self.plotRectOpt=QComboBox()
+        self.plotRectOpt.setMaximumWidth(80)
+        self.plotRectOpt.addItem('Mean')
+        self.plotRectOpt.addItem('Sum')
+        #self.plotRectOpt.setStyleSheet('font :bold  10pt;color: white')
+            # self.labelTrigger=QLabel('Trigger')
+            # self.labelTrigger.setMaximumWidth(70)
+            # self.labelTrigger.setStyleSheet('font :bold  10pt')
+            # self.itrig=self.self.plotRectOpt.currentIndex()
+        
+        hbox9.addWidget(self.labelPlot)
+        hbox9.addWidget(self.plotRectOpt)
+        
+        vbox1.addLayout(hbox9)
         
         hMainLayout=QHBoxLayout()
         hMainLayout.addLayout(vbox1)
