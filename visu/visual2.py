@@ -206,7 +206,7 @@ class SEE2(QMainWindow) :
         self.plotRectZoomEtat='Zoom'
         self.angleImage=0
         
-        
+        self.setup()
         
         def twoD_Gaussian(x,y, amplitude, xo, yo, sigma_x, sigma_y, theta, offset):
            xo = float(xo)
@@ -244,9 +244,10 @@ class SEE2(QMainWindow) :
         self.yminR=0
         self.ymaxR=self.dimy
         
-        self.setup()
+        
         self.shortcut()
         self.actionButton()
+        self.Display(self.data)
         self.activateWindow()
         self.raise_()
         self.showNormal()
@@ -615,7 +616,7 @@ class SEE2(QMainWindow) :
         #self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5()) # dark style
         
         
-        self.Display(self.data)
+        
         
     def actionButton(self):
         # action of button
@@ -897,13 +898,14 @@ class SEE2(QMainWindow) :
            if self.winPref.checkBoxAxeScale.isChecked()==1: #en micron
                size=1E-8*self.winPref.stepX*self.winPref.stepY
                self.labelValue=' mJ/cm2'
-               #self.label_CrossValue.setSuffix(" %s" % "mJ/cm2")
+               
            enrgTot=self.roiFluence.getArrayRegion(self.data,self.imh).sum()
            
            self.data=1000*(self.data*energy/enrgTot)/size #(microJ/cm2)
         # self.p1.setAspectLocked(True,ratio=1)
         else :
             self.labelValue=''
+            
         ### color  and sacle 
         if self.checkBoxScale.isChecked()==1: # color autoscale on
             
@@ -956,6 +958,8 @@ class SEE2(QMainWindow) :
                 self.Graph3D()
         if self.winPointing.isWinOpen==True:
             self.Pointing()
+            
+            
         ### autosave
         if self.checkBoxAutoSave.isChecked()==True: ## autosave data
             self.pathAutoSave=str(self.conf.value(self.name+'/pathAutoSave'))
@@ -1270,9 +1274,7 @@ class SEE2(QMainWindow) :
         self.imh.setLevels([xmin, xmax])
         self.hist.setHistogramRange(xmin,xmax)
   
-        
-    
-    
+     
     
     def Setcolor(self):
         action = self.sender()
@@ -1424,7 +1426,6 @@ class SEE2(QMainWindow) :
         
         self.newDataReceived(data)
         
-    
     
     def SliderImgFct(self):# open multiimage
         nbImgToOpen=int(self.sliderImage.value())
@@ -1641,7 +1642,7 @@ class SEE2(QMainWindow) :
         
        
         
-def runVisu() :
+def runVisu(file=None,path=None) :
         
     from PyQt5.QtWidgets import QApplication
     import sys
@@ -1650,7 +1651,7 @@ def runVisu() :
     
     appli = QApplication(sys.argv)   
     appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
-    e = visu.visual2.SEE2()
+    e = visu.visual2.SEE2(file=file,path=path)
     e.show()
     appli.exec_() 
 
@@ -1662,7 +1663,10 @@ if __name__ == "__main__":
     pathVisu="/Users/juliengautier/Desktop/confTest.ini"
     name="testVisu"
     conf=QtCore.QSettings(pathVisu, QtCore.QSettings.IniFormat)
-    e = SEE2(aff='left',roiCross=True)#,conf=conf,name=name)
+    
+    file='FP__2201_2019_01_17_13_17_59.TIFF'
+    path='/Users/juliengautier/Dropbox (LOA)/Data_Analysis_LOA/Laser X/Manip Janvier 2019/FP/2019-01-16'
+    e = SEE2(file=file,path=path,aff='left',roiCross=True)#,conf=conf,name=name)
     e.show()
     appli.exec_() 
 
