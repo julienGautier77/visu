@@ -429,13 +429,13 @@ class SEE2(QMainWindow) :
             self.ProcessMenu.addAction(self.mathButton)
             self.winMath.emitApply.connect(self.newDataReceived)
         
-        self.paletteupButton=QAction(QtGui.QIcon(self.icon+"user.png"),'Brightness   &+',self)
-        #self.paletteupButton.setShortcut('+')
+        self.paletteupButton=QAction(QtGui.QIcon(self.icon+"user.png"),'Brightness',self)
+        self.paletteupButton.setShortcut('+')
         self.ProcessMenu.addAction(self.paletteupButton)
         self.paletteupButton.triggered.connect(self.paletteup)
         
-        self.palettedownButton=QAction(QtGui.QIcon(self.icon+"userM.png"),'Brightness  &-',self)
-        #self.palettedownButton.setShortcut('-')
+        self.palettedownButton=QAction(QtGui.QIcon(self.icon+"userM.png"),'Brightness',self)
+        self.palettedownButton.setShortcut('-')
         self.ProcessMenu.addAction(self.palettedownButton)
         self.palettedownButton.triggered.connect(self.palettedown)
         
@@ -1369,14 +1369,17 @@ class SEE2(QMainWindow) :
             
             chemin=self.conf.value(self.name+"/path")
             fname=QtGui.QFileDialog.getOpenFileNames(self,"Open File",chemin,"Images (*.txt *.spe *.TIFF *.sif *.tif);;Text File(*.txt);;Ropper File (*.SPE);;Andor File(*.sif);; TIFF file(*.TIFF)")
-            
+           
             fichier=fname[0]
+            
             self.openedFiles=fichier
-
-            self.nbOpenedImage=len(fichier)
+            
+            self.nbOpenedImage=len(self.openedFiles)
+            
             if self.nbOpenedImage==1:
                 fichier=fichier[0]
                 self.sliderImage.setEnabled(False)
+                
             if self.nbOpenedImage>1:
                 fichier=fichier[0]
                 self.sliderImage.setMinimum(0)
@@ -1388,6 +1391,21 @@ class SEE2(QMainWindow) :
         else:
             fichier=str(fileOpen)
             
+            
+            
+            # print('file',fileOpen)
+            # self.openedFiles=fileOpen
+            # if len(self.openedFiles)==1:
+            #     self.sliderImage.setEnabled(False)
+            #     fichier=str(fileOpen)
+            # else:
+            #     fichier=self.openedFiles[0]
+            #     self.sliderImage.setMinimum(0)
+            #     self.sliderImage.setMaximum(self.nbOpenedImage - 1)
+            #     self.sliderImage.setValue(0)
+            #     self.sliderImage.setEnabled(True)
+                
+                
         ext=os.path.splitext(fichier)[1]
         
         if ext=='.txt': # text file
@@ -1429,7 +1447,7 @@ class SEE2(QMainWindow) :
     
     def SliderImgFct(self):# open multiimage
         nbImgToOpen=int(self.sliderImage.value())
-        
+
         self.OpenF(fileOpen=self.openedFiles[nbImgToOpen])
         
     def SaveF (self):
@@ -1595,6 +1613,15 @@ class SEE2(QMainWindow) :
         for url in e.mimeData().urls():
             l.append(str(url.toLocalFile()))
         e.accept()
+        
+        if len(l)>1: #open multi file in drag process
+                self.openedFiles=l
+                self.sliderImage.setMinimum(0)
+                self.sliderImage.setMaximum(len(l) - 1)
+                self.sliderImage.setValue(0)
+                self.sliderImage.setEnabled(True)
+                
+        
         self.OpenF(fileOpen=l[0])
     
     def checkBoxScaleImage(self):
@@ -1661,12 +1688,13 @@ if __name__ == "__main__":
     appli = QApplication(sys.argv) 
     appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
     pathVisu="/Users/juliengautier/Desktop/confTest.ini"
+    
     name="testVisu"
     conf=QtCore.QSettings(pathVisu, QtCore.QSettings.IniFormat)
     
-    file='FP__2201_2019_01_17_13_17_59.TIFF'
-    path='/Users/juliengautier/Dropbox (LOA)/Data_Analysis_LOA/Laser X/Manip Janvier 2019/FP/2019-01-16'
-    e = SEE2(file=file,path=path,aff='left',roiCross=True)#,conf=conf,name=name)
+    #file='FP__2201_2019_01_17_13_17_59.TIFF'
+    #path='/Users/juliengautier/Dropbox (LOA)/Data_Analysis_LOA/Laser X/Manip Janvier 2019/FP/2019-01-16'
+    e = SEE2(aff='left',roiCross=True)#,conf=conf,name=name)
     e.show()
     appli.exec_() 
 
