@@ -5,7 +5,7 @@ Created on Mon Mar 18 10:50:06 2019
 Data vizualisation
 @author: juliengautier
 """
-__version__='2021.08'
+__version__='2021.09'
 __author__='julien Gautier'
 
 
@@ -16,7 +16,7 @@ from visu.visualLight import SEELIGHT
 from visu.visualLightThread import SEELIGHTTHREAD
 from visu.visual import SEE
 from visu.visual2 import SEE2
-from visu.visual import runVisu
+from visu.visual2 import runVisu
 from visu import andor
 from visu import WinCut
 from visu import winMeas
