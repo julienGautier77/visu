@@ -27,8 +27,8 @@ from visu import winZoom
 from visu import winMath
 from visu import winPointing
 from visu import winHist
-try:
-    from visu import Win3D
-except :
-    print('')
+# try:
+#     from visu import Win3D
+# except :
+#     print('')
 # #from visu import moteurRSAI as RSAI

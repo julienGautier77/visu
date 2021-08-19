@@ -44,10 +44,10 @@ from visu.winMath import WINMATH
 from visu.winPointing import WINPOINTING
 from visu.winHist import HISTORY
 from visu import aboutWindows
-try :
-    from visu.Win3D import GRAPH3D #conda install pyopengl
-except :
-    print ('')
+# try :
+#     from visu.Win3D import GRAPH3D #conda install pyopengl
+# except :
+#     print ('')
     
 import pathlib
 import visu
@@ -82,7 +82,7 @@ class SEE2(QMainWindow) :
         
         super().__init__()
         version=__version__
-        print("data visualisation :  ",version)
+        print("data visualisation version :  ",version)
         p = pathlib.Path(__file__)
         self.fullscreen=False
         self.setAcceptDrops(True)
@@ -177,9 +177,9 @@ class SEE2(QMainWindow) :
         else:
             self.plot3D="off"
             
-        if self.plot3D=="on":
+        # if self.plot3D=="on":
             
-            self.Widget3D=GRAPH3D(self.conf,name=self.name)
+        #     self.Widget3D=GRAPH3D(self.conf,name=self.name)
         
         
         if "math" in kwds:
@@ -631,8 +631,8 @@ class SEE2(QMainWindow) :
         self.plotRect.sigRegionChangeFinished.connect(self.RectChanged)
         self.plotCercle.sigRegionChangeFinished.connect(self.CercChanged)
         
-        if self.plot3D=="on":
-            self.box3d.clicked.connect(self.Graph3D)
+        # if self.plot3D=="on":
+        #     self.box3d.clicked.connect(self.Graph3D)
             
         self.winPref.closeEventVar.connect(self.ScaleImg)
         
@@ -772,10 +772,10 @@ class SEE2(QMainWindow) :
             self.open_widget(self.winCoupe)
             self.winCoupe.PLOT(self.cut1)#,symbol=False)
    
-    def Graph3D (self):
+    # def Graph3D (self):
         
-        self.open_widget(self.Widget3D)
-        self.Widget3D.Plot3D(self.data)
+    #     self.open_widget(self.Widget3D)
+    #     self.Widget3D.Plot3D(self.data)
         
         
     def Measurement(self) :
@@ -882,11 +882,11 @@ class SEE2(QMainWindow) :
         #### filtre
         if self.filter=='gauss':
             self.data=gaussian_filter(self.data,self.sigma)
-            print('gauss filter')
+            #print('gauss filter')
             
         if self.filter=='median':
             self.data=median_filter(self.data,size=self.sigma)
-            print('median filter')
+            #print('median filter')
         
         ### fluence 
         if self.winPref.checkBoxFluence.isChecked()==1: # fluence on 
@@ -953,9 +953,10 @@ class SEE2(QMainWindow) :
         if self.fft=='on':        
             if self.winFFT.isWinOpen==True: # fft update
                 self.winFFT.Display(self.data)
-        if self.plot3D=="on":
-            if self.Widget3D.isWinOpen==True:
-                self.Graph3D()
+                
+        # if self.plot3D=="on":
+        #     if self.Widget3D.isWinOpen==True:
+        #         self.Graph3D()
         if self.winPointing.isWinOpen==True:
             self.Pointing()
             
@@ -1359,7 +1360,7 @@ class SEE2(QMainWindow) :
         self.filter='origin'
         self.Display(self.data)
         self.filtreBox.setText('Filters')
-        print('original data')
+        #print('original data')
         
     def OpenF(self,fileOpen=False):
         #open file in txt spe TIFF sif jpeg png  format
@@ -1370,18 +1371,18 @@ class SEE2(QMainWindow) :
             chemin=self.conf.value(self.name+"/path")
             fname=QtGui.QFileDialog.getOpenFileNames(self,"Open File",chemin,"Images (*.txt *.spe *.TIFF *.sif *.tif);;Text File(*.txt);;Ropper File (*.SPE);;Andor File(*.sif);; TIFF file(*.TIFF)")
            
-            fichier=fname[0]
             
-            self.openedFiles=fichier
+            
+            self.openedFiles=fname[0]
             
             self.nbOpenedImage=len(self.openedFiles)
             
             if self.nbOpenedImage==1:
-                fichier=fichier[0]
+                fichier=self.openedFiles[0]
                 self.sliderImage.setEnabled(False)
                 
             if self.nbOpenedImage>1:
-                fichier=fichier[0]
+                fichier=self.openedFiles[0]
                 self.sliderImage.setMinimum(0)
                 self.sliderImage.setMaximum(self.nbOpenedImage - 1)
                 self.sliderImage.setValue(0)
@@ -1392,18 +1393,6 @@ class SEE2(QMainWindow) :
             fichier=str(fileOpen)
             
             
-            
-            # print('file',fileOpen)
-            # self.openedFiles=fileOpen
-            # if len(self.openedFiles)==1:
-            #     self.sliderImage.setEnabled(False)
-            #     fichier=str(fileOpen)
-            # else:
-            #     fichier=self.openedFiles[0]
-            #     self.sliderImage.setMinimum(0)
-            #     self.sliderImage.setMaximum(self.nbOpenedImage - 1)
-            #     self.sliderImage.setValue(0)
-            #     self.sliderImage.setEnabled(True)
                 
                 
         ext=os.path.splitext(fichier)[1]
@@ -1435,7 +1424,7 @@ class SEE2(QMainWindow) :
         chemin=os.path.dirname(fichier)
         self.conf.setValue(self.name+"/path",chemin)
         self.conf.setValue(self.name+"/lastFichier",os.path.split(fichier)[1])
-        print('open',fichier)
+        print('Open file  :  ',fichier)
         
         self.fileName.setText(str(fichier))
         self.nomFichier=os.path.split(fichier)[1]
