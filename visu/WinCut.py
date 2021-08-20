@@ -421,6 +421,7 @@ class GRAPHCUT(QMainWindow):
         self.fitAction=QAction('Gaussian Fit',self)
         self.AnalyseMenu.addAction(self.fitAction)
         self.fitAction.setCheckable(True)
+        
         self.fitAction.triggered.connect(self.setFit)
         
         self.fitAction.triggered.connect(lambda:self.open_widget(self.measWidget))
@@ -826,6 +827,7 @@ class GRAPHCUT(QMainWindow):
             try :
                 Datafwhm,xDataMax=self.fwhm(xxx,self.cutData)
                 ymaxx=self.cutData[int(xDataMax)]
+                
             except:
                 Datafwhm,xDataMax,ymaxx=0,0,0
                 
@@ -834,19 +836,20 @@ class GRAPHCUT(QMainWindow):
                 best_vals, covar = curve_fit(self.gauss, xxx, gaussian_filter(self.cutData,5), p0=init_vals)
         
                 y_fit = self.gauss(xxx, best_vals[0], best_vals[1], best_vals[2],best_vals[3])
-                
+    
                 self.pFit.setData(x=xxx,y=y_fit)
                 
             except:
                 y_fit = [0]
-                #self.pFit.setData(x=0,y=0)
+                #print('no fit')
+                self.pFit.setData(x=[],y=[],clear=True)
             
             self.fitA=best_vals[0]
             self.fitMu=best_vals[1]
             self.fitSigma=best_vals[2]
             
         else :
-             self.pFit.setData([])
+            self.pFit.setData(x=[],y=[],clear=True)
             
         
     def open_widget(self,fene):
