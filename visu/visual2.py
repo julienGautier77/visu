@@ -33,6 +33,7 @@ from scipy.interpolate import splrep, sproot #
 from scipy.ndimage.filters import gaussian_filter,median_filter
 from PIL import Image
 from visu.winspec import SpeFile
+from visu.visualLight2 import SEELIGHT
 from visu.winSuppE import WINENCERCLED
 from visu.WinCut import GRAPHCUT
 from visu.winMeas import MEAS
@@ -301,6 +302,14 @@ class SEE2(QMainWindow) :
         self.openAct.triggered.connect(self.OpenF)
         self.toolBar.addAction(self.openAct)
         self.fileMenu.addAction(self.openAct)
+        
+        
+        self.openActNewWin = QAction(QtGui.QIcon(self.icon+"Open.png"), 'Open in new window', self)
+        #self.openActNewWin.setShortcut('Ctrl+o')
+        self.openActNewWin.triggered.connect(self.OpenFNewWin)
+        #self.toolBar.addAction(self.openActNewWin)
+        self.fileMenu.addAction(self.openActNewWin)
+        
         
         self.saveAct=QAction(QtGui.QIcon(self.icon+"disketteSave.png"), 'Save file', self)
         self.saveAct.setShortcut('Ctrl+s')
@@ -1435,6 +1444,56 @@ class SEE2(QMainWindow) :
         
         self.newDataReceived(data)
         
+    
+    def OpenFNewWin(self):
+        
+        chemin=self.conf.value(self.name+"/path")
+        fname=QtGui.QFileDialog.getOpenFileNames(self,"Open File",chemin,"Images (*.txt *.spe *.TIFF *.sif *.tif);;Text File(*.txt);;Ropper File (*.SPE);;Andor File(*.sif);; TIFF file(*.TIFF)")
+           
+            
+        self.openedFiles=fname[0]
+            
+            
+        fichier=self.openedFiles[0]
+                
+       
+                
+        ext=os.path.splitext(fichier)[1]
+        
+        if ext=='.txt': # text file
+            data=np.loadtxt(str(fichier))
+        elif ext=='.spe' or ext=='.SPE': # SPE file
+            dataSPE=SpeFile(fichier)
+            data1=dataSPE.data[0]#.transpose() # first frame
+            data=data1#np.flipud(data1)
+        elif ext=='.TIFF' or ext=='.tif' or ext=='.Tiff' or ext=='.jpg' or ext=='.JPEG' or ext=='.png': # tiff File
+            dat=Image.open(fichier)
+            data=np.array(dat)
+            data=np.rot90(data,3)
+        elif ext=='.sif': 
+            sifop=SifFile()
+            im=sifop.openA(fichier)
+            data=np.rot90(im,3)
+#            self.data=self.data[250:495,:]
+        else :
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Critical)
+            msg.setText("Wrong file format !")
+            msg.setInformativeText("The format of the file must be : .SPE  .TIFF .sif  png jpeg or .txt ")
+            msg.setWindowTitle("Warning ...")
+            msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+            msg.exec_()
+            
+        chemin=os.path.dirname(fichier)
+        self.conf.setValue(self.name+"/path",chemin)
+        self.conf.setValue(self.name+"/lastFichier",os.path.split(fichier)[1])
+        print('Open file  :  ',fichier)
+        
+        
+        self.newWindow=SEELIGHT(conf=self.conf,name=self.name)
+        self.newWindow.setWindowTitle(fichier)
+        self.newWindow.newDataReceived(data)
+    
     
     def SliderImgFct(self):# open multiimage
         nbImgToOpen=int(self.sliderImage.value())
