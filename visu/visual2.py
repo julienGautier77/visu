@@ -866,7 +866,7 @@ class SEE2(QMainWindow) :
     def Display(self,data):
         #  display the data and refresh all the calculated things and plots
         self.data=data
-        
+        self.data=np.rot90(self.data,self.winPref.rotateValue)
         
         if self.checkBoxBg.isChecked()==True and self.winOpt.dataBgExist==True:
             try :

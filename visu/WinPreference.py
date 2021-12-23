@@ -45,12 +45,12 @@ class PREFERENCES(QWidget):
         self.stepX=float(self.conf.value(self.name+"/stepX"))
         self.stepY=float(self.conf.value(self.name+"/stepY"))
         
+        
+        self.rotateValue=int(self.conf.value(self.name+"/rotation"))
+
         self.setup()
-       
         self.actionButton()
         
-        self.rotateValue=0
-
         
         
         
@@ -113,7 +113,7 @@ class PREFERENCES(QWidget):
         hbox7.addWidget(labelRotate)
         self.rotate=QSpinBox()
         self.rotate.setMaximum(4)
-        
+        self.rotate.setValue(self.rotateValue)
         hbox7.addWidget(self.rotate)
         vbox1.addLayout(hbox7)
         
@@ -166,7 +166,7 @@ class PREFERENCES(QWidget):
        
         self.stepXBox.valueChanged.connect(self.stepXChange)
         self.stepYBox.valueChanged.connect(self.stepYChange)
-        
+        self.rotate.valueChanged.connect(self.rotateChange)
         
     def stepXChange(self) :
         self.stepX=self.stepXBox.value()
@@ -185,7 +185,7 @@ class PREFERENCES(QWidget):
     
     def rotateChange(self):
         self.rotateValue=int(self.rotate.value())
-        
+        self.conf.setValue(self.name+"/rotation",self.rotateValue)
         
     def closeEvent(self, event):
         """ when closing the window
