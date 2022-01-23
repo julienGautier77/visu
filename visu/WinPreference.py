@@ -31,6 +31,7 @@ class PREFERENCES(QWidget):
         
         if conf==None:
             self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+            print(str(p.parent))
         else :
             self.conf=conf
         self.name=name
@@ -44,8 +45,8 @@ class PREFERENCES(QWidget):
         
         self.stepX=float(self.conf.value(self.name+"/stepX"))
         self.stepY=float(self.conf.value(self.name+"/stepY"))
-        
-        
+        self.server=str(self.conf.value(self.name+"/server"))
+        self.serverPort=str(self.conf.value(self.name+"/serverPort"))
         self.rotateValue=int(self.conf.value(self.name+"/rotation"))
 
         self.setup()
@@ -154,8 +155,18 @@ class PREFERENCES(QWidget):
         
         hbox9.addWidget(self.labelPlot)
         hbox9.addWidget(self.plotRectOpt)
-        
         vbox1.addLayout(hbox9)
+        
+        hbox10=QHBoxLayout()
+        self.labelServer=QLabel('IP Server address')
+        self.serverIP=QLineEdit(str(self.conf.value(self.name+"/server")))
+        hbox10.addWidget(self.labelServer)
+        hbox10.addWidget(self.serverIP)
+        self.labelPort=QLabel('IP Server port')
+        self.serverPortBut=QLineEdit(str(self.conf.value(self.name+"/serverPort")))
+        hbox10.addWidget(self.labelPort)
+        hbox10.addWidget(self.serverPortBut)
+        vbox1.addLayout(hbox10)
         
         hMainLayout=QHBoxLayout()
         hMainLayout.addLayout(vbox1)
@@ -167,6 +178,16 @@ class PREFERENCES(QWidget):
         self.stepXBox.valueChanged.connect(self.stepXChange)
         self.stepYBox.valueChanged.connect(self.stepYChange)
         self.rotate.valueChanged.connect(self.rotateChange)
+        self.serverIP.textChanged.connect(self.serverChange)
+        self.serverPortBut.textChanged.connect(self.serverPortChange)
+        
+    def serverChange(self) :
+        self.server=self.serverIP.text()
+        self.conf.setValue(self.name+"/server",self.server)
+        
+    def serverPortChange(self) :
+        self.serverPort=self.serverPortBut.text()
+        self.conf.setValue(self.name+"/serverPort",self.serverPort)
         
     def stepXChange(self) :
         self.stepX=self.stepXBox.value()

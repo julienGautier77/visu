@@ -978,12 +978,12 @@ class SEE2(QMainWindow) :
             self.fileNameSave=str(self.conf.value(self.name+'/nameFile'))
             date=time.strftime("%Y_%m_%d_%H_%M_%S")
             self.numTir=int(self.conf.value(self.name+'/tirNumber'))
-            if self.numTir<10:
-                num="00"+str(self.numTir)
-            elif 9<self.numTir<100:
-                num="0"+str(self.numTir)
-            else:
-                num=str(self.numTir)
+            # if self.numTir<10:
+            #     num="00"+str(self.numTir)
+            # elif 9<self.numTir<100:
+            #     num="0"+str(self.numTir)
+            # else:
+            num=str(self.numTir)
             if self.winOpt.checkBoxDate.isChecked()==True: # add the date
                 nomFichier=str(str(self.pathAutoSave)+'/'+self.fileNameSave+'_'+num+'_'+date)
             else :
@@ -997,10 +997,12 @@ class SEE2(QMainWindow) :
             else :
                 
                 np.savetxt(str(nomFichier)+'.txt',self.data)
-
-            self.numTir+=1
-            self.winOpt.setTirNumber(self.numTir)
-            self.conf.setValue(self.name+"/tirNumber",self.numTir)
+                
+            if self.winOpt.checkBoxServer.isChecked==False: # if not connected to server we had +1
+                self.numTir+=1
+                self.winOpt.setTirNumber(self.numTir)
+                self.conf.setValue(self.name+"/tirNumber",self.numTir)
+                
             self.fileName.setText(nomFichier)
     
         

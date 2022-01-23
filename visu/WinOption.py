@@ -13,8 +13,9 @@ from PyQt5.QtWidgets import QWidget,QLabel,QTextEdit,QSpinBox,QLineEdit,QMessage
 from PyQt5.QtGui import QIcon
 import sys,os
 import numpy as np
-
+import socket as _socket
 import pathlib
+import time
 
 class OPTION(QWidget):
     
@@ -104,8 +105,12 @@ class OPTION(QWidget):
         
         hbox4=QHBoxLayout()
         labelTirNumber=QLabel('Next number : ')
+        self.checkBoxServer=QCheckBox('Auto',self)
+        self.checkBoxServer.setChecked(False)
+        hbox4.addWidget(self.checkBoxServer)
+        
         self.tirNumberBox=QSpinBox()
-        self.tirNumberBox.setMaximum(10000)
+        self.tirNumberBox.setMaximum(100000)
         self.tirNumberBox.setValue(self.shoot)
         hbox4.addWidget(labelTirNumber)
         hbox4.addWidget(self.tirNumberBox)
@@ -135,7 +140,7 @@ class OPTION(QWidget):
         self.tirNumberBox.valueChanged.connect(self.TirNumberChange)
         self.buttonFileBg.clicked.connect(self.selectBg)
         #self.fileBgBox.textChanged.connect(self.bgTextChanged)
-    
+        self.checkBoxServer.stateChanged.connect(self.checkBoxServerChange)
 
     def pathTextChanged(self):
         self.pathAutoSave=self.pathBox.text()
@@ -203,15 +208,75 @@ class OPTION(QWidget):
             msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
             msg.exec_()
             self.dataBgExist=False
+    
         
+    def checkBoxServerChange(self):
+        
+        if self. checkBoxServer.isChecked()==True:
+            # print('start number of shot Client')
+            self.threadClient=THREADCLIENT(self)
+            self.threadClient.start()
+            self.threadClient.newShotnumber.connect(self.receiveNewNumber)
+        else:
+            # print('close client')
+            self.threadClient.stopClientThread()
+    
+    def receiveNewNumber (self,nbShot):
+        self.tirNumberBox.setValue(nbShot)
+        #print(nbShot)
+    
     def closeEvent(self, event):
         """ when closing the window
         """
         self.isWinOpen=False   
         self.closeEventVar.emit(True)
         
-
-
+class THREADCLIENT(QtCore.QThread):
+    
+    '''Second thread for controling one acquisition independtly
+    '''
+    newShotnumber=QtCore.Signal(int) # signal to send 
+    
+    def __init__(self, parent):
+        
+        super(THREADCLIENT,self).__init__(parent)
+        self.parent=parent
+        self.conf=self.parent.conf
+        self.name=self.parent.name
+        self.serverHost = str(self.conf.value(self.name+"/server"))
+        self.serverPort = str(self.conf.value(self.name+"/serverPort"))
+        self.clientSocket= _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM) 
+        
+        
+    def run(self):
+        try :
+            self.serverHost = str(self.conf.value(self.name+"/server"))
+            self.serverPort = str(self.conf.value(self.name+"/serverPort"))
+            print(self.serverHost,self.serverPort)
+            self.clientSocket.connect((self.serverHost,int(self.serverPort)))
+            
+            self.ClientIsConnected = True
+            print('client connected to server',self.serverHost)
+        except:
+            self.isConnected = False
+            print('Do you start the server?')
+            self.ClientIsConnected = False
+            
+        
+       
+        while self.ClientIsConnected == True:
+            cmd='numberShoot?'
+            self.clientSocket.send(cmd.encode())
+            receiv=self.clientSocket.recv(64500)
+            nbshot=int(receiv.decode())
+            if int(self.parent.tirNumberBox.value()) is not nbshot: # sent signal only when different
+                   self.newShotnumber.emit(nbshot)
+            time.sleep(0.1)
+     
+    def stopClientThread(self):
+            self.ClientIsConnected=False
+            self.clientSocket.close()
+     
 if __name__ == "__main__":
     appli = QApplication(sys.argv) 
     appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
