@@ -267,7 +267,8 @@ class THREADCLIENT(QtCore.QThread):
         while self.ClientIsConnected == True:
             cmd='numberShoot?'
             self.clientSocket.send(cmd.encode())
-            try: receiv=self.clientSocket.recv(64500)
+            try: 
+                receiv=self.clientSocket.recv(64500)
                 nbshot=int(receiv.decode())
                 if int(self.parent.tirNumberBox.value()) is not nbshot: # sent signal only when different
                    self.newShotnumber.emit(nbshot)
