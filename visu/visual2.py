@@ -998,7 +998,7 @@ class SEE2(QMainWindow) :
                 
                 np.savetxt(str(nomFichier)+'.txt',self.data)
                 
-            if self.winOpt.checkBoxServer.isChecked==False: # if not connected to server we had +1
+            if self.winOpt.checkBoxServer.isChecked()==False: # if not connected to server we had +1
                 self.numTir+=1
                 self.winOpt.setTirNumber(self.numTir)
                 self.conf.setValue(self.name+"/tirNumber",self.numTir)
