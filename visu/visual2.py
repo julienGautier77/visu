@@ -45,6 +45,7 @@ from visu.winMath import WINMATH
 from visu.winPointing import WINPOINTING
 from visu.winHist import HISTORY
 from visu import aboutWindows
+from visu.winZoom import ZOOM
 # try :
 #     from visu.Win3D import GRAPH3D #conda install pyopengl
 # except :
@@ -487,7 +488,12 @@ class SEE2(QMainWindow) :
         self.PointingButton=QAction(QtGui.QIcon(self.icon+"recycle.png"),'Pointing',self)
         self.PointingButton.triggered.connect(self.Pointing)
         self.AnalyseMenu.addAction(self.PointingButton)       
-            
+        
+        
+        
+        
+        
+        
         self.ZoomRectButton=QAction(QtGui.QIcon(self.icon+"loupe.png"),'Zoom',self)
         self.ZoomRectButton.triggered.connect(self.zoomRectAct)
         self.toolBar.addAction(self.ZoomRectButton)
@@ -506,6 +512,14 @@ class SEE2(QMainWindow) :
         self.PlotButton.triggered.connect(self.CUT)
         self.PlotButton.setShortcut("ctrl+k")
         self.AnalyseMenu.addAction(self.PlotButton)
+        
+        
+        self.showMaxButton=QAction('Show max',self)
+        self.showMaxButton.triggered.connect(self.ZoomMAX)
+        self.winZoomMax=ZOOM()
+        self.AnalyseMenu.addAction(self.showMaxButton)
+        
+        
         
         self.flipButton=QAction(QtGui.QIcon(self.icon+"fliphorizontal.png"),'Flip Horizontally',self)
         self.flipButton.setCheckable(True)
@@ -604,8 +618,6 @@ class SEE2(QMainWindow) :
             
         
         
-       
-        
         hMainLayout.setContentsMargins(1,1,1,1)
         #hMainLayout.setSpacing(1)
         #hMainLayout.setStretch(10,1)
@@ -623,7 +635,6 @@ class SEE2(QMainWindow) :
         self.plotRectZoom=pg.RectROI([self.xc,self.yc],[4*self.rx,self.ry],pen='w')
         self.plotRectZoom.addScaleHandle((0,0),center=(1,1))
         #self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5()) # dark style
-        
         
         
         
@@ -970,7 +981,8 @@ class SEE2(QMainWindow) :
         #         self.Graph3D()
         if self.winPointing.isWinOpen==True:
             self.Pointing()
-            
+        if self.winZoomMax.isWinOpen==True:
+            self.ZoomMAX()   
             
         ### autosave
         if self.checkBoxAutoSave.isChecked()==True: ## autosave data
@@ -1001,7 +1013,7 @@ class SEE2(QMainWindow) :
             if self.winOpt.checkBoxServer.isChecked()==False: # if not connected to server we had +1
                 self.numTir+=1
                 self.winOpt.setTirNumber(self.numTir)
-                self.conf.setValue(self.name+"/tirNumber",self.numTir)
+            self.conf.setValue(self.name+"/tirNumber",self.numTir)
                 
             self.fileName.setText(nomFichier)
     
@@ -1096,7 +1108,8 @@ class SEE2(QMainWindow) :
             
             if self.maxGraphBox.isChecked()==True  and self.bloqKeyboard==False  : # find and fix the cross on the maximum of the image
                 
-                dataF=gaussian_filter(self.data,3)
+                #dataF=gaussian_filter(self.data,3)
+                dataF=self.data
                 (self.xc,self.yc)=pylab.unravel_index(dataF.argmax(),self.data.shape) #take the max ndimage.measurements.center_of_mass(dataF)#
                 self.vLine.setPos(self.xc)
                 self.hLine.setPos(self.yc)
@@ -1698,7 +1711,14 @@ class SEE2(QMainWindow) :
         self.sizeFluenceX=self.roiFluence.size()[0]
         self.sizeFluenceY=self.roiFluence.size()[1]
         self.Display(self.data)
-
+    
+    
+    def ZoomMAX(self):
+        self.open_widget(self.winZoomMax)
+        self.winZoomMax.SetTITLE('MAX')
+        self.maxx=round(self.data.max(),3)
+        self.winZoomMax.setZoom(self.maxx)
+    
     def closeEvent(self,event):
         # when the window is closed
         if self.encercled=="on":
