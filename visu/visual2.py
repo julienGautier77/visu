@@ -439,13 +439,13 @@ class SEE2(QMainWindow) :
             self.ProcessMenu.addAction(self.mathButton)
             self.winMath.emitApply.connect(self.newDataReceived)
         
-        self.paletteupButton=QAction(QtGui.QIcon(self.icon+"user.png"),'Brightness',self)
-        self.paletteupButton.setShortcut('+')
+        self.paletteupButton=QAction(QtGui.QIcon(self.icon+"user.png"),'Brightness +',self)
+        #self.paletteupButton.setShortcut('+')
         self.ProcessMenu.addAction(self.paletteupButton)
         self.paletteupButton.triggered.connect(self.paletteup)
         
-        self.palettedownButton=QAction(QtGui.QIcon(self.icon+"userM.png"),'Brightness',self)
-        self.palettedownButton.setShortcut('-')
+        self.palettedownButton=QAction(QtGui.QIcon(self.icon+"userM.png"),'Brightness -',self)
+        #self.palettedownButton.setShortcut('-')
         self.ProcessMenu.addAction(self.palettedownButton)
         self.palettedownButton.triggered.connect(self.palettedown)
         
@@ -673,13 +673,13 @@ class SEE2(QMainWindow) :
     def shortcut(self):
         # keyboard shortcut
         
-        # self.shortcutPu=QShortcut(QtGui.QKeySequence("+"),self)
-        # self.shortcutPu.activated.connect(self.paletteup)
-        # self.shortcutPu.setContext(Qt.ShortcutContext(3))
+        self.shortcutPu=QShortcut(QtGui.QKeySequence("+"),self)
+        self.shortcutPu.activated.connect(self.paletteup)
+        self.shortcutPu.setContext(Qt.ShortcutContext(3))
         #3: The shortcut is active when its parent widget, or any of its children has focus. default O The shortcut is active when its parent widget has focus.
-        # self.shortcutPd=QtGui.QShortcut(QtGui.QKeySequence("-"),self)
-        # self.shortcutPd.activated.connect(self.palettedown)
-        # self.shortcutPd.setContext(Qt.ShortcutContext(3))
+        self.shortcutPd=QtGui.QShortcut(QtGui.QKeySequence("-"),self)
+        self.shortcutPd.activated.connect(self.palettedown)
+        self.shortcutPd.setContext(Qt.ShortcutContext(3))
         
         
         self.shortcutBloq=QtGui.QShortcut(QtGui.QKeySequence("Ctrl+b"),self)
