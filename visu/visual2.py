@@ -20,7 +20,7 @@ created 2021/11/02 : new design
 
 from PyQt5.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QWidget,QPushButton,QGridLayout
 from PyQt5.QtWidgets import QInputDialog,QSlider,QCheckBox,QLabel,QSizePolicy,QMenu,QMessageBox
-from PyQt5.QtWidgets import QShortcut,QDockWidget,QToolBar,QMainWindow,QToolButton,QAction,QStatusBar
+from PyQt5.QtWidgets import QShortcut,QDockWidget,QToolBar,QMainWindow,QToolButton,QAction,QStatusBar,QFrame
 from pyqtgraph.Qt import QtCore,QtGui 
 from PyQt5.QtCore import Qt,pyqtSlot
 from PyQt5.QtGui import QIcon
@@ -112,7 +112,10 @@ class SEE2(QMainWindow) :
         if "conf"in kwds:               #conf : le QSetting
             self.conf=kwds["conf"]
         
-        
+        if "color" in kwds:
+            self.color=kwds["color"]
+        else:
+            self.color=None
         
         if "name" in kwds:
             self.name=kwds["name"]
@@ -620,8 +623,12 @@ class SEE2(QMainWindow) :
         
         hMainLayout.setContentsMargins(1,1,1,1)
         #hMainLayout.setSpacing(1)
-        #hMainLayout.setStretch(10,1)
-        MainWidget=QWidget()
+        #hMainLayo.setStretch(10,1)
+        MainWidget=QFrame()#
+        
+        if self.color is not None :
+            
+            self.winImage.setStyleSheet("border : 3px solid  %s" % self.color);
         
         MainWidget.setLayout(hMainLayout)
         
@@ -899,8 +906,9 @@ class SEE2(QMainWindow) :
                 msg.setWindowTitle("Warning ...")
                 msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
                 msg.exec_()
-            
-        self.data=np.rot90(self.data,self.winPref.rotateValue)
+                
+        self.data=np.rot90(self.data,self.winPref.rotateValue)    
+        
         #### filtre
         if self.filter=='gauss':
             self.data=gaussian_filter(self.data,self.sigma)
@@ -1758,7 +1766,7 @@ def runVisu(file=None,path=None) :
 if __name__ == "__main__":
     
     appli = QApplication(sys.argv) 
-    appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+    # appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
     pathVisu="/Users/juliengautier/Desktop/confTest.ini"
     
     name="testVisu"
@@ -1766,7 +1774,7 @@ if __name__ == "__main__":
     
     #file='FP__2201_2019_01_17_13_17_59.TIFF'
     #path='/Users/juliengautier/Dropbox (LOA)/Data_Analysis_LOA/Laser X/Manip Janvier 2019/FP/2019-01-16'
-    e = SEE2(aff='left',roiCross=True)#,conf=conf,name=name)
+    e = SEE2(aff='left',roiCross=True,color="red")#,conf=conf,name=name)
     e.show()
     appli.exec_() 
 
