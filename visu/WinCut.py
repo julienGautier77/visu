@@ -87,6 +87,7 @@ class WINDOWMEAS(QWidget):
         self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
         self.setup()
         self.setGeometry(50, 100, 200, 350)
+    
     def setup(self):
         hLayout1=QHBoxLayout()
         self.table=QTableWidget()
@@ -825,7 +826,7 @@ class GRAPHCUT(QMainWindow):
                 else :
                     xxx=self.axis
             try :
-                print('lé')
+                
                 Datafwhm,xDataMax=self.fwhm(xxx,self.cutData)
                 
                 xmaxx=self.cutData.max()
