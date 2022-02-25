@@ -825,13 +825,17 @@ class GRAPHCUT(QMainWindow):
                 else :
                     xxx=self.axis
             try :
+                print('lé')
                 Datafwhm,xDataMax=self.fwhm(xxx,self.cutData)
-                ymaxx=self.cutData[int(xDataMax)]
                 
+                xmaxx=self.cutData.max()
+                ymaxx=self.cutData[int(xmaxx)]
+                
+                print(xmaxx,ymaxx)
             except:
-                Datafwhm,xDataMax,ymaxx=0,0,0
+                xmaxx,ymaxx,Datafwhm=0,0,0
                 
-            init_vals = [ymaxx, xDataMax, Datafwhm,0]  # for [A, mu, sigma,B]
+            init_vals = [ymaxx, xmaxx, Datafwhm,0]  # for [A, mu, sigma,B]
             try :
                 best_vals, covar = curve_fit(self.gauss, xxx, gaussian_filter(self.cutData,5), p0=init_vals)
         
