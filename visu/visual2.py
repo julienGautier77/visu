@@ -80,10 +80,11 @@ class SEE2(QMainWindow) :
             plot3D 
     '''
    
-    def __init__(self,file=None,path=None,**kwds):
+    def __init__(self,file=None,path=None,parent=None,**kwds):
         
         super().__init__()
         version=__version__
+        self.parent=parent
         print("data visualisation version :  ",version)
         p = pathlib.Path(__file__)
         self.fullscreen=False
@@ -668,6 +669,8 @@ class SEE2(QMainWindow) :
         # self.dockImage.topLevelChanged.connect(self.fullScreen)
         self.roiFluence.sigRegionChangeFinished.connect(self.fluenceFct)
         
+        if self.parent is not None:
+            self.parent.signalData.connect(self.Display)
         
     def fullScreen(self):
         if  self.fullscreen==False:
