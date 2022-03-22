@@ -206,10 +206,11 @@ class MEAS(QMainWindow):
         self.setCentralWidget(MainWidget)
         self.setContentsMargins(1,1,1,1)
         
-        
-        
         if self.parent is not None:
-            self.parent.newMesurment.connect(self.Display)
+            self.parent.signalMeas.connect(self.Display)
+            
+        # if self.parent is not None:
+        #     self.parent.newMesurment.connect(self.Display)
         self.But_reset.triggered.connect(self.Reset)
         
     def Reset(self):
@@ -276,10 +277,7 @@ class MEAS(QMainWindow):
         self.winZoomCymax.SetTITLE('y center of mass')
         self.winZoomCymax.setZoom(self.ycmass)
         
-    
-    
-    
-        
+       
     
     def PlotMAX(self):
         self.open_widget(self.winCoupeMax)
@@ -330,7 +328,7 @@ class MEAS(QMainWindow):
         self.summ=round(data.sum(),3)
         self.moy=round(data.mean(),3)
         
-        (self.xmax,self.ymax)=pylab.unravel_index(data.argmax(),data.shape)
+        (self.xmax,self.ymax)=np.unravel_index(data.argmax(),data.shape)
         #print(self.maxx,data[int(self.xmax),int(self.ymax)])
         (self.xcmass,self.ycmass)=ndimage.center_of_mass(data)
         self.xcmass=round(self.xcmass,3)
@@ -456,7 +454,7 @@ class MEAS(QMainWindow):
             #fene.setGeometry(A.left()+A.width(),A.top(),500,A.height())
             fene.show()
         else:
-            fene.activateWindow()
+            # fene.activateWindow()
             fene.raise_()
             fene.showNormal()
             
