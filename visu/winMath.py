@@ -20,7 +20,7 @@ import pathlib
 class WINMATH(QWidget):
     emitApply=QtCore.pyqtSignal(object) # signal emit when aplly
     
-    def __init__(self,conf=None,name='VISU'):
+    def __init__(self,parent=None,conf=None,name='VISU'):
         
         super().__init__()
         
@@ -28,7 +28,7 @@ class WINMATH(QWidget):
         
         self.data1=[]
         self.data2=[]
-        
+        self.parent=parent
         if conf==None:
             self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
         else :
@@ -106,7 +106,7 @@ class WINMATH(QWidget):
     def apply(self):
          
         
-        if self.data1 == [] or self.data2 == []:
+        if np.shape(self.data1)==0 or np.shape(self.data2) == 0:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Critical)
             msg.setText("Select Files !")
@@ -137,7 +137,7 @@ class WINMATH(QWidget):
                  self.data=self.data1 * self.data2
             if self.operandButton.currentIndex()==3:
                  self.data=self.data1 / self.data2
-                 
+            
             self.emitApply.emit(self.data)
             
             

@@ -12,17 +12,17 @@ pip install qdarkstyle (https://github.com/ColinDuquesnoy/QDarkStyleSheet.git)
 pip install pyqtgraph (https://github.com/pyqtgraph/pyqtgraph.git)
 conda install pyopengl 3D plot
 
-modified 2020/03/23 :add save tiff and save in graphCut, scale px to um
+created 2021/11/02 : new design
 """
 
 
-__author__='julien Gautier'
+
 
 from PyQt5.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QWidget,QPushButton,QGridLayout
 from PyQt5.QtWidgets import QInputDialog,QSlider,QCheckBox,QLabel,QSizePolicy,QMenu,QMessageBox
-from PyQt5.QtWidgets import QShortcut,QDockWidget
+from PyQt5.QtWidgets import QShortcut,QDockWidget,QToolBar,QMainWindow,QToolButton,QAction,QStatusBar,QFrame
 from pyqtgraph.Qt import QtCore,QtGui 
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt,pyqtSlot
 from PyQt5.QtGui import QIcon
 import pylab
 import sys,time,os
@@ -33,25 +33,34 @@ from scipy.interpolate import splrep, sproot #
 from scipy.ndimage.filters import gaussian_filter,median_filter
 from PIL import Image
 from visu.winspec import SpeFile
+from visu.visualLight import SEELIGHT
 from visu.winSuppE import WINENCERCLED
 from visu.WinCut import GRAPHCUT
 from visu.winMeas import MEAS
 from visu.WinOption import OPTION
+from visu.WinPreference import PREFERENCES
 from visu.andor import SifFile
 from visu.winFFT import WINFFT
 from visu.winMath import WINMATH
-try :
-    from visu.Win3D import GRAPH3D #conda install pyopengl
-except :
-    print ('')
+from visu.winPointing import WINPOINTING
+from visu.winHist import HISTORY
+from visu import aboutWindows
+from visu.winZoom import ZOOM
+# try :
+#     from visu.Win3D import GRAPH3D #conda install pyopengl
+# except :
+#     print ('')
     
 import pathlib
+import visu
 
-__version__='2020.09'
+__version__=visu.__version__
+__author__=visu.__author__
+
 
 __all__=['SEE','runVisu']
 
-class SEE(QWidget) :
+class SEE(QMainWindow) :
     '''open and plot file : 
         SEE(file='nameFile,path=pathFileName,confpath,confMot,name,aff)
         Make plot profile ands differents measurements(max,min mean...)
@@ -70,39 +79,64 @@ class SEE(QWidget) :
             fft="on" or "off" display 1d and 2D fft 
             plot3D 
     '''
-   
-    def __init__(self,file=None,path=None,**kwds):
+    
+    signalMeas= QtCore.pyqtSignal(object)
+    signalEng=QtCore.pyqtSignal(object)
+    signalPointing=QtCore.pyqtSignal(object)
+    signalPlot=QtCore.pyqtSignal(object)
+    
+    def __init__(self,file=None,path=None,parent=None,**kwds):
         
         super().__init__()
         version=__version__
-        print("data visualisation :  ",version)
+        self.parent=parent
+        print("data visualisation version :  ",version)
         p = pathlib.Path(__file__)
         self.fullscreen=False
         self.setAcceptDrops(True)
         sepa=os.sep
         self.icon=str(p.parent) + sepa+'icons' +sepa
-        
-        
+        self.colorBar='flame'
+        self.setWindowIcon(QIcon(self.icon+'LOA.png'))
         self.nomFichier=''
-        
-        
+        self.labelValue=''
+        self.aboutWidget=aboutWindows.ABOUT()
+        self.signalTrans=dict() #dict to emit multivariable
         ### kwds definition  : 
         
-        if "confpath"in kwds :
+        if "confpath"in kwds :   #confpath path.file pour le fichier ini.
             self.confpath=kwds["confpath"]
-            self.conf=QtCore.QSettings(self.confpath, QtCore.QSettings.IniFormat)
+            if self.confpath==None:
+                self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+            else:
+                self.conf=QtCore.QSettings(self.confpath, QtCore.QSettings.IniFormat)
+            print ('configuration path of visu : ',self.confpath)
             
+            # print ('conf path visu',self.confpath,self.conf)
         else:
             self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
         
+        if "conf"in kwds:               #conf : le QSetting
+            self.conf=kwds["conf"]
+        
+        if "color" in kwds:
+            self.color=kwds["color"]
+        else:
+            self.color=None
         
         if "name" in kwds:
             self.name=kwds["name"]
         else:
             self.name="VISU"
-            
         
+        print('name :' ,self.name)
         
+        if "roiCross" in kwds:
+            # print('ROICROSS on')
+            self.roiCross=kwds["roiCross"]
+        else :
+            self.roiCross=False
+            # print('no roicross')
         if "aff" in kwds:
             self.aff=kwds["aff"]
         else :
@@ -136,25 +170,28 @@ class SEE(QWidget) :
         if "confMot" in kwds:
             print('motor accepted')
             if self.meas=="on":
-                self.confMot=kwds["confoMot"]
-                self.winM=MEAS(confMot=self.confMot,conf=self.conf,name=self.name)
+                self.confMot=kwds["confMot"]
+                # print(self.confMot)
+                self.winM=MEAS(parent=self,confMot=self.confMot,conf=self.conf,name=self.name)
         else :
             if self.meas=="on":
-                self.winM=MEAS(conf=self.conf,name=self.name)
+                self.winM=MEAS(parent=self,conf=self.conf,name=self.name)
             
         self.winOpt=OPTION(conf=self.conf,name=self.name)
+        self.winPref=PREFERENCES(conf=self.conf,name=self.name)
+        self.winHistory=HISTORY(self,conf=self.conf,name=self.name)
         
         if self.encercled=="on":
-            self.winEncercled=WINENCERCLED(conf=self.conf,name=self.name)
+            self.winEncercled=WINENCERCLED(parent=self,conf=self.conf,name=self.name)
         
         if "plot3d" in kwds :
             self.plot3D=kwds["plot3d"]
         else:
             self.plot3D="off"
             
-        if self.plot3D=="on":
+        # if self.plot3D=="on":
             
-            self.Widget3D=GRAPH3D(self.conf,name=self.name)
+        #     self.Widget3D=GRAPH3D(self.conf,name=self.name)
         
         
         if "math" in kwds:
@@ -164,18 +201,16 @@ class SEE(QWidget) :
         
         if self.math=="on":
             self.winMath=WINMATH()
-        
-        self.winCoupe=GRAPHCUT(symbol=False,conf=self.conf,name=self.name)
+            
+            
+            
+        self.winPointing=WINPOINTING(parent=self)
+        self.winCoupe=GRAPHCUT(parent=self,symbol=None,conf=self.conf,name=self.name)
         self.path=path
         self.setWindowTitle('Visualization'+'       v.'+ version)
-        self.bloqKeyboard=bool((self.conf.value(self.name+"/bloqKeyboard"))  )  # block cross by keyboard
+        self.bloqKeyboard=1#bool((self.conf.value(self.name+"/bloqKeyboard"))  )  # block cross by keyboard
         self.bloqq=1 # block the cross by click on mouse
-        self.setup()
-        self.shortcut()
-        self.actionButton()
-        self.activateWindow()
-        self.raise_()
-        self.showNormal()
+        
         # initialize variable : 
         self.filter='origin' # filter initial value
         self.ite=None
@@ -183,9 +218,9 @@ class SEE(QWidget) :
         self.zo=1 # zoom initial value
         self.scaleAxis="off"
         self.plotRectZoomEtat='Zoom'
+        self.angleImage=0
         
-        
-        
+        self.setup()
         
         def twoD_Gaussian(x,y, amplitude, xo, yo, sigma_x, sigma_y, theta, offset):
            xo = float(xo)
@@ -217,12 +252,19 @@ class SEE(QWidget) :
         
         self.dataOrg=self.data
         self.dataOrgScale=self.data
-        self.Display(self.data)
+        
         self.xminR=0
         self.xmaxR=self.dimx
         self.yminR=0
         self.ymaxR=self.dimy
         
+        
+        self.shortcut()
+        self.actionButton()
+        self.Display(self.data)
+        self.activateWindow()
+        self.raise_()
+        self.showNormal()
         
         
         
@@ -235,189 +277,284 @@ class SEE(QWidget) :
         TogOff=pathlib.PurePosixPath(TogOff)
         TogOn=pathlib.Path(TogOn)
         TogOn=pathlib.PurePosixPath(TogOn)
+        self.hboxBar=QHBoxLayout() 
         
-        self.setStyleSheet("QCheckBox::indicator{width: 30px;height: 30px;}""QCheckBox::indicator:unchecked { image : url(%s);}""QCheckBox::indicator:checked { image:  url(%s);}""QCheckBox{font :10pt;}" % (TogOff,TogOn) )
+        #self.setStyleSheet("QCheckBox::indicator{width: 30px;height: 30px;}""QCheckBox::indicator:unchecked { image : url(%s);}""QCheckBox::indicator:checked { image:  url(%s);}""QCheckBox{font :10pt;QCheckBox{background-color :red}" % (TogOff,TogOn) )
+        
+        
+        self.toolBar =self.addToolBar('tools')
+        self.toolBar.setMovable(False)
+        #self.setStyleSheet("{background-color: black}")
+        menubar = self.menuBar()
+        menubar.setNativeMenuBar(False)
+        self.fileMenu = menubar.addMenu('&File')
+        self.ImageMenu = menubar.addMenu('&Image')
+        self.ProcessMenu = menubar.addMenu('&Process')
+        self.AnalyseMenu = menubar.addMenu('&Analyse')
+        self.AboutMenu = menubar.addMenu('&About')
+        
+        self.aboutAction=QAction(QtGui.QIcon(self.icon+"LOA.png'"), 'About', self)
+        self.AboutMenu.addAction(self.aboutAction)
+        self.aboutAction.triggered.connect(lambda:self.open_widget(self.aboutWidget) )     
+        self.statusBar = QStatusBar()
+        self.setContentsMargins(0, 0, 0, 0)
+        
+        self.setStatusBar(self.statusBar)
+       
         
         self.vbox1=QVBoxLayout() 
+        self.vbox1.setContentsMargins(0, 0, 0, 0)
+        
         self.hbox0=QHBoxLayout()
+        self.hbox0.setContentsMargins(0, 0, 0, 0)
         self.vbox1.addLayout(self.hbox0)
         
-        hbox2=QHBoxLayout()
-        self.openButton=QPushButton('Open',self)
-        self.openButton.setIcon(QtGui.QIcon(self.icon+"Open.png"))
-        self.openButton.setIconSize(QtCore.QSize(50,50))
-        self.openButton.setMaximumWidth(200)
-        self.openButton.setMaximumHeight(100)
- 
-        hbox2.addWidget(self.openButton)
-        self.openButtonhbox4=QHBoxLayout()
-        self.openButton.setStyleSheet("background-color: rgb(0, 0, 0,0) ;border-color: rgb(0, 0, 0,0)")
+         
+        self.openAct = QAction(QtGui.QIcon(self.icon+"Open.png"), 'Open File', self)
+        self.openAct.setShortcut('Ctrl+o')
+        self.openAct.triggered.connect(self.OpenF)
+        self.toolBar.addAction(self.openAct)
+        self.fileMenu.addAction(self.openAct)
         
-        self.saveButton=QPushButton('Save',self)
-        self.saveButton.setMaximumWidth(100)
-        self.saveButton.setMinimumHeight(100)
-        self.saveButton.setIconSize(QtCore.QSize(50,50))
-        hbox2.addWidget(self.saveButton)
-        self.saveButton.setIcon(QtGui.QIcon(self.icon+"Saving.png"))
-        self.saveButton.setStyleSheet("background-color: rgb(0, 0, 0,0) ;border-color: rgb(0, 0, 0,0)")
-        self.vbox1.addLayout(hbox2)
         
-        hbox3=QHBoxLayout()
-        grid_layout0 = QGridLayout()
-        self.checkBoxAutoSave=QCheckBox('AutoSave',self)
-        self.checkBoxAutoSave.setChecked(False)
-        grid_layout0.addWidget(self.checkBoxAutoSave,0,0)
-        self.checkBoxBg=QCheckBox('Bg substraction',self)
-        self.checkBoxBg.setChecked(False)
-        grid_layout0.addWidget(self.checkBoxBg,1,0)
-        self.optionAutoSave=QPushButton('Options',self)
-        hbox3.addLayout( grid_layout0)
-        self.optionAutoSave.setIcon(QtGui.QIcon(self.icon+"Settings.png"))
-        #self.optionAutoSave.setIconSize(QtCore.QSize(20,20))
-        hbox3.addWidget(self.optionAutoSave)
-        self.vbox1.addLayout(hbox3)
+        self.openActNewWin = QAction(QtGui.QIcon(self.icon+"Open.png"), 'Open in new window', self)
+        #self.openActNewWin.setShortcut('Ctrl+o')
+        self.openActNewWin.triggered.connect(self.OpenFNewWin)
+        #self.toolBar.addAction(self.openActNewWin)
+        self.fileMenu.addAction(self.openActNewWin)
+        
+        
+        self.saveAct=QAction(QtGui.QIcon(self.icon+"disketteSave.png"), 'Save file', self)
+        self.saveAct.setShortcut('Ctrl+s')
+        self.saveAct.triggered.connect(self.SaveF)
+        self.toolBar.addAction(self.saveAct)
+        self.fileMenu.addAction(self.saveAct)
 
-        hbox8=QHBoxLayout()
         
-        hbox4=QHBoxLayout()
-        self.labelFileName=QLabel("File :")
-        self.labelFileName.setStyleSheet("font:15pt;")
-        self.labelFileName.setMinimumHeight(50)
-        self.labelFileName.setMaximumWidth(40)
-        hbox4.addWidget(self.labelFileName)
-        hbox42=QHBoxLayout()
-    
-        self.fileName=QLabel()
-        self.fileName.setStyleSheet("font:10pt")
-        self.fileName.setMaximumHeight(30)
-        self.fileName.setMaximumWidth(200)
-        self.fileName.setAlignment(Qt.AlignRight)
-        hbox42.addWidget(self.fileName)
-        self.vbox1.addLayout(hbox4)
-        self.vbox1.addLayout(hbox42)
+        self.checkBoxAutoSave=QAction(QtGui.QIcon(self.icon+"diskette.png"),'AutoSave Off',self)
+        self.checkBoxAutoSave.setCheckable(True)
+        self.checkBoxAutoSave.setChecked(False)
         
-        hbox5=QHBoxLayout()
-        self.checkBoxPlot=QCheckBox('CROSS',self)
+        self.checkBoxAutoSave.triggered.connect(self.autoSaveColor)
+        self.toolBar.addAction(self.checkBoxAutoSave)
+        self.fileMenu.addAction(self.checkBoxAutoSave)
+        
+        
+        self.optionAutoSaveAct=QAction(QtGui.QIcon(self.icon+"Settings.png"),'Options',self) #
+        self.optionAutoSaveAct.triggered.connect(lambda:self.open_widget(self.winOpt))
+        self.toolBar.addAction(self.optionAutoSaveAct)
+        self.fileMenu.addAction(self.optionAutoSaveAct)
+        
+        self.preferenceAct=QAction(QtGui.QIcon(self.icon+"pref.png"),'Preferences',self) #
+        self.preferenceAct.triggered.connect(lambda:self.open_widget(self.winPref))
+        
+        self.fileMenu.addAction(self.preferenceAct)
+        
+        self.historyAct=QAction(QtGui.QIcon(self.icon+"time.png"),'&History',self) #
+        self.historyAct.triggered.connect(lambda:self.open_widget(self.winHistory))
+        self.fileMenu.addAction(self.historyAct)
+        
+        
+        self.checkBoxPlot=QAction(QtGui.QIcon(self.icon+"target.png"),'Cross On (ctrl+b to block ctrl+d to unblock)',self)
+        self.checkBoxPlot.setCheckable(True)
         self.checkBoxPlot.setChecked(False)
+        self.checkBoxPlot.triggered.connect(self.PlotXY)
+        self.toolBar.addAction(self.checkBoxPlot)
+        self.AnalyseMenu.addAction(self.checkBoxPlot)
+        
+        self.maxGraphBox=QAction('Set Cross on the max',self)
+        self.maxGraphBox.setCheckable(True)
+        self.maxGraphBox.setChecked(False)
+        self.maxGraphBox.triggered.connect(self.Coupe)
+        self.AnalyseMenu.addAction(self.maxGraphBox)
+        
+        
+        
         self.label_CrossValue=QLabel()
         self.label_CrossValue.setStyleSheet("font:13pt")
-        hbox5.addWidget(self.checkBoxPlot)
-        hbox5.addWidget(self.label_CrossValue)
-        hbox6=QHBoxLayout()
+        
         self.label_Cross=QLabel()
         #self.label_Cross.setMaximumHeight(20)
         self.label_Cross.setMaximumWidth(170)
         self.label_Cross.setStyleSheet("font:12pt")
-        hbox6.addWidget(self.label_Cross)
-        #hbox6.setSpacing(1)
-        self.vbox1.addLayout(hbox5)
-        self.vbox1.addLayout(hbox6)
+        self.statusBar.addPermanentWidget(self.label_Cross)
+        self.statusBar.addPermanentWidget(self.label_CrossValue)
         
-        self.ZoomLabel=QLabel('Zoom')
-        self.vbox1.addWidget(self.ZoomLabel)
-        self.checkBoxZoom=QSlider(Qt.Horizontal)
-        self.checkBoxZoom.setMaximumWidth(250)
-        self.checkBoxZoom.setMinimum(0)
-        self.checkBoxZoom.setMaximum(200)
-        self.checkBoxZoom.setValue(0)
-        self.vbox1.addWidget(self.checkBoxZoom)
+        self.labelFileName=QLabel("File :")
+        self.labelFileName.setStyleSheet("font:12pt;")
+        self.labelFileName.setMinimumHeight(30)
+        self.labelFileName.setMaximumWidth(40)
         
-        self.checkBoxScale=QCheckBox('Auto Scale',self)
+        self.fileName=QLabel()
+        self.fileName.setStyleSheet("font:12pt")
+        self.fileName.setMaximumHeight(30)
+        self.fileName.setMaximumWidth(200000)
+        #self.fileName.setAlignment(Qt.AlignRight)
+        self.statusBar.addWidget(self.labelFileName)
+        self.statusBar.addWidget(self.fileName)
+         
+        self.checkBoxScale=QAction(QtGui.QIcon(self.icon+"expand.png"),' Auto Scale on',self)
+        self.checkBoxScale.setCheckable(True)
         self.checkBoxScale.setChecked(True)
-        self.checkBoxScale.setMaximumWidth(100)
+        self.toolBar.addAction(self.checkBoxScale)
+        self.ImageMenu.addAction(self.checkBoxScale)
+        self.checkBoxScale.triggered.connect(self.checkBoxScaleImage)
         
-        self.checkBoxColor=QCheckBox('Color',self)
+        self.checkBoxColor=QAction(QtGui.QIcon(self.icon+"colors-icon.png"),'Color on',self)
+        self.checkBoxColor.triggered.connect(self.Color)
+        self.checkBoxColor.setCheckable(True) 
         self.checkBoxColor.setChecked(True)
+        self.toolBar.addAction(self.checkBoxColor)
+        self.ImageMenu.addAction(self.checkBoxColor)
+        
     
-        self.checkBoxHist=QCheckBox('Hist',self)
+        self.checkBoxHist=QAction(QtGui.QIcon(self.icon+"colourBar.png"),'Show colour Bar',self)
+        self.checkBoxHist.setCheckable(True)
         self.checkBoxHist.setChecked(False)
-        self.maxGraphBox=QCheckBox('Max',self)
+        self.checkBoxHist.triggered.connect(self.HIST)
+        self.ImageMenu.addAction(self.checkBoxHist)
+        
+        self.ColorBox=QAction('&LookUp Table',self)
+        menuColor=QMenu()
+        menuColor.addAction('thermal',self.Setcolor)
+        menuColor.addAction('flame',self.Setcolor)
+        menuColor.addAction('yellowy',self.Setcolor)
+        menuColor.addAction('bipolar',self.Setcolor)
+        menuColor.addAction('spectrum',self.Setcolor)
+        menuColor.addAction('cyclic',self.Setcolor)
+        menuColor.addAction('viridis',self.Setcolor) 
+        menuColor.addAction('inferno',self.Setcolor)
+        menuColor.addAction('plasma',self.Setcolor)      
+        menuColor.addAction('magma',self.Setcolor)            
+        
+        self.ColorBox.setMenu(menuColor)
+        self.ImageMenu.addAction(self.ColorBox)
         
         
-        grid_layout = QGridLayout()
-        grid_layout.setVerticalSpacing(0)
-        grid_layout.setHorizontalSpacing(10)
-        grid_layout.addWidget(self.checkBoxScale, 0, 0)
-        grid_layout.addWidget(self.checkBoxColor,1,0)
-        grid_layout.addWidget(self.checkBoxHist, 0, 1)
-        #grid_layout.addWidget(self.checkBoxZoom, 1, 0)
-        grid_layout.addWidget(self.maxGraphBox, 1,1)
+        self.checkBoxBg=QAction('Background Substraction On',self)
+        self.checkBoxBg.setCheckable(True)
+        self.checkBoxBg.setChecked(False)
+        self.ImageMenu.addAction(self.checkBoxBg)
         
-        hbox8.addLayout(grid_layout)
         
-        self.vbox1.addLayout(hbox8)
-        
-        hbox9=QHBoxLayout()
         
         if self.encercled=="on":
-            self.energyBox=QPushButton('&Encercled',self)
-            hbox9.addWidget(self.energyBox)
+            self.energyBox=QAction(QtGui.QIcon(self.icon+"coin.png"),'Energy Encercled',self)
+            self.energyBox.setShortcut('Ctrl+e')
+            self.AnalyseMenu.addAction(self.energyBox)
+            self.energyBox.triggered.connect(self.Energ)
         
             
         if self.math=="on":
-            self.mathButton=QPushButton('Math',self)
-            hbox9.addWidget(self.mathButton)
+            self.mathButton=QAction(QtGui.QIcon(self.icon+"math.png"),'Math',self)
+            self.mathButton.triggered.connect(lambda:self.open_widget(self.winMath))
+            self.ProcessMenu.addAction(self.mathButton)
+            self.winMath.emitApply.connect(self.newDataReceived)
+        
+        self.paletteupButton=QAction(QtGui.QIcon(self.icon+"user.png"),'Brightness +',self)
+        #self.paletteupButton.setShortcut('+')
+        self.ProcessMenu.addAction(self.paletteupButton)
+        self.paletteupButton.triggered.connect(self.paletteup)
+        
+        self.palettedownButton=QAction(QtGui.QIcon(self.icon+"userM.png"),'Brightness -',self)
+        #self.palettedownButton.setShortcut('-')
+        self.ProcessMenu.addAction(self.palettedownButton)
+        self.palettedownButton.triggered.connect(self.palettedown)
+        
+        self.paletteautoButton=QAction(QtGui.QIcon(self.icon+"robotics.png"),'Brightness auto ',self)
+        #self.palettedautoButton.setShortcut('-')
+        self.ProcessMenu.addAction(self.paletteautoButton)
+        self.paletteautoButton.triggered.connect(self.paletteauto)
+        
+        self.contrastButton=QAction(QtGui.QIcon(self.icon+"ying-yang.png"),'Contrast 5%-95%',self)
+        #self.palettedautoButton.setShortcut('-')
+        self.ProcessMenu.addAction(self.contrastButton)
+        self.contrastButton.triggered.connect(self.contrast)
+        
+        
+        
         if self.winFilter=='on':
-            self.filtreBox=QPushButton('&Filters',self)
+            self.filtreBox=QAction('&Filters',self)
             menu=QMenu()
             menu.addAction('&Gaussian',self.Gauss)
             menu.addAction('&Median',self.Median)
             menu.addAction('&Origin',self.Orig)
             self.filtreBox.setMenu(menu)
-            hbox9.addWidget(self.filtreBox)
+            self.ProcessMenu.addAction(self.filtreBox)
         
         if self.plot3D=="on":
             self.box3d=QPushButton('3D', self)
-            hbox9.addWidget(self.box3d)
-            
-        self.vbox1.addLayout(hbox9)
-        
-        hbox11=QHBoxLayout()
-        self.PlotButton=QPushButton('Plot')
-        hbox11.addWidget(self.PlotButton)
+            self.toolBar.addWidget(self.box3d)
         
         if self.meas=='on':
-            self.MeasButton=QPushButton('Meas.')
-            hbox11.addWidget(self.MeasButton)
+            self.MeasButton=QAction(QtGui.QIcon(self.icon+"laptop.png"),'Measure',self)
+            self.MeasButton.setShortcut('ctrl+m')
+            self.MeasButton.triggered.connect(self.Measurement)
+            self.AnalyseMenu.addAction(self.MeasButton)
             
         if self.fft=='on':
-            self.fftButton=QPushButton('FFT')
-            hbox11.addWidget(self.fftButton)
-        self.ZoomRectButton=QPushButton('Zoom')
-        hbox11.addWidget(self.ZoomRectButton)
+            self.fftButton=QAction('FFT')
+            self.AnalyseMenu.addAction(self.fftButton)
+            self.fftButton.triggered.connect(self.fftTransform)
+        
+        self.PointingButton=QAction(QtGui.QIcon(self.icon+"recycle.png"),'Pointing',self)
+        self.PointingButton.triggered.connect(self.Pointing)
+        self.AnalyseMenu.addAction(self.PointingButton)       
         
         
-        hbox10=QHBoxLayout()
-        self.ligneButton=QPushButton('Line')
-        self.ligneButton.setIcon(QtGui.QIcon(self.icon+"ligne.jpeg")) 
-
-        hbox10.addWidget(self.ligneButton)
         
-        self.rectangleButton=QPushButton('Rect')
-        self.rectangleButton.setIcon(QtGui.QIcon(self.icon+"rectangle.png")) 
-        hbox10.addWidget(self.rectangleButton)
         
-        self.circleButton=QPushButton('Circle')
-        self.circleButton.setIcon(QtGui.QIcon(self.icon+"Red_circle.png")) 
-        hbox10.addWidget(self.circleButton)
         
-        self.vbox1.addLayout(hbox11)
-        self.vbox1.addLayout(hbox10)
-        self.vbox1.addStretch(1)
         
-        self.winImage = pg.GraphicsLayoutWidget()
-        #self.winImage.setContentsMargins(1,1,1,1)
-        self.winImage.setAspectLocked(True)
-        self.winImage.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        #self.winImage.ci.setContentsMargins(1,1,1,1)
+        self.ZoomRectButton=QAction(QtGui.QIcon(self.icon+"loupe.png"),'Zoom',self)
+        self.ZoomRectButton.triggered.connect(self.zoomRectAct)
+        self.toolBar.addAction(self.ZoomRectButton)
+        
+        
+        self.ligneButton=QAction(QtGui.QIcon(self.icon+"line.png"),'add  Line',self)
+        self.toolBar.addAction(self.ligneButton)
+        
+        self.rectangleButton=QAction(QtGui.QIcon(self.icon+"rectangle.png"),'Add Rectangle',self)
+        self.toolBar.addAction(self.rectangleButton)
+        
+        self.circleButton=QAction(QtGui.QIcon(self.icon+"Red_circle.png"),'add  Cercle',self)
+        self.toolBar.addAction(self.circleButton)
+        
+        self.PlotButton=QAction(QtGui.QIcon(self.icon+"analytics.png"),'Plot Profile',self)
+        self.PlotButton.triggered.connect(self.CUT)
+        self.PlotButton.setShortcut("ctrl+k")
+        self.AnalyseMenu.addAction(self.PlotButton)
+        
+        
+        self.showMaxButton=QAction('Show max',self)
+        self.showMaxButton.triggered.connect(self.ZoomMAX)
+        self.winZoomMax=ZOOM()
+        self.AnalyseMenu.addAction(self.showMaxButton)
+        
+        
+        
+        self.flipButton=QAction(QtGui.QIcon(self.icon+"fliphorizontal.png"),'Flip Horizontally',self)
+        self.flipButton.setCheckable(True)
+        self.flipButton.setChecked(False)
+        self.flipButton.triggered.connect(self.flipAct)
+        self.ImageMenu.addAction(self.flipButton)
+        
+        
+        self.flipButtonVert=QAction(QtGui.QIcon(self.icon+"flipvertical.png"),'Flip Horizontally',self)
+        self.flipButtonVert.setCheckable(True)
+        self.flipButtonVert.setChecked(False)
+        self.ImageMenu.addAction(self.flipButtonVert)
+        self.flipButtonVert.triggered.connect(self.flipVertAct)
+        
         
         self.vbox2=QVBoxLayout()
-        self.dockImage=QDockWidget(self)
         
-        self.dockImage.setWidget(self.winImage)
-        self.dockImage.setFeatures(QDockWidget.DockWidgetFloatable)
-        self.vbox2.addWidget(self.dockImage)
-        #self.vbox2.addWidget(self.winImage)
+        self.winImage = pg.GraphicsLayoutWidget()
+        self.winImage.setContentsMargins(0,0,0,0)
+        self.winImage.setAspectLocked(True)
+        self.winImage.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.winImage.ci.setContentsMargins(0,0,0,0)
+        self.vbox2.addWidget(self.winImage)
         self.vbox2.setContentsMargins(0,0,0,0)
         
         self.p1=self.winImage.addPlot()
@@ -431,8 +568,8 @@ class SEE(QWidget) :
         self.p1.setAspectLocked(True,ratio=1)
         self.p1.showAxis('right',show=False)
         self.p1.showAxis('top',show=False)
-        self.p1.showAxis('left',show=True)
-        self.p1.showAxis('bottom',show=True)
+        self.p1.showAxis('left',show=False)
+        self.p1.showAxis('bottom',show=False)
         
         if self.bloqKeyboard==True:
             self.vLine = pg.InfiniteLine(angle=90, movable=False,pen='r')
@@ -449,10 +586,14 @@ class SEE(QWidget) :
         self.hLine.setPos(self.yc)
        
         
-        self.ro1=pg.EllipseROI([self.xc,self.yc],[self.rx,self.ry],pen='y',movable=False,maxBounds=QtCore.QRectF(0,0,self.rx,self.ry))
+        self.ro1=pg.EllipseROI([self.xc,self.yc],[self.rx,self.ry],pen='r',movable=False)
         self.ro1.setPos([self.xc-(self.rx/2),self.yc-(self.ry/2)])
-      
+        
        
+        self.roiFluence=pg.EllipseROI([self.xc,self.yc],[self.rx,self.ry],pen='b',movable=True)
+        self.roiFluence.setPos([self.xc-(self.rx/2),self.yc-(self.ry/2)])
+       
+        
         # text for fwhm on p1
         self.textX = pg.TextItem(angle=-90) 
         self.textY = pg.TextItem()
@@ -473,7 +614,13 @@ class SEE(QWidget) :
         self.vbox2.addWidget(self.sliderImage)
         
         ## main layout
+        
+        # vMainLayout=QVBoxLayout()
+        
         hMainLayout=QHBoxLayout()
+        # vMainLayout.addLayout(self.hboxBar)
+        #vMainLayout.addLayout(hMainLayout)
+        
         if self.aff=='right':
             hMainLayout.addLayout(self.vbox2)
             hMainLayout.addLayout(self.vbox1)
@@ -481,63 +628,57 @@ class SEE(QWidget) :
             hMainLayout.addLayout(self.vbox1)
             hMainLayout.addLayout(self.vbox2)
             
-            
-        hMainLayout.setContentsMargins(1,1,1,1)
-        hMainLayout.setSpacing(1)
-        hMainLayout.setStretch(10,1)
         
-        self.setLayout(hMainLayout)
-        self.setContentsMargins(1,1,1,1)
+        
+        hMainLayout.setContentsMargins(1,1,1,1)
+        #hMainLayout.setSpacing(1)
+        #hMainLayo.setStretch(10,1)
+        MainWidget=QFrame()#
+        
+        if self.color is not None :
+            
+            self.winImage.setStyleSheet("border : 3px solid  %s" % self.color);
+        
+        MainWidget.setLayout(hMainLayout)
+        
+        self.setCentralWidget(MainWidget)
+        #self.setContentsMargins(1,1,1,1)
         #self.plotLine=pg.LineSegmentROI(positions=((self.dimx/2-100,self.dimy/2),(self.dimx/2+100,self.dimy/2)), movable=True,angle=0,pen='b')
         self.plotLine=pg.LineSegmentROI(positions=((0,200),(200,200)), movable=True,angle=0,pen='w')
         #self.plotLine=pg.PolyLineROI(positions=((0,200),(200,200),(300,200)), movable=True,angle=0,pen='w')
         self.plotRect=pg.RectROI([self.xc,self.yc],[4*self.rx,self.ry],pen='g')
         self.plotCercle=pg.CircleROI([self.xc,self.yc],[80,80],pen='g')
         self.plotRectZoom=pg.RectROI([self.xc,self.yc],[4*self.rx,self.ry],pen='w')
-        #self.plotRect.addScaleRotateHandle([0.5, 1], [0.5, 0.5])
+        self.plotRectZoom.addScaleHandle((0,0),center=(1,1))
         #self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5()) # dark style
+        
         
         
     def actionButton(self):
         # action of button
         
-        self.openButton.clicked.connect(self.OpenF)
-        self.saveButton.clicked.connect(self.SaveF)
-        
-        self.optionAutoSave.clicked.connect(lambda:self.open_widget(self.winOpt))
-        self.checkBoxColor.stateChanged.connect(self.Color)
-        self.checkBoxPlot.stateChanged.connect(self.PlotXY)
-        self.checkBoxPlot.setToolTip('ctrl+b to block the cross,  ctrl+d to unblock')
+       
         self.ro1.sigRegionChangeFinished.connect(self.roiChanged)
-        self.checkBoxZoom
-        #self.checkBoxZoom.stateChanged.connect(self.Zoom)
-        if self.encercled=="on":
-            self.energyBox.clicked.connect(self.Energ)
-        self.checkBoxHist.stateChanged.connect(self.HIST)
-        self.maxGraphBox.stateChanged.connect(self.Coupe)  
-        self.ligneButton.clicked.connect(self.LIGNE)
-        self.rectangleButton.clicked.connect(self.Rectangle)
-        self.circleButton.clicked.connect(self.CERCLE)
+        self.ligneButton.triggered.connect(self.LIGNE)
+        self.rectangleButton.triggered.connect(self.Rectangle)
+        self.circleButton.triggered.connect(self.CERCLE)
+        
         self.plotLine.sigRegionChangeFinished.connect(self.LigneChanged)
         self.plotRect.sigRegionChangeFinished.connect(self.RectChanged)
         self.plotCercle.sigRegionChangeFinished.connect(self.CercChanged)
-        self.PlotButton.clicked.connect(self.CUT)
-        if self.meas=='on':
-            self.MeasButton.clicked.connect(self.Measurement)
-        if self.fft=='on':
-            self.fftButton.clicked.connect(self.fftTransform)
-        if self.plot3D=="on":
-            self.box3d.clicked.connect(self.Graph3D)
-        self.winOpt.closeEventVar.connect(self.ScaleImg)
-        # self.winOpt.checkBoxStepY.stateChanged.connect(lambda:self.Display(self.data))
-        #self.winOpt.emitChangeRot.connect(self.RotImg)
-        self.ZoomRectButton.clicked.connect(self.zoomRectAct)
-        self.sliderImage.valueChanged.connect(self.SliderImgFct)
-        self.dockImage.topLevelChanged.connect(self.fullScreen)
-        if self.math=="on":
-            self.mathButton.clicked.connect(lambda:self.open_widget(self.winMath))
-            self.winMath.emitApply.connect(self.newDataReceived)
         
+        # if self.plot3D=="on":
+        #     self.box3d.clicked.connect(self.Graph3D)
+            
+        self.winPref.closeEventVar.connect(self.ScaleImg)
+        
+        
+        self.sliderImage.valueChanged.connect(self.SliderImgFct)
+        # self.dockImage.topLevelChanged.connect(self.fullScreen)
+        self.roiFluence.sigRegionChangeFinished.connect(self.fluenceFct)
+        
+        if self.parent is not None:
+            self.parent.signalData.connect(self.newDataReceived)
         
     def fullScreen(self):
         if  self.fullscreen==False:
@@ -558,25 +699,6 @@ class SEE(QWidget) :
         self.shortcutPd.activated.connect(self.palettedown)
         self.shortcutPd.setContext(Qt.ShortcutContext(3))
         
-        self.shortcutOpen=QtGui.QShortcut(QtGui.QKeySequence("Ctrl+o"),self)
-        self.shortcutOpen.activated.connect(self.OpenF)
-        self.shortcutOpen.setContext(Qt.ShortcutContext(3))
-        
-        self.shortcutSave=QtGui.QShortcut(QtGui.QKeySequence("Ctrl+s"),self)
-        self.shortcutSave.activated.connect(self.SaveF)
-        self.shortcutSave.setContext(Qt.ShortcutContext(3))
-        if self.encercled=="on":
-            self.shortcutEnerg=QtGui.QShortcut(QtGui.QKeySequence("Ctrl+e"),self)
-            self.shortcutEnerg.activated.connect(self.Energ)
-            self.shortcutEnerg.setContext(Qt.ShortcutContext(3))
-        
-        self.shortcutMeas=QtGui.QShortcut(QtGui.QKeySequence('Ctrl+m'),self)
-        self.shortcutMeas.activated.connect(self.Measurement)
-        self.shortcutMeas.setContext(Qt.ShortcutContext(3))
-        
-        self.shortcutCut=QtGui.QShortcut(QtGui.QKeySequence('Ctrl+k'),self)
-        self.shortcutCut.activated.connect(self.CUT)
-        self.shortcutCut.setContext(Qt.ShortcutContext(3))
         
         self.shortcutBloq=QtGui.QShortcut(QtGui.QKeySequence("Ctrl+b"),self)
         self.shortcutBloq.activated.connect(self.bloquer)
@@ -617,9 +739,9 @@ class SEE(QWidget) :
       
     def LigneChanged(self):
         # take ROI 
-        self.cut,coor=self.plotLine.getArrayRegion(self.data,self.imh,returnMappedCoords=True)
+        self.cut=self.plotLine.getArrayRegion(self.data,self.imh)
         
-        if self.winOpt.checkBoxAxeScale.isChecked()==1:
+        if self.winPref.checkBoxAxeScale.isChecked()==1:
             self.linePoints=self.plotLine.listPoints()
             self.lineXo=self.linePoints[0][0]
             self.lineYo=self.linePoints[0][1]
@@ -628,7 +750,7 @@ class SEE(QWidget) :
             #self.plotLineAngle=np.arctan((self.lineYf-self.lineYo)/(self.lineXf-self.lineXo))
             # print('angle',self.plotLineAngle*360/(2*3.14),self.cut.size)
             
-            step=(self.winOpt.stepX**2*(self.lineXo-self.lineXf)**2+self.winOpt.stepY**2*(self.lineYo-self.lineYf)**2)
+            step=(self.winPref.stepX**2*(self.lineXo-self.lineXf)**2+self.winPref.stepY**2*(self.lineYo-self.lineYf)**2)
             step=step**0.5/self.cut.size
             self.absiLine=np.arange(0,(self.cut.size)*step,step)
             
@@ -653,8 +775,10 @@ class SEE(QWidget) :
     def RectChanged(self):
         # take ROI
         self.cut=(self.plotRect.getArrayRegion(self.data,self.imh))
-        self.cut1=self.cut.mean(axis=1)
-        
+        if self.winPref.plotRectOpt.currentIndex()==0:
+            self.cut1=self.cut.mean(axis=1)
+        else:
+            self.cut1=self.cut.sum(axis=1)
         
     def CERCLE(self) : 
         try :
@@ -678,20 +802,26 @@ class SEE(QWidget) :
     def CUT(self): 
         # plot on a separated widget the ROI plot profile
         if self.ite=='line':
+            self.signalTrans['data']=self.cut
             self.open_widget(self.winCoupe)
-            if self.winOpt.checkBoxAxeScale.isChecked()==1:
-                self.winCoupe.PLOT(self.cut,axis=self.absiLine,symbol=False)
+            if self.winPref.checkBoxAxeScale.isChecked()==1:
+                
+                self.signalTrans['axis']=self.absiLine
+                self.signalPlot.emit(self.signalTrans)
+                # self.winCoupe.PLOT(self.cut,axis=self.absiLine)
             else:
-                self.winCoupe.PLOT(self.cut,symbol=False)
-            
+                # self.winCoupe.PLOT(self.cut)#,symbol=False)
+                self.signalPlot.emit(self.signalTrans)
         if self.ite=='rect':
+            self.signalTrans['data']=self.cut1
             self.open_widget(self.winCoupe)
-            self.winCoupe.PLOT(self.cut1,symbol=False)
+            # self.winCoupe.PLOT(self.cut1)#,symbol=False)
+            self.signalPlot.emit(self.signalTrans)
    
-    def Graph3D (self):
+    # def Graph3D (self):
         
-        self.open_widget(self.Widget3D)
-        self.Widget3D.Plot3D(self.data)
+    #     self.open_widget(self.Widget3D)
+    #     self.Widget3D.Plot3D(self.data)
         
         
     def Measurement(self) :
@@ -701,14 +831,16 @@ class SEE(QWidget) :
             if self.meas=="on":
                 self.winM.setFile(self.nomFichier)
                 self.open_widget(self.winM)
-                self.winM.Display(self.cut)
+                self.signalMeas.emit(self.cut)
+                # self.winM.Display(self.cut)
             
         if self.ite=='cercle':
             self.CercChanged()
             if self.meas=="on":
                 self.winM.setFile(self.nomFichier)
                 self.open_widget(self.winM)
-                self.winM.Display(self.cut)
+                self.signalMeas.emit(self.cut)
+                # self.winM.Display(self.cut)
         
         # if self.ite=='line':
         #     self.LigneChanged()
@@ -720,8 +852,32 @@ class SEE(QWidget) :
             if self.meas=="on":
                 self.winM.setFile(self.nomFichier)
                 self.open_widget(self.winM)
-                self.winM.Display(self.data)
-    
+                
+                self.signalMeas.emit(self.data)
+                
+                # self.winM.Display(self.data)
+                
+    def Pointing(self) :
+
+        self.open_widget(self.winPointing)
+
+        if self.ite=='rect':
+            self.RectChanged()
+            pData=self.cut
+        elif self.ite=='cercle':
+            self.CercChanged() 
+            pData=self.cut
+        elif self.ite==None:
+            pData=self.data
+        else :pData=self.data
+
+
+        if self.winPref.checkBoxAxeScale.isChecked()==1:
+            self.signalPointing.emit(pData,self.winPref.stepX,self.winPref.stepX)
+                #self.winPointing.Display(pData,self.winPref.stepX,self.winPref.stepX)
+        else:
+            self.signalPointing.emit(pData)
+            # self.winPointing.Display(pData)
 
     def fftTransform(self):
         # show on a new widget fft 
@@ -748,12 +904,12 @@ class SEE(QWidget) :
         
 
         
-        
+    @pyqtSlot (object)   
     def Display(self,data):
         #  display the data and refresh all the calculated things and plots
         self.data=data
         
-        self.data=np.rot90(self.data,self.winOpt.rotate.value())
+        
         if self.checkBoxBg.isChecked()==True and self.winOpt.dataBgExist==True:
             try :
                 self.data=self.data-self.winOpt.dataBg
@@ -769,38 +925,50 @@ class SEE(QWidget) :
         if self.checkBoxBg.isChecked()==True and self.winOpt.dataBgExist==False:
                 msg = QMessageBox()
                 msg.setIcon(QMessageBox.Critical)
-                msg.setText("Background not soustracred !")
+                msg.setText("Background not soustracted !")
                 msg.setInformativeText("Background file not selected in options menu ")
                 msg.setWindowTitle("Warning ...")
                 msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
                 msg.exec_()
-            
+                
         
         #### filtre
         if self.filter=='gauss':
             self.data=gaussian_filter(self.data,self.sigma)
-            print('gauss filter')
+            #print('gauss filter')
             
         if self.filter=='median':
             self.data=median_filter(self.data,size=self.sigma)
-            print('median filter')
+            #print('median filter')
         
-        
-        # self.p1.setYRange(0,self.dimy)
-        # self.p1.setXRange(0,self.dimx)
-        
+        ### fluence 
+        if self.winPref.checkBoxFluence.isChecked()==1: # fluence on 
+           energy=self.winPref.energy.value()
+           #print('energy',energy)
+           if self.winPref.checkBoxAxeScale.isChecked()==0:  # en pixel
+               size=1#self.sizeFluenceX*self.sizeFluenceY
+               self.labelValue=' mJ/pixel2'
+           if self.winPref.checkBoxAxeScale.isChecked()==1: #en micron
+               size=1E-8*self.winPref.stepX*self.winPref.stepY
+               self.labelValue=' mJ/cm2'
+               
+           enrgTot=self.roiFluence.getArrayRegion(self.data,self.imh).sum()
+           
+           self.data=1000*(self.data*energy/enrgTot)/size #(microJ/cm2)
         # self.p1.setAspectLocked(True,ratio=1)
-        
+        else :
+            self.labelValue=''
             
+        ### color  and sacle 
         if self.checkBoxScale.isChecked()==1: # color autoscale on
             
-            if self.winOpt.checkBoxAxeScale.isChecked()==1:
-                self.axeX.setScale(self.winOpt.stepX)
-                self.axeY.setScale(self.winOpt.stepY)
+            if self.winPref.checkBoxAxeScale.isChecked()==1:
+                self.axeX.setScale(self.winPref.stepX)
+                self.axeY.setScale(self.winPref.stepY)
                 self.axeX.setLabel('um')
                 self.axeY.setLabel('um')
                 self.axeX.showLabel(True)
-            if self.winOpt.checkBoxAxeScale.isChecked()==0:
+            if self.winPref.checkBoxAxeScale.isChecked()==0:
                 self.scaleAxis="off"
                 self.axeX.setScale(1)
                 self.axeY.setScale(1)  
@@ -809,11 +977,13 @@ class SEE(QWidget) :
         else :
             self.imh.setImage(self.data,autoLevels=False,autoDownsample=True)
         
-        self.PlotXY() # graph update
-                
+        self.Coupe()#self.PlotXY() # graph update
+        
+        ##update        
         if self.encercled=="on":
             if self.winEncercled.isWinOpen==True:
-                self.winEncercled.Display(self.data) ## energy update
+                self.signalEng.emit(self.data)
+                # self.winEncercled.Display(self.data) ## energy update
         
         if self.winCoupe.isWinOpen==True:
             if self.ite=='line':
@@ -837,21 +1007,27 @@ class SEE(QWidget) :
         if self.fft=='on':        
             if self.winFFT.isWinOpen==True: # fft update
                 self.winFFT.Display(self.data)
-        if self.plot3D=="on":
-            if self.Widget3D.isWinOpen==True:
-                self.Graph3D()
-        
+                
+        # if self.plot3D=="on":
+        #     if self.Widget3D.isWinOpen==True:
+        #         self.Graph3D()
+        if self.winPointing.isWinOpen==True:
+            self.Pointing()
+        if self.winZoomMax.isWinOpen==True:
+            self.ZoomMAX()   
+            
+        ### autosave
         if self.checkBoxAutoSave.isChecked()==True: ## autosave data
             self.pathAutoSave=str(self.conf.value(self.name+'/pathAutoSave'))
             self.fileNameSave=str(self.conf.value(self.name+'/nameFile'))
             date=time.strftime("%Y_%m_%d_%H_%M_%S")
             self.numTir=int(self.conf.value(self.name+'/tirNumber'))
-            if self.numTir<10:
-                num="00"+str(self.numTir)
-            elif 9<self.numTir<100:
-                num="0"+str(self.numTir)
-            else:
-                num=str(self.numTir)
+            # if self.numTir<10:
+            #     num="00"+str(self.numTir)
+            # elif 9<self.numTir<100:
+            #     num="0"+str(self.numTir)
+            # else:
+            num=str(self.numTir)
             if self.winOpt.checkBoxDate.isChecked()==True: # add the date
                 nomFichier=str(str(self.pathAutoSave)+'/'+self.fileNameSave+'_'+num+'_'+date)
             else :
@@ -859,33 +1035,67 @@ class SEE(QWidget) :
 
             print( nomFichier, 'saved')
             if self.winOpt.checkBoxTiff.isChecked()==True: #save as tiff 
-                img_PIL = Image.fromarray(self.data)
+                self.dataS=self.dataS=np.rot90(self.data,1)
+                img_PIL = Image.fromarray(self.dataS)
                 img_PIL.save(str(nomFichier)+'.TIFF',format='TIFF') 
             else :
                 
                 np.savetxt(str(nomFichier)+'.txt',self.data)
-
-            self.numTir+=1
-            self.winOpt.setTirNumber(self.numTir)
+                
+            if self.winOpt.checkBoxServer.isChecked()==False: # if not connected to server we had +1
+                self.numTir+=1
+                self.winOpt.setTirNumber(self.numTir)
             self.conf.setValue(self.name+"/tirNumber",self.numTir)
+                
             self.fileName.setText(nomFichier)
     
-        self.Zoom() # update zoom
+        
         self.zoomRectupdate() # update rect
         
-    def mouseClick(self): # block the cross if mousse button clicked
+    def mouseClick(self,evt): # block the cross if mousse button clicked
         
+#            
+#            
+#        else:
         if self.bloqq==1:
             self.bloqq=0
             
         else :
             self.bloqq=1
-            self.conf.setValue(self.name+"/xc",int(self.xc)) # save cross postion in ini file
-            self.conf.setValue(self.name+"/yc",int(self.yc))
-            
+#            self.conf.setValue(self.name+"/xc",int(self.xc)) # save cross postion in ini file
+#            self.conf.setValue(self.name+"/yc",int(self.yc))
+        
             
     def mouseMoved(self,evt):
-
+        if self.checkBoxPlot.isChecked()==False or self.bloqKeyboard==True :  # if not  cross or crossblocked by  keyboard: 
+            
+            if self.bloqq==0:
+                
+                pos = evt[0]  ## using signal proxy turns original arguments into a tuple
+                if self.p1.sceneBoundingRect().contains(pos):
+                    
+                    mousePoint = self.vb.mapSceneToView(pos)
+                    self.xMouse = (mousePoint.x())
+                    self.yMouse= (mousePoint.y())
+                    if ((self.xMouse>0 and self.xMouse<self.dimx-1) and (self.yMouse>0 and self.yMouse<self.dimy-1) ):
+                        self.xc = self.xMouse
+                        self.yc= self.yMouse  
+                        
+                        try :
+                            dataCross=self.data[int(self.xc),int(self.yc)]
+                    
+                        except :
+                            dataCross=0  # evoid to have an error if cross if out of the image
+                            self.xc=0
+                            self.yc=0
+                        if self.winPref.checkBoxAxeScale.isChecked()==1: # scale axe on 
+                            self.label_Cross.setText('x='+ str(round(int(self.xc)*self.winPref.stepX,2)) + '  um'+' y=' + str(round(int(self.yc)*self.winPref.stepY,2)) +' um')
+                        else : 
+                            
+                            self.label_Cross.setText('x='+ str(int(self.xc)) + ' y=' + str(int(self.yc)) )
+                        
+                        dataCross=round(dataCross,3) # take data  value  on the cross
+                        self.label_CrossValue.setText(' v.=' + str(dataCross)+self.labelValue)
         ## the cross mouve with the mousse mvt
         if self.bloqKeyboard==False :  #mouse not  blocked by  keyboard
             if self.bloqq==0: # mouse not  blocked by mouse  click
@@ -901,7 +1111,8 @@ class SEE(QWidget) :
                             self.yc= self.yMouse  
                             self.vLine.setPos(self.xc)
                             self.hLine.setPos(self.yc) # the cross move only in the graph    
-                            #self.ro1.setPos([self.xc-(self.rx/2),self.yc-(self.ry/2)])
+                            if self.roiCross==True :
+                                self.ro1.setPos([self.xc-(self.rx/2),self.yc-(self.ry/2)])
                             self.PlotXY()
                 
     def fwhm(self,x, y, order=3):
@@ -921,7 +1132,7 @@ class SEE(QWidget) :
         else:
             return np.around(abs(roots[1] - roots[0]),decimals=2)
         
-        
+       
     def Coupe(self):
         # make  plot profile on cross
         
@@ -929,17 +1140,27 @@ class SEE(QWidget) :
             
             if self.maxGraphBox.isChecked()==True  and self.bloqKeyboard==False  : # find and fix the cross on the maximum of the image
                 
-                dataF=gaussian_filter(self.data,5)
-                (self.xc,self.yc)=pylab.unravel_index(dataF.argmax(),self.data.shape) #take the max ndimage.measurements.center_of_mass(dataF)#
+                #dataF=gaussian_filter(self.data,3)
+                # dataF=self.data
+                (self.xc,self.yc)=np.unravel_index(self.data.argmax(),self.data.shape) #take the max ndimage.measurements.center_of_mass(dataF)#
                 self.vLine.setPos(self.xc)
                 self.hLine.setPos(self.yc)
+                if self.roiCross==True:
+                    self.ro1.setPos([self.xc-(self.rx/2),self.yc-(self.ry/2)])
             
                 
-            dataCross=self.data[int(self.xc),int(self.yc)] 
+            try :
+                dataCross=self.data[int(self.xc),int(self.yc)]
+                
+            except :
+                dataCross=0  # evoid to have an error if cross if out of the image
+                self.xc=0
+                self.yc=0
+               
             coupeX=self.data[int(self.xc),:]
             coupeY=self.data[:,int(self.yc)]
-            xxx=np.arange(0,int(self.dimx),1)#
-            yyy=np.arange(0,int(self.dimy),1)#
+            xxx=np.arange(0,int(self.dimx),1)
+            yyy=np.arange(0,int(self.dimy),1)
             coupeXMax=np.max(coupeX)
             coupeYMax=np.max(coupeY)
             
@@ -950,26 +1171,34 @@ class SEE(QWidget) :
             if coupeYMax==0:
                 coupeYMax=1
                 
-            if self.winOpt.checkBoxAxeScale.isChecked()==1: # scale axe on 
-                self.label_Cross.setText('x='+ str(round(int(self.xc)*self.winOpt.stepX,2)) + '  um'+' y=' + str(round(int(self.yc)*self.winOpt.stepY,2)) +' um')
+            if self.winPref.checkBoxAxeScale.isChecked()==1: # scale axe on 
+                self.label_Cross.setText('x='+ str(round(int(self.xc)*self.winPref.stepX,2)) + '  um'+' y=' + str(round(int(self.yc)*self.winPref.stepY,2)) +' um')
             else : 
                 self.label_Cross.setText('x='+ str(int(self.xc)) + ' y=' + str(int(self.yc)) )
                 
             dataCross=round(dataCross,3) # take data  value  on the cross
+            
             self.label_CrossValue.setText(' v.=' + str(dataCross))
             
-            
-            coupeXnorm=(self.data.shape[0]/10)*(coupeX/coupeXMax) # normalize the curves
-            self.curve2.setData(20+self.xminR+coupeXnorm,yyy,clear=True)
-    
-              
+            coupeXnorm=(self.data.shape[0]/10)*(coupeX/coupeXMax)
             coupeYnorm=(self.data.shape[1]/10)*(coupeY/coupeYMax)
-            self.curve3.setData(xxx,20+self.yminR+coupeYnorm,clear=True)
+            
+            if self.plotRectZoomEtat=="ZoomOut": # the cut line follow the zoom
+               
+                self.curve2.setData(20+self.xZoomMin+coupeXnorm,yyy,clear=True)
+                self.curve3.setData(xxx,20+self.yZoomMin+coupeYnorm,clear=True)
+            
+            else :
+                 # normalize the curves
+                self.curve2.setData(20+self.xminR+coupeXnorm,yyy,clear=True)
+                self.curve3.setData(xxx,20+self.yminR+coupeYnorm,clear=True)
+                
+            
             
             ###  fwhm on the  X et Y curves if max  >20 counts if checked in winOpt
             
             
-            if self.winOpt.checkBoxFwhm.isChecked()==1: # show fwhm values on graph
+            if self.winPref.checkBoxFwhm.isChecked()==1: # show fwhm values on graph
                 xCXmax=np.amax(coupeXnorm) # max
                 if xCXmax>20:
                     try :
@@ -978,8 +1207,8 @@ class SEE(QWidget) :
                     if fwhmX==None:
                         self.textX.setText('')
                     else:
-                        if self.winOpt.checkBoxAxeScale.isChecked()==1:
-                            self.textX.setText('fwhm='+str(round(fwhmX*self.winOpt.stepX,2))+' um',color='w')
+                        if self.winPref.checkBoxAxeScale.isChecked()==1:
+                            self.textX.setText('fwhm='+str(round(fwhmX*self.winPref.stepX,2))+' um',color='w')
                         else :
                            self.textX.setText('fwhm='+str(round(fwhmX,2)),color='w')
                     yCXmax=yyy[coupeXnorm.argmax()]
@@ -996,13 +1225,31 @@ class SEE(QWidget) :
                     if fwhmY==None:
                         self.textY.setText('',color='w')
                     else:
-                        if self.winOpt.checkBoxAxeScale.isChecked()==1:
-                            self.textY.setText('fwhm='+str(round(fwhmY*self.winOpt.stepY,2))+' um',color='w')
+                        if self.winPref.checkBoxAxeScale.isChecked()==1:
+                            self.textY.setText('fwhm='+str(round(fwhmY*self.winPref.stepY,2))+' um',color='w')
                         else:
                             self.textY.setText('fwhm='+str(round(fwhmY,2)),color='w')
                             
                     self.textY.setPos(xCYmax-60,yCYmax+70)   
-    
+        
+        if self.checkBoxPlot.isChecked()==False: ## write mouse value and not cross  value
+            
+            try :
+                dataCross=self.data[int(self.xc),int(self.yc)]
+                
+            except :
+                dataCross=0  # evoid to have an error if mousse is out of the image
+                self.xc=0
+                self.yc=0
+                
+            if self.winPref.checkBoxAxeScale.isChecked()==1: # scale axe on 
+                self.label_Cross.setText('x='+ str(round(int(self.xc)*self.winPref.stepX,2)) + '  um'+' y=' + str(round(int(self.yc)*self.winPref.stepY,2)) +' um')
+            else : 
+                        
+                self.label_Cross.setText('x='+ str(int(self.xc)) + ' y=' + str(int(self.yc)) )
+                        
+            dataCross=round(dataCross,3) # take data  value  on the mousse
+            self.label_CrossValue.setText(' v.=' + str(dataCross)+self.labelValue)
  
     def PlotXY(self): # plot curves on the  graph
         
@@ -1016,6 +1263,8 @@ class SEE(QWidget) :
             self.p1.showAxis('bottom',show=True)
             self.p1.addItem(self.textX)
             self.p1.addItem(self.textY)
+            if self.roiCross==True:
+                self.p1.addItem(self.ro1)
             self.Coupe()
         else:
             self.p1.removeItem(self.vLine)
@@ -1026,8 +1275,11 @@ class SEE(QWidget) :
             self.p1.removeItem(self.textY)
             self.p1.showAxis('left',show=False)
             self.p1.showAxis('bottom',show=False)
-            self.p1.removeItem(self.textX)
-            self.p1.removeItem(self.textY)
+            #self.label_Cross.setText('')
+            #self.label_CrossValue.setText('')
+            if self.roiCross==True:
+                self.p1.removeItem(self.ro1)
+
             
     def paletteup(self):
         # change the color scale
@@ -1057,60 +1309,51 @@ class SEE(QWidget) :
         #hist.setImageItem(imh,clear=True)
         self.hist.setHistogramRange(xmin,xmax)
     
+    def paletteauto(self):
+        
+        xmax=self.data.max()
+        xmin=self.data.min()
+        if xmax==xmin:
+            xmax=xmin+1
+ 
+        self.imh.setLevels([xmin, xmax])
+        self.hist.setHistogramRange(xmin,xmax)
+    
+    def contrast(self):
+        if self.ite=='rect':
+            self.cont=(self.plotRect.getArrayRegion(self.data,self.imh))
+            xmax=self.cont.max()
+            xmin=self.cont.min()
+            
+        else:
+             xmax=self.data.max()
+             xmin=self.data.min()
+        xmin=0.05*xmax
+        xmax=0.95*xmax
+        self.imh.setLevels([xmin, xmax])
+        self.hist.setHistogramRange(xmin,xmax)
+  
+     
+    
+    def Setcolor(self):
+        action = self.sender()
+        self.colorBar=str(action.text())
+        
+        self.hist.gradient.loadPreset(self.colorBar)
+    
     def Color(self):
         """ image in colour/n&b
         """
+        
+        
         if self.checkBoxColor.isChecked()==1:
-            self.hist.gradient.loadPreset('flame')
+            self.checkBoxColor.setIcon(QtGui.QIcon(self.icon+"colors-icon.png"))
+            self.hist.gradient.loadPreset(self.colorBar)
+            self.checkBoxColor.setText('Color On')
         else:
             self.hist.gradient.loadPreset('grey')
-            
-    def Zoom(self):
-        
-        """Zoom function
-        """
-        self.zo=self.checkBoxZoom.value()
-        
-        # if self.checkBoxPlot.isChecked()==0:
-        #     self.xc=self.dimx/2
-        #     self.yc=self.dimy/2
-        
-       
-        if self.zo<=2:
-            self.zo=0
-            self.p1.setYRange(0,self.dimy)
-            self.p1.setXRange(0,self.dimx)
-            
-            self.xminR=0
-            self.yminR=0
-            self.xmaxR=self.dimx
-            self.ymaxR=self.dimy
-        
-        else:
-            
-            self.xminR=self.xc-(self.dimx-self.xc)*(1-self.zo/200)
-            self.xmaxR=self.xc+(self.dimx-self.xc)*(1-self.zo/200)
-            
-            
-            self.yminR=self.yc-(self.dimy-self.yc)*(1-self.zo/200)
-            self.ymaxR=self.yc+(self.dimy-self.yc)*(1-self.zo/200)
-            
-        
-            if self.xminR<0:
-                self.xminR=0
-            if self.xmaxR>self.dimx:
-                self.xmaxR=self.dimx   
-                
-            if self.yminR<0:
-                self.yminR=0
-            if self.ymaxR>self.dimy:
-                self.ymaxR=self.dimy 
-            
-            self.p1.setYRange(self.yminR,self.ymaxR)
-            self.p1.setXRange(self.xminR,self.xmaxR)
-            
-            
-        self.Coupe()
+            self.checkBoxColor.setIcon(QtGui.QIcon(self.icon+"circleGray.png"))
+            self.checkBoxColor.setText('Gray')
             
     def roiChanged(self):
         
@@ -1120,7 +1363,7 @@ class SEE(QWidget) :
         self.conf.setValue(self.name+"/ry",int(self.ry))
       
         
-    def bloquer(self): # block the cross
+    def bloquer(self): # block the cross by keyboard
         
         self.bloqKeyboard=bool(True)
         self.conf.setValue(self.name+"/xc",int(self.xc))# save cross postion in ini file
@@ -1128,11 +1371,13 @@ class SEE(QWidget) :
         self.conf.setValue(self.name+"/bloqKeyboard",bool(self.bloqKeyboard))
         self.vLine.setPen('r')
         self.hLine.setPen('r')
+        self.ro1.setPen('r')
         
     def debloquer(self): # unblock the cross
         self.bloqKeyboard=bool(False)
         self.vLine.setPen('y')
         self.hLine.setPen('y')
+        self.ro1.setPen('y')
         self.conf.setValue(self.name+"/bloqKeyboard",bool(self.bloqKeyboard))
         
         
@@ -1173,7 +1418,7 @@ class SEE(QWidget) :
         self.filter='origin'
         self.Display(self.data)
         self.filtreBox.setText('Filters')
-        print('original')
+        #print('original data')
         
     def OpenF(self,fileOpen=False):
         #open file in txt spe TIFF sif jpeg png  format
@@ -1183,16 +1428,19 @@ class SEE(QWidget) :
             
             chemin=self.conf.value(self.name+"/path")
             fname=QtGui.QFileDialog.getOpenFileNames(self,"Open File",chemin,"Images (*.txt *.spe *.TIFF *.sif *.tif);;Text File(*.txt);;Ropper File (*.SPE);;Andor File(*.sif);; TIFF file(*.TIFF)")
+           
             
-            fichier=fname[0]
-            self.openedFiles=fichier
-
-            self.nbOpenedImage=len(fichier)
+            
+            self.openedFiles=fname[0]
+            
+            self.nbOpenedImage=len(self.openedFiles)
+            
             if self.nbOpenedImage==1:
-                fichier=fichier[0]
+                fichier=self.openedFiles[0]
                 self.sliderImage.setEnabled(False)
+                
             if self.nbOpenedImage>1:
-                fichier=fichier[0]
+                fichier=self.openedFiles[0]
                 self.sliderImage.setMinimum(0)
                 self.sliderImage.setMaximum(self.nbOpenedImage - 1)
                 self.sliderImage.setValue(0)
@@ -1202,6 +1450,9 @@ class SEE(QWidget) :
         else:
             fichier=str(fileOpen)
             
+            
+                
+                
         ext=os.path.splitext(fichier)[1]
         
         if ext=='.txt': # text file
@@ -1231,16 +1482,69 @@ class SEE(QWidget) :
         chemin=os.path.dirname(fichier)
         self.conf.setValue(self.name+"/path",chemin)
         self.conf.setValue(self.name+"/lastFichier",os.path.split(fichier)[1])
-        self.fileName.setText(os.path.split(fichier)[1])
+        print('Open file  :  ',fichier)
+        
+        self.fileName.setText(str(fichier))
         self.nomFichier=os.path.split(fichier)[1]
-    
+        
+        self.winHistory.Display(fichier)
+        
         self.newDataReceived(data)
         
     
-    
-    def SliderImgFct(self):
-        nbImgToOpen=int(self.sliderImage.value())
+    def OpenFNewWin(self):
         
+        chemin=self.conf.value(self.name+"/path")
+        fname=QtGui.QFileDialog.getOpenFileNames(self,"Open File",chemin,"Images (*.txt *.spe *.TIFF *.sif *.tif);;Text File(*.txt);;Ropper File (*.SPE);;Andor File(*.sif);; TIFF file(*.TIFF)")
+           
+            
+        self.openedFiles=fname[0]
+            
+            
+        fichier=self.openedFiles[0]
+                
+       
+                
+        ext=os.path.splitext(fichier)[1]
+        
+        if ext=='.txt': # text file
+            data=np.loadtxt(str(fichier))
+        elif ext=='.spe' or ext=='.SPE': # SPE file
+            dataSPE=SpeFile(fichier)
+            data1=dataSPE.data[0]#.transpose() # first frame
+            data=data1#np.flipud(data1)
+        elif ext=='.TIFF' or ext=='.tif' or ext=='.Tiff' or ext=='.jpg' or ext=='.JPEG' or ext=='.png': # tiff File
+            dat=Image.open(fichier)
+            data=np.array(dat)
+            data=np.rot90(data,3)
+        elif ext=='.sif': 
+            sifop=SifFile()
+            im=sifop.openA(fichier)
+            data=np.rot90(im,3)
+#            self.data=self.data[250:495,:]
+        else :
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Critical)
+            msg.setText("Wrong file format !")
+            msg.setInformativeText("The format of the file must be : .SPE  .TIFF .sif  png jpeg or .txt ")
+            msg.setWindowTitle("Warning ...")
+            msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+            msg.exec_()
+            
+        chemin=os.path.dirname(fichier)
+        self.conf.setValue(self.name+"/path",chemin)
+        self.conf.setValue(self.name+"/lastFichier",os.path.split(fichier)[1])
+        print('Open file  :  ',fichier)
+        
+        
+        self.newWindow=SEELIGHT(conf=self.conf,name=self.name)
+        self.newWindow.setWindowTitle(fichier)
+        self.newWindow.newDataReceived(data)
+    
+    
+    def SliderImgFct(self):# open multiimage
+        nbImgToOpen=int(self.sliderImage.value())
+
         self.OpenF(fileOpen=self.openedFiles[nbImgToOpen])
         
     def SaveF (self):
@@ -1256,7 +1560,8 @@ class SEE(QWidget) :
             print(fichier,' is saved')
             self.conf.setValue(self.name+"/path",self.path)
             time.sleep(0.1)
-            img_PIL = Image.fromarray(self.data)
+            self.dataS=np.rot90(self.data,1)
+            img_PIL = Image.fromarray(self.dataS)
 
             img_PIL.save(str(fname[0])+'.TIFF',format='TIFF')
             self.fileName.setText(fname[0]+'.TIFF') 
@@ -1265,19 +1570,32 @@ class SEE(QWidget) :
             fname=QtGui.QFileDialog.getSaveFileName(self,"Save data as txt",self.path)
             self.path=os.path.dirname(str(fname[0]))
             fichier=fname[0]
-        
+            self.dataS=np.rot90(self.data,1)
             ext=os.path.splitext(fichier)[1]
             #print(ext)
             print(fichier,' is saved')
             self.conf.setValue(self.name+"/path",self.path)
             time.sleep(0.1)
-            np.savetxt(str(fichier)+'.txt',self.data)
+            np.savetxt(str(fichier)+'.txt',self.dataS)
             self.fileName.setText(fname[0]+str(ext))
 
-  
+    @pyqtSlot (object) 
     def newDataReceived(self,data):
+        
         # Do display and save origin data when new data is  sent to  visu
+        
         self.data=data
+        if self.flipButton.isChecked()==1 and self.flipButtonVert.isChecked()==1 :
+            self.data=np.flipud(self.data)
+            self.data=np.fliplr(self.data)
+        elif self.flipButton.isChecked()==1:
+            self.data=np.flipud(self.data)
+        elif self.flipButtonVert.isChecked()==1 :
+            self.data=np.fliplr(self.data)
+        else:
+            self.data=data
+            
+        self.data=np.rot90(self.data,self.winPref.rotateValue)
         self.dimy=np.shape(self.data)[1]
         self.dimx=np.shape(self.data)[0]
         self.dataOrgScale=self.data
@@ -1290,50 +1608,84 @@ class SEE(QWidget) :
     
     def ScaleImg(self):
         #scale Axis px to um
-        if self.winOpt.checkBoxAxeScale.isChecked()==1:
+        if self.winPref.checkBoxAxeScale.isChecked()==1:
             self.scaleAxis="on"
             self.LigneChanged()
         else :
             self.scaleAxis="off"
         self.data=self.dataOrg
+        if self.winPref.checkBoxFluence.isChecked()==1: 
+            # fluence on 
+            self.p1.addItem(self.roiFluence)
+            self.fluenceFct()
+        else:
+            try :
+                self.p1.removeItem(self.roiFluence)
+            except:
+                pass
         self.Display(self.data)
     
     
-    def zoomRectAct(self):
+    def zoomRectAct(self): #zoom fonction Display data on a range difined by a rectangular  roi
         
         if self.plotRectZoomEtat=="Zoom": 
             
             self.p1.addItem(self.plotRectZoom)
-            self.plotRectZoom.setPos([self.dimx/2,self.dimy/2])
-            self.ZoomRectButton.setText('Zoom IN')
+            self.plotRectZoom.setSize(size=(2*self.rx,2*self.ry),center=None)
+            self.plotRectZoom.setPos([self.xc-1*self.rx,self.yc-1*self.ry])
+            
+            self.ZoomRectButton.setIcon(QtGui.QIcon(self.icon+"zoom-in.png"))
             self.plotRectZoomEtat="ZoomIn"
+            self.ZoomRectButton.setText('Zoom In')
             
         elif self.plotRectZoomEtat=="ZoomIn":
-            self.ZoomRectButton.setText('ZoomOut')
+            self.ZoomRectButton.setIcon(QtGui.QIcon(self.icon+"zoom-out.png"))
             self.xZoomMin=(self.plotRectZoom.pos()[0])
             self.yZoomMin=(self.plotRectZoom.pos()[1])
             self.xZoomMax=(self.plotRectZoom.pos()[0])+self.plotRectZoom.size()[0]
             self.yZoomMax=(self.plotRectZoom.pos()[1])+self.plotRectZoom.size()[1]
             self.p1.setXRange(self.xZoomMin,self.xZoomMax)
+            
             self.p1.setYRange(self.yZoomMin,self.yZoomMax)
-            self.p1.setAspectLocked(True)
+            self.p1.setAspectLocked(False)
             self.p1.removeItem(self.plotRectZoom)
             self.ZoomRectButton.setText('Zoom Out')
             self.plotRectZoomEtat="ZoomOut"
-        
-        elif self.plotRectZoomEtat=="ZoomOut": 
-            self.p1.setYRange(0,self.dimy)
-            self.p1.setXRange(0,self.dimx)
-            self.ZoomRectButton.setText('Zoom ')
-            self.plotRectZoomEtat="Zoom"
-            self.p1.setAspectLocked(True,ratio=1)
             
+        elif self.plotRectZoomEtat=="ZoomOut": 
+            self.p1.setYRange(0,self.dimy,update=True)
+            self.p1.setXRange(0,self.dimx,update=True)
+            #self.p1.setLimits(minXRange=0,maxXRange=self.dimx,minYRange=0,maxYRange=self.dimy,xMin=0,yMin=0,xMax=self.dimx,yMax=self.dimy)
+            self.ZoomRectButton.setIcon(QtGui.QIcon(self.icon+"loupe.png"))
+            self.ZoomRectButton.setText('Zoom rect')
+            self.plotRectZoomEtat="Zoom"
+            self.p1.setAspectLocked(True)
+            #print(self.p1.viewRange(),self.p1.viewRect())
+            
+        
+        self.Coupe()  #update profile line
+        
     def zoomRectupdate(self):
         if self.plotRectZoomEtat=="ZoomOut":
             self.p1.setXRange(self.xZoomMin,self.xZoomMax)
             self.p1.setYRange(self.yZoomMin,self.yZoomMax)
             self.p1.setAspectLocked(True)
-        
+        # else:
+        #     self.p1.setYRange(0,self.dimy)
+        #     self.p1.setXRange(0,self.dimx)
+        #     print('ra')
+            
+    def flipAct (self):
+        ##flip the image up/down
+        self.data=np.flipud(self.data)
+        self.Display(self.data)
+    
+    def flipVertAct (self):
+        #flip the image left/right
+        self.data=np.fliplr(self.data)
+        self.Display(self.data)
+    
+    
     def open_widget(self,fene):
         """ open new widget 
         """
@@ -1346,7 +1698,7 @@ class SEE(QWidget) :
             fene.show()
         else:
             #fene.activateWindow()
-            fene.raise_()
+            # fene.raise_()
             fene.showNormal()
     
     
@@ -1355,13 +1707,56 @@ class SEE(QWidget) :
 
         
     def dropEvent(self, e):
+        #allow to drop image in visu and open it
         l = []
         for url in e.mimeData().urls():
             l.append(str(url.toLocalFile()))
         e.accept()
+        
+        if len(l)>1: #open multi file in drag process
+                self.openedFiles=l
+                self.sliderImage.setMinimum(0)
+                self.sliderImage.setMaximum(len(l) - 1)
+                self.sliderImage.setValue(0)
+                self.sliderImage.setEnabled(True)
+                
+        
         self.OpenF(fileOpen=l[0])
     
+    def checkBoxScaleImage(self):
+        if self.checkBoxScale.isChecked()==True:
+            self.checkBoxScale.setIcon(QtGui.QIcon(self.icon+"expand.png"))
+            self.checkBoxScale.setText('Auto Scale On')
+        else :
+             self.checkBoxScale.setIcon(QtGui.QIcon(self.icon+"minimize.png"))
+             self.checkBoxScale.setText('Auto Scale Off')
+    
+    def autoSaveColor(self):
+        
+        if self.checkBoxAutoSave.isChecked()==True:
+            self.checkBoxAutoSave.setIcon(QtGui.QIcon(self.icon+"saveAutoOn.png"))
+            self.checkBoxAutoSave.setText('Auto Save on')
+        else :
+             self.checkBoxAutoSave.setIcon(QtGui.QIcon(self.icon+"diskette.png"))
+             self.checkBoxAutoSave.setText('Auto Save off')
+    
+             
+    def fluenceFct(self):
+        self.sizeFluenceX=self.roiFluence.size()[0]
+        self.sizeFluenceY=self.roiFluence.size()[1]
+        self.Display(self.data)
+    
+    
+    def ZoomMAX(self):
+        self.open_widget(self.winZoomMax)
+        self.winZoomMax.SetTITLE('MAX')
+        self.maxx=round(self.data.max(),3)
+        self.winZoomMax.setZoom(self.maxx)
+    
     def closeEvent(self,event):
+        self.close()
+    def close(self):
+        
         # when the window is closed
         if self.encercled=="on":
             if self.winEncercled.isWinOpen==True:
@@ -1373,6 +1768,8 @@ class SEE(QWidget) :
                 self.winM.close()
         if self.winOpt.isWinOpen==True:
             self.winOpt.close() 
+        if self.winPref.isWinOpen==True:
+            self.winPref.close() 
         if self.fft=='on':
             if self.winFFT.isWinOpen==True:
                 self.winFFT.close()
@@ -1381,7 +1778,7 @@ class SEE(QWidget) :
         
        
         
-def runVisu() :
+def runVisu(file=None,path=None) :
         
     from PyQt5.QtWidgets import QApplication
     import sys
@@ -1390,7 +1787,7 @@ def runVisu() :
     
     appli = QApplication(sys.argv)   
     appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
-    e = visu.visual.SEE()
+    e = visu.visual2.SEE2(file=file,path=path)
     e.show()
     appli.exec_() 
 
@@ -1399,6 +1796,18 @@ if __name__ == "__main__":
     
     appli = QApplication(sys.argv) 
     appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
-    e = SEE(aff='left')
+    pathVisu="/Users/juliengautier/Desktop/confTest.ini"
+    
+    name="testVisu"
+    conf=QtCore.QSettings(pathVisu, QtCore.QSettings.IniFormat)
+    
+    #file='FP__2201_2019_01_17_13_17_59.TIFF'
+    #path='/Users/juliengautier/Dropbox (LOA)/Data_Analysis_LOA/Laser X/Manip Janvier 2019/FP/2019-01-16'
+    e = SEE(aff='left',roiCross=True)#,color="red")#,conf=conf,name=name)
     e.show()
     appli.exec_() 
+
+
+
+
+

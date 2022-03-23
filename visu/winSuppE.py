@@ -23,10 +23,11 @@ import pathlib
 
 class WINENCERCLED(QWidget):
     
-    def __init__(self,conf=None,name='VISU'):
+    def __init__(self,parent=None,conf=None,name='VISU'):
         
         super().__init__()
         self.name=name
+        self.parent=parent
         p = pathlib.Path(__file__)
         if conf==None:
             self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
@@ -96,16 +97,17 @@ class WINENCERCLED(QWidget):
         self.checkBoxAuto=QCheckBox('Auto',self)
         self.checkBoxAuto.setChecked(True)
         hbox.addWidget(self.checkBoxAuto)
-        self.resetButton=QPushButton('Reset',self)
-        hbox.addWidget(self.resetButton)
+        self.bckButton=QCheckBox('Soustract Bg',self)
+        hbox.addWidget(self.bckButton)
         vbox1.addLayout(hbox)
         hbox0=QHBoxLayout()
         self.energieRes=QLabel('?')
         self.energieRes.setMaximumHeight(30)
-        self.energieRes.setMaximumWidth(120)
+        self.energieRes.setMaximumWidth(140)
+        self.energieRes.setStyleSheet("color:blue;font:20pt")
         self.lEnergie=QLabel('s(E1)/s(E2) :')
-        self.lEnergie.setStyleSheet("color:blue;font:14pt")
-        self.lEnergie.setMaximumWidth(80)
+        self.lEnergie.setStyleSheet("color:blue;font:18pt")
+        self.lEnergie.setMaximumWidth(160)
         hbox0.addWidget(self.lEnergie)
         hbox0.addWidget(self.energieRes)
         #vbox1.addStretch(1)
@@ -228,6 +230,8 @@ class WINENCERCLED(QWidget):
         self.p1.addItem(self.textY)
         
         
+        self.ROIRect=pg.RectROI([self.xec,self.yec],[4*self.r1x,4*self.r1y],pen='m',)
+        
         hLayout1=QHBoxLayout()
         
         hLayout1.addLayout(vbox2)
@@ -242,85 +246,7 @@ class WINENCERCLED(QWidget):
         vMainLayout.addLayout(hLayout1)
         
         
-        self.winCurve=QVBoxLayout()
         
-        
-        self.win2=pg.PlotWidget()
-        self.p2=self.win2.plot(pen='b',symbol='t',symboleSize=2,clear=True,symbolPen='b',symbolBrush='b',name="rapport")
-        self.win2.setContentsMargins(0,0,0,0)
-        self.win2.setLabel('left','E1/E2',units='%')
-        self.hLineMeanE = pg.InfiniteLine(angle=0, movable=False,pen=pg.mkPen('b', width=3, style=QtCore.Qt.DashLine) ) 
-        self.win2.addItem(self.hLineMeanE, ignoreBounds=True)
-        
-        self.win2.addItem(self.hLineMeanE, ignoreBounds=True)
-        
-        
-        self.winCurve.addWidget(self.win2)
-        
-        self.win3=pg.PlotWidget()
-        self.p3=self.win3.plot(pen='r',symbol='t',symboleSize=2,clear=True,symbolPen='r',symbolBrush='r',name="x")
-        self.win3.setContentsMargins(0,0,0,0)
-        self.win3.setLabel('left','X')#,units='pixel')
-        self.hLineMeanX = pg.InfiniteLine(angle=0, movable=False,pen=pg.mkPen('r', width=3, style=QtCore.Qt.DashLine))
-        self.win3.addItem(self.hLineMeanX, ignoreBounds=True)
-        self.winCurve.addWidget(self.win3)
-        
-        
-        self.win4=pg.PlotWidget()
-        self.p4=self.win4.plot(pen='g',symbol='t',symboleSize=2,clear=True,symbolPen='g',symbolBrush='g',name="y")
-        self.win4.setLabel('left','Y')#,units='pixel')
-        self.win4.setLabel('bottom',"Shoot number")
-        self.hLineMeanY = pg.InfiniteLine(angle=0, movable=False,pen=pg.mkPen('g', width=3, style=QtCore.Qt.DashLine))
-        self.win4.addItem(self.hLineMeanY, ignoreBounds=True)
-        self.winCurve.addWidget(self.win4)
-        
-        labelMean=QLabel('<E1/E2> ')
-        labelMean.setStyleSheet("color:blue;font:14pt")
-        #labelMean.setMaximumWidth(120)
-        self.meanAff=QLabel('?')
-        #self.meanAff.setMaximumWidth(60)
-        labelPV=QLabel('std E1/E2')
-        labelPV.setStyleSheet("color:blue;font:14pt")
-        self.PVAff=QLabel('?')
-        
-        labelMeanX=QLabel('<X>')
-        self.meanXAff=QLabel()
-        labelMeanX.setStyleSheet("color:red;font:14pt")
-        labelMeanY=QLabel('<Y>')
-        labelMeanY.setStyleSheet("color:green;font:14pt")
-        self.meanYAff=QLabel()
-        
-        labelStdX=QLabel('std X')
-        labelStdX.setStyleSheet("color:red;font:14pt")
-        self.stdXAff=QLabel()
-        labelStdY=QLabel('std Y')
-        labelStdY.setStyleSheet("color:green;font:14pt")
-        self.stdYAff=QLabel()
-        
-        
-        grid_layout2 = QGridLayout()
-        grid_layout2.addWidget(labelMean, 0, 0)
-        grid_layout2.addWidget(self.meanAff, 0, 1)
-        grid_layout2.addWidget(labelPV, 1, 0)
-        grid_layout2.addWidget(self.PVAff, 1,1)
-        
-        grid_layout2.addWidget(labelMeanX, 2, 0)
-        grid_layout2.addWidget(self.meanXAff, 2, 1)
-        grid_layout2.addWidget(labelStdX, 3, 0)
-        grid_layout2.addWidget(self.stdXAff, 3,1)
-        
-        grid_layout2.addWidget(labelMeanY, 4, 0)
-        grid_layout2.addWidget(self.meanYAff, 4, 1)
-        grid_layout2.addWidget(labelStdY, 5, 0)
-        grid_layout2.addWidget(self.stdYAff, 5,1)
-        
-        
-        hLayout2=QHBoxLayout()
-        
-        hLayout2.addLayout(self.winCurve)
-        hLayout2.addLayout(grid_layout2)
-        
-        vMainLayout.addLayout(hLayout2)
         
         
         hMainLayout=QHBoxLayout()
@@ -360,8 +286,12 @@ class WINENCERCLED(QWidget):
         self.vb=self.p1.vb
         
         self.checkBoxAuto.stateChanged.connect(self.AutoE)
-        self.resetButton.clicked.connect(self.Reset)
+        self.bckButton.stateChanged.connect(self.Back)
+        self.ROIRect.sigRegionChangeFinished.connect(self.roiBackChanged)
         
+        
+        if self.parent is not None:
+            self.parent.signalEng.connect(self.Display)
         
     def mouseClick(self):
         # bloque ou debloque la souris si click su le graph
@@ -468,13 +398,13 @@ class WINENCERCLED(QWidget):
         E2=self.roi2.getArrayRegion(self.data,self.imh).sum()
         self.rap=100*E1/E2
         self.energieRes.setText('%.2f %%' % self.rap)
-        self.E=np.append(self.E,self.rap)
-        #self.E.append(self.rap)
-        Emean=np.mean(self.E)
-        self.meanAff.setText('%.2f' % Emean)
-        EPV=np.std(self.E)
-        self.PVAff.setText('%.2f' % EPV)
-        self.hLineMeanE.setPos(Emean)
+        # self.E=np.append(self.E,self.rap)
+        # #self.E.append(self.rap)
+        # Emean=np.mean(self.E)
+        # self.meanAff.setText('%.2f' % Emean)
+        # EPV=np.std(self.E)
+        # self.PVAff.setText('%.2f' % EPV)
+        # self.hLineMeanE.setPos(Emean)
         self.textX.setText('fwhm='+str(self.fwhmY))
         self.textY.setText('fwhm='+str(self.fwhmX),color='w')
         self.LabelE1Sum.setText('%.2f' %E1)
@@ -483,7 +413,9 @@ class WINENCERCLED(QWidget):
         self.LabelE2Mean.setText('%.2f' % (self.roi2.getArrayRegion(self.data,self.imh).mean()))
         
     def Display(self,data):
+        self.dataOrg=data
         self.data=data
+        
         self.dimx=self.data.shape[0]
         self.dimy=self.data.shape[1]
         self.p1.setXRange(0,self.dimx)
@@ -492,35 +424,36 @@ class WINENCERCLED(QWidget):
         self.imh.setImage(data.astype(float),autoLevels=True,autoDownsample=True)
         self.CalculCentroid()
         self.Coupe()
-        self.CalculE() 
+        self.Back()
+        # self.CalculE() 
         
-        self.Xec.append(self.xec)
-        self.Yec.append(self.yec)
+    #     self.Xec.append(self.xec)
+    #     self.Yec.append(self.yec)
         
-        Xmean=np.mean(self.Xec)
-        self.meanXAff.setText('%.2f' % Xmean)
-        XPV=np.std(self.Xec)
-        self.stdXAff.setText('%.2f' % XPV)
-        self.hLineMeanX.setPos(Xmean)
-        Ymean=np.mean(self.Yec)
-        self.meanYAff.setText('%.2f' % Ymean)
-        YPV=np.std(self.Yec)
-        self.stdYAff.setText('%.2f' % YPV)
-        self.hLineMeanY.setPos(Ymean)
-        self.plotGraph()
+    #     Xmean=np.mean(self.Xec)
+    #     self.meanXAff.setText('%.2f' % Xmean)
+    #     XPV=np.std(self.Xec)
+    #     self.stdXAff.setText('%.2f' % XPV)
+    #     self.hLineMeanX.setPos(Xmean)
+    #     Ymean=np.mean(self.Yec)
+    #     self.meanYAff.setText('%.2f' % Ymean)
+    #     YPV=np.std(self.Yec)
+    #     self.stdYAff.setText('%.2f' % YPV)
+    #     self.hLineMeanY.setPos(Ymean)
+    #     self.plotGraph()
        
         
     
-    def plotGraph(self):
+    # def plotGraph(self):
         
         
         
-        self.p2.setData(self.E)#,pen='b',symbol='t',symboleSize=2,clear=True,symbolPen='b',symbolBrush='b',name="rapport")
-        #self.p2.addItem(self.hLineMeanE, ignoreBounds=True)
-        self.p3.setData(self.Xec)#,pen='r',symbol='t',symboleSize=2,clear=True,symbolPen='r',symbolBrush='r',name="x")
-        #self.p3.addItem(self.hLineMeanX, ignoreBounds=True)
-        self.p4.setData(self.Yec)#,pen='g',symbol='t',symboleSize=2,clear=True,symbolPen='g',symbolBrush='g',name="y")
-        #self.p4.addItem(self.hLineMeanY, ignoreBounds=True)
+    #     self.p2.setData(self.E)#,pen='b',symbol='t',symboleSize=2,clear=True,symbolPen='b',symbolBrush='b',name="rapport")
+    #     #self.p2.addItem(self.hLineMeanE, ignoreBounds=True)
+    #     self.p3.setData(self.Xec)#,pen='r',symbol='t',symboleSize=2,clear=True,symbolPen='r',symbolBrush='r',name="x")
+    #     #self.p3.addItem(self.hLineMeanX, ignoreBounds=True)
+    #     self.p4.setData(self.Yec)#,pen='g',symbol='t',symboleSize=2,clear=True,symbolPen='g',symbolBrush='g',name="y")
+    #     #self.p4.addItem(self.hLineMeanY, ignoreBounds=True)
     
     
     
@@ -622,12 +555,34 @@ class WINENCERCLED(QWidget):
         #hist.setImageItem(imh,clear=True)
         self.hist.setHistogramRange(xmin,xmax)
         
-    def Reset(self):
-        self.E = []
-        self.Xec=[]
-        self.Yec=[]
+    # def Reset(self):
+    #     self.E = []
+    #     self.Xec=[]
+    #     self.Yec=[]
         
+    
         
+    def roiBackChanged(self):
+        bg=self.ROIRect.getArrayRegion(self.dataOrg,self.imh).mean()
+        print(bg)
+        self.data=self.dataOrg-bg
+        self.CalculE()
+    
+    def Back(self):
+        if self.bckButton.isChecked()==True:
+            self.p1.addItem(self.ROIRect)
+            bg=self.ROIRect.getArrayRegion(self.dataOrg,self.imh).mean()
+            self.data=self.dataOrg-bg
+            self.CalculE()
+        else:
+            self.p1.removeItem(self.ROIRect)
+            
+            self.data=self.dataOrg
+            
+            self.CalculE()
+            
+            
+            
     def closeEvent(self, event):
         """ when closing the window
         """

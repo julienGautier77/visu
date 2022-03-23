@@ -11,13 +11,12 @@ __author__='julien Gautier'
 
 from visu import visual
 from visu import visualLight
-from visu import visualLight2
+
 from visu.visualLight import SEELIGHT
-from visu.visualLightThread import SEELIGHTTHREAD
+
+
 from visu.visual import SEE
-from visu.visual2 import SEE2
-from visu.visual3 import SEE3
-from visu.visual2 import runVisu
+from visu.visual import runVisu
 from visu import andor
 from visu import WinCut
 from visu import winMeas

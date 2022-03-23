@@ -23,6 +23,8 @@ import numpy as np
 
 class MEAS(QMainWindow):
     
+    signalPlot=QtCore.pyqtSignal(object)
+    
     def __init__(self,parent=None,conf=None,name='VISU',confMot=None,**kwds):
         
         super().__init__()
@@ -60,14 +62,16 @@ class MEAS(QMainWindow):
         self.TableSauv=['file,Max,Min,x Max,y max,Sum,Mean,Size,x c.mass,y c.mass']
         
         self.path=self.conf.value(self.name+"/path")
-        self.winCoupeMax=GRAPHCUT(conf=self.conf,name=self.name,symbol='t',pen=None)
-        self.winCoupeMin=GRAPHCUT(conf=self.conf,name=self.name,symbol='t',pen=None)
-        self.winCoupeXmax=GRAPHCUT(conf=self.conf,name=self.name,symbol='t',pen=None)
-        self.winCoupeYmax=GRAPHCUT(conf=self.conf,name=self.name,symbol='t',pen=None)
-        self.winCoupeSum=GRAPHCUT(conf=self.conf,name=self.name,symbol='t',pen=None)
-        self.winCoupeMean=GRAPHCUT(conf=self.conf,name=self.name,symbol='t',pen=None)
-        self.winCoupeXcmass=GRAPHCUT(conf=self.conf,name=self.name,symbol='t',pen=None)
-        self.winCoupeYcmass=GRAPHCUT(conf=self.conf,name=self.name,symbol='t',pen=None)
+        self.winCoupeMax=GRAPHCUT(parent=self,conf=self.conf,name=self.name,symbol='t',pen=None)
+        self.winCoupeMin=GRAPHCUT(parent=self,conf=self.conf,name=self.name,symbol='t',pen=None)
+        self.winCoupeXmax=GRAPHCUT(parent=self,conf=self.conf,name=self.name,symbol='t',pen=None)
+        self.winCoupeYmax=GRAPHCUT(parent=self,conf=self.conf,name=self.name,symbol='t',pen=None)
+        self.winCoupeSum=GRAPHCUT(parent=self,conf=self.conf,name=self.name,symbol='t',pen=None)
+        self.winCoupeMean=GRAPHCUT(parent=self,conf=self.conf,name=self.name,symbol='t',pen=None)
+        self.winCoupeXcmass=GRAPHCUT(parent=self,conf=self.conf,name=self.name,symbol='t',pen=None)
+        self.winCoupeYcmass=GRAPHCUT(parent=self,conf=self.conf,name=self.name,symbol='t',pen=None)
+        
+        self.signalTrans=dict()
         
         self.Maxx=[]
         self.Minn=[]
@@ -279,47 +283,89 @@ class MEAS(QMainWindow):
         
        
     
+    
     def PlotMAX(self):
         self.open_widget(self.winCoupeMax)
         self.winCoupeMax.SetTITLE('Plot Max')
-        self.winCoupeMax.PLOT(self.Maxx,axis=self.posMotor, label=self.label)
-           
+        self.signalTrans['data']=self.Maxx
+        self.signalTrans['axis']=self.posMotor
+        self.signalTrans['label']=self.label
+        print('ici')
+        self.signalPlot.emit(self.signalTrans)
+        # self.winCoupeMax.PLOT(self.Maxx,axis=self.posMotor, label=self.label)
+    
     def PlotMIN (self):
         self.open_widget(self.winCoupeMin)
         self.winCoupeMin.SetTITLE('Plot Min')
-        self.winCoupeMin.PLOT(self.Minn,axis=self.posMotor,label=self.label)
+        self.signalTrans['data']=self.Minn
+        self.signalTrans['axis']=self.posMotor
+        self.signalTrans['label']=self.label
+        print('ici')
+        self.signalPlot.emit(self.signalTrans)
+        # self.winCoupeMin.PLOT(self.Minn,axis=self.posMotor,label=self.label)
         
     
     def PlotXMAX(self):
         self.open_widget(self.winCoupeXmax)
         self.winCoupeXmax.SetTITLE('Plot  X MAX')
-        self.winCoupeXmax.PLOT(self.Xmax,axis=self.posMotor,label=self.label)
+        self.signalTrans['data']=self.Xmax
+        self.signalTrans['axis']=self.posMotor
+        self.signalTrans['label']=self.label
+        print('ici')
+        self.signalPlot.emit(self.signalTrans)
+        
+        # self.winCoupeXmax.PLOT(self.Xmax,axis=self.posMotor,label=self.label)
     
     def PlotYMAX(self):
         self.open_widget(self.winCoupeYmax)
         self.winCoupeYmax.SetTITLE('Plot  Y MAX')
-        self.winCoupeYmax.PLOT(self.Ymax,axis=self.posMotor,label=self.label)
+        self.signalTrans['data']=self.Ymax
+        self.signalTrans['axis']=self.posMotor
+        self.signalTrans['label']=self.label
+        
+        self.signalPlot.emit(self.signalTrans)
+        # self.winCoupeYmax.PLOT(self.Ymax,axis=self.posMotor,label=self.label)
      
         
     def PlotSUM(self):
         self.open_widget(self.winCoupeSum)
         self.winCoupeSum.SetTITLE('Plot Sum')
-        self.winCoupeSum.PLOT(self.Summ,axis=self.posMotor,label=self.label)
+        self.signalTrans['data']=self.Summ
+        self.signalTrans['axis']=self.posMotor
+        self.signalTrans['label']=self.label
+        
+        self.signalPlot.emit(self.signalTrans)
+        # self.winCoupeSum.PLOT(self.Summ,axis=self.posMotor,label=self.label)
     
     def PlotMEAN (self):
         self.open_widget(self.winCoupeMean)
         self.winCoupeMean.SetTITLE('Plot Mean')
-        self.winCoupeMean.PLOT(self.Mean,axis=self.posMotor,label=self.label)
+        self.signalTrans['data']=self.Mean
+        self.signalTrans['axis']=self.posMotor
+        self.signalTrans['label']=self.label
+        
+        self.signalPlot.emit(self.signalTrans)
+        # self.winCoupeMean.PLOT(self.Mean,axis=self.posMotor,label=self.label)
         
     def PlotXCMASS (self):
         self.open_widget(self.winCoupeXcmass)
         self.winCoupeXcmass.SetTITLE('Plot x center of mass')
-        self.winCoupeXcmass.PLOT(self.Xcmass,axis=self.posMotor,label=self.label)
+        self.signalTrans['data']=self.Xcmass
+        self.signalTrans['axis']=self.posMotor
+        self.signalTrans['label']=self.label
+        
+        self.signalPlot.emit(self.signalTrans)
+        # self.winCoupeXcmass.PLOT(self.Xcmass,axis=self.posMotor,label=self.label)
     
     def PlotYCMASS (self):
         self.open_widget(self.winCoupeYcmass)
         self.winCoupeYcmass.SetTITLE('Plot Y center of mass')
-        self.winCoupeYcmass.PLOT(self.Xcmass,axis=self.posMotor,label=self.label)    
+        self.signalTrans['data']=self.Ycmass
+        self.signalTrans['axis']=self.posMotor
+        self.signalTrans['label']=self.label
+        
+        self.signalPlot.emit(self.signalTrans)
+        # self.winCoupeYcmass.PLOT(self.Xcmass,axis=self.posMotor,label=self.label)    
          
     def Display(self,data):
         

@@ -24,10 +24,11 @@ from scipy import ndimage
 
 class WINPOINTING(QMainWindow):
     
-    def __init__(self,conf=None,name='VISU'):
+    def __init__(self,parent=None,conf=None,name='VISU'):
         
         super().__init__()
         self.name=name
+        self.parent=parent
         p = pathlib.Path(__file__)
         if conf==None:
             self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
@@ -228,7 +229,8 @@ class WINPOINTING(QMainWindow):
         self.axeY3=self.win3.getAxis('left')
         self.axeY4=self.win4.getAxis('left')
         
- 
+        if self.parent is not None:
+            self.parent.signalPointing.connect(self.Display)
         
     def Display(self,data,stepX=1,stepY=1):
         self.data=data

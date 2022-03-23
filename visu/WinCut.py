@@ -213,11 +213,12 @@ class WINDOWMEAS(QWidget):
 
 class GRAPHCUT(QMainWindow):
     
-    def __init__(self,symbol=None,title='Plot',conf=None,name='VISU',meas=False,pen='w',symbolPen='w',label=None,labelY=None,clearPlot=True):
+    def __init__(self,parent=None,symbol=None,title='Plot',conf=None,name='VISU',meas=False,pen='w',symbolPen='w',label=None,labelY=None,clearPlot=True):
         
         super().__init__()
         p = pathlib.Path(__file__)
         sepa=os.sep
+        self.parent=parent
         self.title=title
         self.icon=str(p.parent) + sepa+'icons' +sepa
         self.isWinOpen=False
@@ -472,7 +473,8 @@ class GRAPHCUT(QMainWindow):
         self.winPLOT.scene().sigMouseClicked.connect(self.mouseClick)
         self.widgetRange.applyButton.clicked.connect(self.setRangeOn)
         self.widgetRange.ResetButton.clicked.connect(self.setRangeReset)
-        
+        if self.parent is not None:
+            self.parent.signalPlot.connect(self.PLOTSIG)
         
     def OpenF(self,fileOpen=False):
 
@@ -611,7 +613,25 @@ class GRAPHCUT(QMainWindow):
             self.winPLOT.removeItem(self.vLine)
             self.winPLOT.removeItem(self.hLine)
     
-     
+    
+    def PLOTSIG(self,P): #when receive signalPlot.emit
+        
+        cutData=P['data']
+        try:
+            axis=P['axis']
+        except:
+            axis=None
+        try:
+            label=P['label']
+        except:
+            label=None
+        try:
+            labelY=P['labelY']
+        except:
+            labelY=None
+                
+        self.PLOT(cutData,axis=axis,label=label,labelY=labelY)
+    
     def PLOT(self,cutData,axis=None,label=None,labelY=None):
         
         self.label=label
@@ -636,7 +656,10 @@ class GRAPHCUT(QMainWindow):
             
         self.zoomRectupdate()
         self.setFit()
-        
+        if self.label!=None:
+            self.winPLOT.setLabel('bottom',self.label)
+        if self.labelY!=None:
+            self.winPLOT.setLabel('left',self.labelY)
         self.fit=self.fitAction.isChecked()
         
         self.measWidget.Display(cutData=self.cutData,axis=self.axis, axisOn= self.axisOn,fwhm=self.fwhmAction.isChecked(), fit=self.fit,fitA=self.fitA,fitMu=self.fitMu,fitSigma=self.fitSigma)
