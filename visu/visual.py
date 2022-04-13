@@ -102,6 +102,7 @@ class SEE(QMainWindow) :
         self.labelValue=''
         self.aboutWidget=aboutWindows.ABOUT()
         self.signalTrans=dict() #dict to emit multivariable
+        self.frameNumber=0
         ### kwds definition  : 
         
         if "confpath"in kwds :   #confpath path.file pour le fichier ini.
@@ -381,18 +382,33 @@ class SEE(QMainWindow) :
         self.statusBar.addPermanentWidget(self.label_CrossValue)
         
         self.labelFileName=QLabel("File :")
-        self.labelFileName.setStyleSheet("font:12pt;")
+        self.labelFileName.setStyleSheet("font:8pt;")
         self.labelFileName.setMinimumHeight(30)
         self.labelFileName.setMaximumWidth(40)
         
         self.fileName=QLabel()
-        self.fileName.setStyleSheet("font:12pt")
+        self.fileName.setStyleSheet("font:10pt")
         self.fileName.setMaximumHeight(30)
         self.fileName.setMaximumWidth(200000)
         #self.fileName.setAlignment(Qt.AlignRight)
         self.statusBar.addWidget(self.labelFileName)
         self.statusBar.addWidget(self.fileName)
-         
+        
+        self.labelFrameName=QLabel("Frame :")
+        self.labelFrameName.setStyleSheet("font:6pt;")
+        self.labelFrameName.setMinimumHeight(30)
+        self.labelFrameName.setMaximumWidth(70)
+        # self.labelFrameName.setAlignment(Qt.AlignRight)
+        self.frameName=QLabel()
+        self.frameName.setStyleSheet("font:6pt")
+        self.frameName.setMaximumHeight(30)
+        self.frameName.setMaximumWidth(100)
+        # self.frameName.setAlignment(Qt.AlignRight)
+        self.statusBar.addPermanentWidget(self.labelFrameName)
+        self.statusBar.addPermanentWidget(self.frameName)
+        
+        
+        
         self.checkBoxScale=QAction(QtGui.QIcon(self.icon+"expand.png"),' Auto Scale on',self)
         self.checkBoxScale.setCheckable(True)
         self.checkBoxScale.setChecked(True)
@@ -1429,8 +1445,6 @@ class SEE(QMainWindow) :
             chemin=self.conf.value(self.name+"/path")
             fname=QtGui.QFileDialog.getOpenFileNames(self,"Open File",chemin,"Images (*.txt *.spe *.TIFF *.sif *.tif);;Text File(*.txt);;Ropper File (*.SPE);;Andor File(*.sif);; TIFF file(*.TIFF)")
            
-            
-            
             self.openedFiles=fname[0]
             
             self.nbOpenedImage=len(self.openedFiles)
@@ -1449,9 +1463,6 @@ class SEE(QMainWindow) :
                 
         else:
             fichier=str(fileOpen)
-            
-            
-                
                 
         ext=os.path.splitext(fichier)[1]
         
@@ -1602,8 +1613,8 @@ class SEE(QMainWindow) :
         self.dataOrg=self.data
         
         self.Display(self.data)
-        
-    
+        self.frameName.setText(str(self.frameNumber))
+        self.frameNumber=self.frameNumber+1
 
     
     def ScaleImg(self):
