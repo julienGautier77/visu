@@ -494,7 +494,9 @@ class SEE(QMainWindow) :
             menu=QMenu()
             menu.addAction('&Gaussian',self.Gauss)
             menu.addAction('&Median',self.Median)
+            menu.addAction('&Threshold',self.Threshold)
             menu.addAction('&Origin',self.Orig)
+            
             self.filtreBox.setMenu(menu)
             self.ProcessMenu.addAction(self.filtreBox)
         
@@ -956,8 +958,9 @@ class SEE(QMainWindow) :
         if self.filter=='median':
             self.data=median_filter(self.data,size=self.sigma)
             #print('median filter')
-        
-        ### fluence 
+        if self.filter=='threshold':
+            self.data=np.where( self.data<self.threshold,0,self.data)
+        #### fluence 
         if self.winPref.checkBoxFluence.isChecked()==1: # fluence on 
            energy=self.winPref.energy.value()
            #print('energy',energy)
@@ -975,7 +978,7 @@ class SEE(QMainWindow) :
         else :
             self.labelValue=''
             
-        ### color  and sacle 
+        #### color  and sacle 
         if self.checkBoxScale.isChecked()==1: # color autoscale on
             
             if self.winPref.checkBoxAxeScale.isChecked()==1:
@@ -993,9 +996,11 @@ class SEE(QMainWindow) :
         else :
             self.imh.setImage(self.data,autoLevels=False,autoDownsample=True)
         
-        self.Coupe()#self.PlotXY() # graph update
         
-        ##update        
+        ####update    
+        self.Coupe()#self.PlotXY() # graph update
+        self.zoomRectupdate() # update rect  
+        
         if self.encercled=="on":
             if self.winEncercled.isWinOpen==True:
                 self.signalEng.emit(self.data)
@@ -1032,7 +1037,7 @@ class SEE(QMainWindow) :
         if self.winZoomMax.isWinOpen==True:
             self.ZoomMAX()   
             
-        ### autosave
+        #### autosave
         if self.checkBoxAutoSave.isChecked()==True: ## autosave data
             self.pathAutoSave=str(self.conf.value(self.name+'/pathAutoSave'))
             self.fileNameSave=str(self.conf.value(self.name+'/nameFile'))
@@ -1066,7 +1071,7 @@ class SEE(QMainWindow) :
             self.fileName.setText(nomFichier)
     
         
-        self.zoomRectupdate() # update rect
+        
         
     def mouseClick(self,evt): # block the cross if mousse button clicked
         
@@ -1425,7 +1430,13 @@ class SEE(QMainWindow) :
             self.filtreBox.setText('F: Median')
             self.Display(self.data)
         
-        
+    def Threshold(self):
+        self.filter='threshold'
+        threshold, ok=QInputDialog.getInt(self,'Threshold Filter ','Enter thresold value')
+        if ok:
+            self.threshold=threshold
+            self.filtreBox.setText('F: Thresold')
+            self.Display(self.data)
     def Orig(self):
         """
         return data without filter

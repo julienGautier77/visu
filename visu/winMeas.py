@@ -11,7 +11,7 @@ modified 2019/08/13 : add motors RSAI position and zoom windows
 import qdarkstyle 
 from pyqtgraph.Qt import QtCore,QtGui 
 from PyQt5.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QPushButton,QStatusBar,QAction,QMainWindow
-from PyQt5.QtWidgets import QMenu,QWidget,QTableWidget,QTableWidgetItem,QAbstractItemView,QComboBox
+from PyQt5.QtWidgets import QMenu,QWidget,QTableWidget,QTableWidgetItem,QAbstractItemView,QComboBox,QInputDialog
 import sys,time,os
 import pylab
 from PyQt5.QtGui import QIcon
@@ -39,7 +39,7 @@ class MEAS(QMainWindow):
         self.confMot=confMot   
         self.name=name
         
-        
+        self.ThresholdState=False
         self.symbol=False
         if self.confMot!=None:    
             self.groups=self.confMot.childGroups()
@@ -70,7 +70,7 @@ class MEAS(QMainWindow):
         self.winCoupeMean=GRAPHCUT(parent=self,conf=self.conf,name=self.name,symbol='t',pen=None)
         self.winCoupeXcmass=GRAPHCUT(parent=self,conf=self.conf,name=self.name,symbol='t',pen=None)
         self.winCoupeYcmass=GRAPHCUT(parent=self,conf=self.conf,name=self.name,symbol='t',pen=None)
-        
+        self.winCoupeSumThreshold=GRAPHCUT(parent=self,conf=self.conf,name=self.name,symbol='t',pen=None)
         self.signalTrans=dict()
         
         self.Maxx=[]
@@ -83,7 +83,7 @@ class MEAS(QMainWindow):
         self.Ycmass=[]
         self.labelsVert=[]
         self.posMotor=[]
-        
+        self.SummThre=[]
         self.winZoomMax=ZOOM()
         self.winZoomSum=ZOOM()
         self.winZoomMean=ZOOM()
@@ -91,11 +91,13 @@ class MEAS(QMainWindow):
         self.winZoomYmax=ZOOM()
         self.winZoomCxmax=ZOOM()
         self.winZoomCymax=ZOOM()
+        self.winZoomSumThreshold=ZOOM()
         self.maxx=0
         self.summ=0
         self.moy=0
         self.label='Shoot'
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
+        self.setGeometry(100, 300, 700, 300)
         
     def setFile(self,file) :
         self.nomFichier=file
@@ -114,7 +116,9 @@ class MEAS(QMainWindow):
         self.PlotMenu = menubar.addMenu('&Plot')
         self.ZoomMenu = menubar.addMenu('&Zoom')
         
-        self.Aboutenu = menubar.addMenu('&About')
+        self.ThresholdAct=QAction('Threshold',self)
+        self.ThresholdMenu = menubar.addAction(self.ThresholdAct)
+        self.ThresholdAct.triggered.connect(self.Threshold)
         
         self.setContentsMargins(0, 0, 0, 0)
        
@@ -162,7 +166,10 @@ class MEAS(QMainWindow):
         
         
         self.But_reset=QAction('Reset',self)
-        self.PlotMenu.addAction(self.But_reset)
+        # self.PlotMenu.addAction(self.But_reset)
+        menubar.addAction(self.But_reset)
+        
+        
         
         hLayout2=QHBoxLayout()
         self.table=QTableWidget()
@@ -230,7 +237,7 @@ class MEAS(QMainWindow):
         self.Ycmass=[]
         self.labelsVert=[]
         self.posMotor=[]
-        
+        self.SummThre=[]
     def saveF(self):
        
         fname=QtGui.QFileDialog.getSaveFileName(self,"Save Measurements as txt file",self.path)
@@ -281,7 +288,11 @@ class MEAS(QMainWindow):
         self.winZoomCymax.SetTITLE('y center of mass')
         self.winZoomCymax.setZoom(self.ycmass)
         
-       
+    def ZoomSUMThreshold(self):
+        self.open_widget(self.winZoomSumThreshold)
+        
+        self.winZoomSumThreshold.SetTITLE('Sum threshold')
+        self.winZoomSumThreshold.setZoom(self.summThre)  
     
     
     def PlotMAX(self):
@@ -290,7 +301,7 @@ class MEAS(QMainWindow):
         self.signalTrans['data']=self.Maxx
         self.signalTrans['axis']=self.posMotor
         self.signalTrans['label']=self.label
-        print('ici')
+        
         self.signalPlot.emit(self.signalTrans)
         # self.winCoupeMax.PLOT(self.Maxx,axis=self.posMotor, label=self.label)
     
@@ -300,7 +311,7 @@ class MEAS(QMainWindow):
         self.signalTrans['data']=self.Minn
         self.signalTrans['axis']=self.posMotor
         self.signalTrans['label']=self.label
-        print('ici')
+        
         self.signalPlot.emit(self.signalTrans)
         # self.winCoupeMin.PLOT(self.Minn,axis=self.posMotor,label=self.label)
         
@@ -311,7 +322,7 @@ class MEAS(QMainWindow):
         self.signalTrans['data']=self.Xmax
         self.signalTrans['axis']=self.posMotor
         self.signalTrans['label']=self.label
-        print('ici')
+        
         self.signalPlot.emit(self.signalTrans)
         
         # self.winCoupeXmax.PLOT(self.Xmax,axis=self.posMotor,label=self.label)
@@ -366,12 +377,40 @@ class MEAS(QMainWindow):
         
         self.signalPlot.emit(self.signalTrans)
         # self.winCoupeYcmass.PLOT(self.Xcmass,axis=self.posMotor,label=self.label)    
-         
+    
+    
+    def PlotSUMTHRESHOLD (self) :
+        self.open_widget(self.winCoupeSumThreshold)
+        self.winCoupeSumThreshold.SetTITLE('Plot Sum with Threshold')
+        # print('fct',self.SummThre,self.posMotor)
+        self.signalTrans['data']=self.SummThre
+        self.signalTrans['axis']=self.posMotor
+        self.signalTrans['label']=self.label
+       
+        self.signalPlot.emit(self.signalTrans)
+    
+    
+    def Threshold(self):
+        
+        threshold, ok=QInputDialog.getInt(self,'Threshold Filter ','Enter thresold value')
+        if ok:
+            self.ThresholdState=True
+            self.threshold=threshold
+            self.Reset()
+            self.PlotMenu.addAction('Sum Threshold',self.PlotSUMTHRESHOLD)
+            self.ZoomMenu.addAction(' Sum  with Threshold',self.ZoomSUMThreshold)
+            self.Display(self.data)
+        else:
+            self.ThresholdState=False
+            self.PlotMenu.removeAction('Sum Threshold',self.PlotSUMTHRESHOLD)
+            self.ZoomMenu.removeAction(' Sum  with Threshold',self.ZoomSUMThreshold)
+            
     def Display(self,data):
         
+        self.data=data
         self.maxx=round(data.max(),3)
         self.minn=round(data.min(),3)
-        self.summ=round(data.sum(),3)
+        self.summ=round(data.sum(),3)#)
         self.moy=round(data.mean(),3)
         
         (self.xmax,self.ymax)=np.unravel_index(data.argmax(),data.shape)
@@ -387,11 +426,13 @@ class MEAS(QMainWindow):
         self.table.setItem(self.shoot, 2, QTableWidgetItem(str(self.minn)))
         self.table.setItem(self.shoot, 3, QTableWidgetItem(str(self.xmax)))
         self.table.setItem(self.shoot, 4, QTableWidgetItem(str(self.ymax)))
-        self.table.setItem(self.shoot, 5, QTableWidgetItem(str(self.summ)))
+        self.table.setItem(self.shoot, 5, QTableWidgetItem("{:.3e}".format(self.summ)))
         self.table.setItem(self.shoot, 6, QTableWidgetItem(str(self.moy)))
         self.table.setItem(self.shoot, 7, QTableWidgetItem(  (str(self.xs) +'*'+ str(self.ys) ) ))
         self.table.setItem(self.shoot, 8, QTableWidgetItem( str(self.xcmass) ) )
         self.table.setItem(self.shoot, 9, QTableWidgetItem( str(self.ycmass) ) )
+        
+        
         
         if self.confMot!=None:
             if self.motor=='Motors':
@@ -400,17 +441,45 @@ class MEAS(QMainWindow):
             else:
                 Posi=(self.MOT.position())/self.unitChange
                 self.label=self.motor+'('+self.unitName+')'
-            self.table.setItem(self.shoot, 10, QTableWidgetItem( str(Posi ) ) )
+            # self.table.setItem(self.shoot, 10, QTableWidgetItem( str(Posi ) ) )
             
         else :
             Posi=self.shoot
             self.label='Shoot'
-        self.table.selectRow(self.shoot)
+            
+        
         
         self.posMotor.append(Posi)    
         self.table.resizeColumnsToContents()
         self.labelsVert.append('%s'% self.shoot)
-        self.TableSauv.append( '%s,%.1f,%.1f,%i,%i,%.1f,%.3f,%.2f,%.2f,%.2f,%.2f,%.2f' % (self.nomFichier,self.maxx,self.minn,self.xmax,self.ymax,self.summ,self.moy,self.xs,self.ys,self.xcmass,self.ycmass,Posi) )
+        
+        if self.ThresholdState==True:
+            dataCor=np.where(data<self.threshold,0,data)
+            self.summThre=round(dataCor.sum(),3)
+            self.SummThre.append(self.summThre)
+            self.TableSauv.append( '%s,%.1f,%.1f,%i,%i,%.1f,%.3f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f' % (self.nomFichier,self.maxx,self.minn,self.xmax,self.ymax,self.summ,self.moy,self.xs,self.ys,self.xcmass,self.ycmass,Posi,self.summThre) )
+            
+            if self.confMot!=None:
+                self.table.setColumnCount(12)
+                self.table.setHorizontalHeaderLabels(('File','Max','Min','x max','y max','Sum','Mean','Size','x c.mass','y c.mass','Sum Thr','Motor'))
+                self.table.setItem(self.shoot, 11, QTableWidgetItem( str(Posi ) ) )
+            else :
+                self.table.setColumnCount(11)
+                self.table.setHorizontalHeaderLabels(('File','Max','Min','x max','y max','Sum','Mean','Size','x c.mass','y c.mass','Sum Thr'))
+                self.TableSauv=['file,Max,Min,x Max,y max,Sum,Mean,Size,x c.mass,y c.mass,SumCorr']
+            self.table.setItem(self.shoot, 10, QTableWidgetItem( "{:.3e}".format(self.summThre ) ) )
+            
+            
+        else:
+            self.TableSauv.append( '%s,%.1f,%.1f,%i,%i,%.1f,%.3f,%.2f,%.2f,%.2f,%.2f,%.2f'% (self.nomFichier,self.maxx,self.minn,self.xmax,self.ymax,self.summ,self.moy,self.xs,self.ys,self.xcmass,self.ycmass,Posi) )
+            self.table.setItem(self.shoot, 10, QTableWidgetItem( str(Posi ) ) )
+            if self.confMot!=None:
+                self.table.setColumnCount(11)
+            else :
+                self.table.setColumnCount(10)
+        
+        
+        self.table.selectRow(self.shoot)
         self.Maxx.append(self.maxx)
         self.Minn.append(self.minn)
         self.Summ.append(self.summ)
@@ -422,7 +491,6 @@ class MEAS(QMainWindow):
         
         
         self.table.setVerticalHeaderLabels(self.labelsVert)
-
 
 
         #  plot Update plot
@@ -442,7 +510,8 @@ class MEAS(QMainWindow):
             self.PlotXCMASS()
         if self.winCoupeYcmass.isWinOpen==True:
             self.PlotYCMASS()
-            
+        if self.winCoupeSumThreshold.isWinOpen==True:
+            self.PlotSUMTHRESHOLD()   
         # update zoom windows  
         
         if self.winZoomMax.isWinOpen==True:
@@ -460,7 +529,9 @@ class MEAS(QMainWindow):
             self.ZoomCxmaX()
         if self.winZoomCymax.isWinOpen==True:
             self.ZoomCymAX()   
-            
+        if self.winZoomSumThreshold.isWinOpen==True:
+            self.ZoomSUMThreshold()
+             
         self.shoot+=1
       
     def closeEvent(self, event):
@@ -486,6 +557,8 @@ class MEAS(QMainWindow):
             self.winCoupeXcmass.close()
         if self.winCoupeYcmass.isWinOpen==True:
             self.winCoupeYcmass.close()
+        if self.winCoupeSumThreshold.isWinOpen==True:
+            self.winCoupeSumThreshold.close()
         time.sleep(0.1)
         event.accept()  
 
