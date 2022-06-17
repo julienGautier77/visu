@@ -36,7 +36,7 @@ It can open .spe .SPE, .sif and .TIFF files
 ## Usage
 ###  to use as  it:
     import visu
-    visu.visual2.runVisu()
+    visu.visual.runVisu()
 
 Or :
 
@@ -47,14 +47,13 @@ Or :
     
     appli = QApplication(sys.argv)   
     appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
-    e = visu.visual2.SEE2() #new style
-    #or e = visu.visual.SEE() 
+    e = visu.visual.SEE() 
     e.show()
     
   ### To  insert in  a  code
   visu is a  QtWidgets it can be use like  a  widget :  
   from PyQt5.QtWidgets import QApplication,QWidget  
-  widgetVisu=visu.visual2.SEE2()   
+  widgetVisu=visu.visual.SEE()   
   
 -----------------------------------------
 -----------------------------------------
