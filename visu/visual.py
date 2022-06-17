@@ -395,19 +395,21 @@ class SEE(QMainWindow) :
         self.statusBar.addWidget(self.fileName)
         
         self.labelFrameName=QLabel("Frame :")
-        self.labelFrameName.setStyleSheet("font:6pt;")
+        self.labelFrameName.setStyleSheet("font:8pt;")
         self.labelFrameName.setMinimumHeight(30)
         self.labelFrameName.setMaximumWidth(70)
         # self.labelFrameName.setAlignment(Qt.AlignRight)
         self.frameName=QLabel()
-        self.frameName.setStyleSheet("font:6pt")
+        self.frameName.setStyleSheet("font:8pt")
         self.frameName.setMaximumHeight(30)
         self.frameName.setMaximumWidth(100)
         # self.frameName.setAlignment(Qt.AlignRight)
         self.statusBar.addPermanentWidget(self.labelFrameName)
         self.statusBar.addPermanentWidget(self.frameName)
         
-        
+        self.ImgFrame=QToolButton()
+        self.ImgFrame.setStyleSheet("QToolButton:!pressed{border-image: url(./icons/data1.png);background-color: transparent;border-color: green;}""QToolButton:pressed{image: url(./icons/data2.png) ;background-color: transparent;border-color: blue}")
+        self.statusBar.addPermanentWidget(self.ImgFrame)
         
         self.checkBoxScale=QAction(QtGui.QIcon(self.icon+"expand.png"),' Auto Scale on',self)
         self.checkBoxScale.setCheckable(True)
@@ -1607,6 +1609,7 @@ class SEE(QMainWindow) :
         # Do display and save origin data when new data is  sent to  visu
         
         self.data=data
+        self.ImgFrame.animateClick() # change icon data when receive image
         if self.flipButton.isChecked()==1 and self.flipButtonVert.isChecked()==1 :
             self.data=np.flipud(self.data)
             self.data=np.fliplr(self.data)
@@ -1627,6 +1630,7 @@ class SEE(QMainWindow) :
         self.frameName.setText(str(self.frameNumber))
         self.frameNumber=self.frameNumber+1
 
+    
     
     def ScaleImg(self):
         #scale Axis px to um
