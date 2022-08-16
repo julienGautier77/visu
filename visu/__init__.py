@@ -5,7 +5,7 @@ Created on Mon Mar 18 10:50:06 2019
 Data vizualisation
 @author: juliengautier
 """
-__version__='2022.06'
+__version__='2022.08'
 __author__='julien Gautier'
 
 

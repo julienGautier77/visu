@@ -145,7 +145,7 @@ class SEELIGHT(QMainWindow) :
         if "toolBar" in kwds:
             self.toolBarOn=kwds["toolBar"]
         else:
-            self.toolBarOn=False
+            self.toolBarOn=True
             
         if "confMot" in kwds:
             print('motor accepted')
@@ -397,10 +397,17 @@ class SEELIGHT(QMainWindow) :
         
         if self.toolBarOn==True:
             self.toolBar =self.addToolBar('tools')
+            
             self.toolBar.addAction(self.checkBoxPlot)
             self.toolBar.addAction(self.checkBoxScale)
             self.toolBar.addAction(self.checkBoxColor)
             self.toolBar.addAction(self.ZoomRectButton)
+            self.checkBoxZoom=QCheckBox('Zoom',self)
+            self.checkBoxZoom.setChecked(False)
+            self.checkBoxZoom.setStyleSheet("QCheckBox { background-color: transparent }""QCheckBox::indicator{width: 30px;height: 30px;}""QCheckBox::indicator:unchecked { image : url(./icons/Toggle_Off.png);background-color: transparent;}""QCheckBox::indicator:checked { image:  url(./icons/Toggle_On.png);background-color: transparent;}")
+            
+            self.toolBar.addWidget(self.checkBoxZoom)
+            self.checkBoxZoom.stateChanged.connect(self.ZoomBut)
             self.toolBar.setMovable(False)
         self.vbox2=QVBoxLayout()
         
@@ -485,6 +492,7 @@ class SEELIGHT(QMainWindow) :
         self.winPref.closeEventVar.connect(self.ScaleImg)
         if self.parent is not None:
             self.parent.signalData.connect(self.newDataReceived)
+        
         
     def shortcut(self):
         # keyboard shortcut
@@ -1039,7 +1047,13 @@ class SEELIGHT(QMainWindow) :
         #     self.p1.setYRange(0,self.dimy)
         #     self.p1.setXRange(0,self.dimx)
         #     print('ra')
-                
+    def ZoomBut(self):
+        if self.checkBoxZoom.isChecked()==1:
+            self.p1.setXRange(self.xc-200,self.xc+200)
+            self.p1.setYRange(self.yc-200,self.yc+200)
+        else:
+            self.p1.setXRange(0,self.dimx)
+            self.p1.setYRange(0,self.dimy)           
         
     def open_widget(self,fene):
         """ open new widget 
@@ -1115,7 +1129,7 @@ if __name__ == "__main__":
     
     appli = QApplication(sys.argv) 
     appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
-    e = SEELIGHT(aff='left',roiCross=True,crossON=False,toolBar=True)
+    e = SEELIGHT(aff='left',roiCross=True,crossON=True,toolBar=False)
     e.show()
     appli.exec_() 
 
