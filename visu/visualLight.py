@@ -780,8 +780,8 @@ class SEELIGHT(QMainWindow) :
             self.p1.addItem(self.vLine, ignoreBounds=False)
             self.p1.addItem(self.hLine, ignoreBounds=False)
            
-            self.p1.showAxis('left',show=True)
-            self.p1.showAxis('bottom',show=True)
+            # self.p1.showAxis('left',show=True)
+            # self.p1.showAxis('bottom',show=True)
            
             if self.roiCross==True:
                 self.p1.addItem(self.ro1)
