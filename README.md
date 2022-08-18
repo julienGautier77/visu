@@ -49,6 +49,7 @@ Or :
     appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
     e = visu.visual.SEE() 
     e.show()
+    appli.exec_()
     
   ### To  insert in  a  code
   visu is a  QtWidgets it can be use like  a  widget :  
