@@ -10,11 +10,11 @@ modified 2019/08/13 : add motors RSAI position and zoom windows
 
 import qdarkstyle 
 from pyqtgraph.Qt import QtCore,QtGui 
-from PyQt5.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QPushButton,QStatusBar,QAction,QMainWindow
-from PyQt5.QtWidgets import QMenu,QWidget,QTableWidget,QTableWidgetItem,QAbstractItemView,QComboBox,QInputDialog
+from pyqtgraph.Qt.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QPushButton,QStatusBar,QAction,QMainWindow
+from pyqtgraph.Qt.QtWidgets import QMenu,QWidget,QTableWidget,QTableWidgetItem,QAbstractItemView,QComboBox,QInputDialog
 import sys,time,os
 import pylab
-from PyQt5.QtGui import QIcon
+from pyqtgraph.Qt.QtGui import QIcon
 from scipy import ndimage
 from visu.WinCut import GRAPHCUT
 from visu.winZoom import ZOOM

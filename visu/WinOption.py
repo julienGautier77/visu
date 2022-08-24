@@ -8,9 +8,9 @@ Created on Wed Feb 13 16:02:40 2019
 
 import qdarkstyle 
 from pyqtgraph.Qt import QtCore,QtGui 
-from PyQt5.QtWidgets import QApplication,QCheckBox,QVBoxLayout,QHBoxLayout,QPushButton,QDoubleSpinBox
-from PyQt5.QtWidgets import QWidget,QLabel,QTextEdit,QSpinBox,QLineEdit,QMessageBox
-from PyQt5.QtGui import QIcon
+from pyqtgraph.Qt.QtWidgets import QApplication,QCheckBox,QVBoxLayout,QHBoxLayout,QPushButton,QDoubleSpinBox
+from pyqtgraph.Qt.QtWidgets import QWidget,QLabel,QTextEdit,QSpinBox,QLineEdit,QMessageBox
+from pyqtgraph.Qt.QtGui import QIcon
 import sys,os
 import numpy as np
 import socket as _socket

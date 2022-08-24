@@ -8,8 +8,8 @@ windows for see max ,mean ,sum in a bigger windows
 
 
 import qdarkstyle # pip install qdakstyle https://github.com/ColinDuquesnoy/QDarkStyleSheet  sur conda
-from PyQt5.QtWidgets import QApplication,QHBoxLayout,QWidget,QLabel
-from PyQt5.QtGui import QIcon
+from pyqtgraph.Qt.QtWidgets import QApplication,QHBoxLayout,QWidget,QLabel
+from pyqtgraph.Qt.QtGui import QIcon
 import sys,time
 
 import pathlib,os

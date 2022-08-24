@@ -7,14 +7,14 @@ Created on Mon Apr 12 21:39:01 2021
 """
 
 
-from PyQt5.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QWidget,QPushButton,QGridLayout
-from PyQt5.QtWidgets import QInputDialog,QSlider,QCheckBox,QLabel,QSizePolicy,QMenu,QMessageBox
-from PyQt5.QtWidgets import QShortcut,QDockWidget,QToolBar,QMainWindow,QToolButton,QAction,QStatusBar
-from PyQt5.QtGui import QIcon
+from pyqtgraph.Qt.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QWidget,QPushButton,QGridLayout
+from pyqtgraph.Qt.QtWidgets import QInputDialog,QSlider,QCheckBox,QLabel,QSizePolicy,QMenu,QMessageBox
+from pyqtgraph.Qt.QtWidgets import QShortcut,QDockWidget,QToolBar,QMainWindow,QToolButton,QAction,QStatusBar
+from pyqtgraph.Qt.QtGui import QIcon
 
 from pyqtgraph.Qt import QtCore,QtGui 
-from PyQt5.QtCore import Qt,pyqtSlot
-from PyQt5.QtGui import QIcon
+from pyqtgraph.Qt.QtCore import Qt,pyqtSlot
+from pyqtgraph.Qt.QtGui import QIcon
 import visu
 import pathlib,os,sys
 import qdarkstyle

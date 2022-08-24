@@ -18,12 +18,12 @@ created 2021/11/02 : new design
 
 
 
-from PyQt5.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QWidget,QPushButton,QGridLayout
-from PyQt5.QtWidgets import QInputDialog,QSlider,QCheckBox,QLabel,QSizePolicy,QMenu,QMessageBox
-from PyQt5.QtWidgets import QShortcut,QDockWidget,QToolBar,QMainWindow,QToolButton,QAction,QStatusBar,QFrame
+from pyqtgraph.Qt.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QWidget,QPushButton,QGridLayout
+from pyqtgraph.Qt.QtWidgets import QInputDialog,QSlider,QCheckBox,QLabel,QSizePolicy,QMenu,QMessageBox
+from pyqtgraph.Qt.QtWidgets import QShortcut,QDockWidget,QToolBar,QMainWindow,QToolButton,QAction,QStatusBar,QFrame
 from pyqtgraph.Qt import QtCore,QtGui 
-from PyQt5.QtCore import Qt,pyqtSlot
-from PyQt5.QtGui import QIcon
+from pyqtgraph.Qt.QtCore import Qt,pyqtSlot
+from pyqtgraph.Qt.QtGui import QIcon
 import pylab
 import sys,time,os
 import pyqtgraph as pg # pip install pyqtgraph (https://github.com/pyqtgraph/pyqtgraph.git)
@@ -1806,13 +1806,13 @@ class SEE(QMainWindow) :
         
 def runVisu(file=None,path=None) :
         
-    from PyQt5.QtWidgets import QApplication
+    from pyqtgraph.Qt.QtWidgets import QApplication
     import sys
     import qdarkstyle
     import visu
     
     appli = QApplication(sys.argv)   
-    appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+    appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqtgraph.Qt())
     e = visu.visual2.SEE2(file=file,path=path)
     e.show()
     appli.exec_() 
@@ -1821,7 +1821,7 @@ def runVisu(file=None,path=None) :
 if __name__ == "__main__":
     
     appli = QApplication(sys.argv) 
-    appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+    appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqtgraph.Qt())
     pathVisu="/Users/juliengautier/Desktop/confTest.ini"
     
     name="testVisu"

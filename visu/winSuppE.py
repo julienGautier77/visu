@@ -6,12 +6,12 @@ Created on Wed Dec 19 11:43:05 2018
 
 """
 
-from PyQt5.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QWidget,QGridLayout
-from PyQt5.QtWidgets import QCheckBox,QLabel,QSizePolicy,QSpinBox,QPushButton
+from pyqtgraph.Qt.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QWidget,QGridLayout
+from pyqtgraph.Qt.QtWidgets import QCheckBox,QLabel,QSizePolicy,QSpinBox,QPushButton
 from pyqtgraph.Qt import QtCore,QtGui 
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QShortcut
-from PyQt5.QtGui import QIcon
+from pyqtgraph.Qt.QtCore import Qt
+from pyqtgraph.Qt.QtWidgets import QShortcut
+from pyqtgraph.Qt.QtGui import QIcon
 import sys,time
 import pyqtgraph as pg # pyqtgraph biblio permettent l'affichage 
 import numpy as np

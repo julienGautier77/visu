@@ -15,12 +15,12 @@ import numpy as np
 import qdarkstyle # pip install qdakstyle https://github.com/ColinDuquesnoy/QDarkStyleSheet  sur conda
 import pathlib
 
-from PyQt5.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QWidget,QPushButton,QGridLayout
-from PyQt5.QtWidgets import QInputDialog,QSlider,QCheckBox,QLabel,QSizePolicy,QMenu,QMessageBox
-from PyQt5.QtWidgets import QShortcut
+from pyqtgraph.Qt.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QWidget,QPushButton,QGridLayout
+from pyqtgraph.Qt.QtWidgets import QInputDialog,QSlider,QCheckBox,QLabel,QSizePolicy,QMenu,QMessageBox
+from pyqtgraph.Qt.QtWidgets import QShortcut
 from pyqtgraph.Qt import QtCore,QtGui 
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QIcon
+from pyqtgraph.Qt.QtCore import Qt
+from pyqtgraph.Qt.QtGui import QIcon
 import pylab
 import pyqtgraph as pg # pip install pyqtgraph (https://github.com/pyqtgraph/pyqtgraph.git)
 

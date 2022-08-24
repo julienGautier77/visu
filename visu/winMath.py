@@ -7,9 +7,9 @@ Created on Fri Oct 30 16:21:09 2020
 
 import qdarkstyle 
 from pyqtgraph.Qt import QtCore,QtGui 
-from PyQt5.QtWidgets import QApplication,QCheckBox,QVBoxLayout,QHBoxLayout,QPushButton,QDoubleSpinBox
-from PyQt5.QtWidgets import QWidget,QLabel,QTextEdit,QSpinBox,QLineEdit,QMessageBox,QComboBox,QMenu
-from PyQt5.QtGui import QIcon
+from pyqtgraph.Qt.QtWidgets import QApplication,QCheckBox,QVBoxLayout,QHBoxLayout,QPushButton,QDoubleSpinBox
+from pyqtgraph.Qt.QtWidgets import QWidget,QLabel,QTextEdit,QSpinBox,QLineEdit,QMessageBox,QComboBox,QMenu
+from pyqtgraph.Qt.QtGui import QIcon
 import sys,os
 import numpy as np
 from visu.andor import SifFile
