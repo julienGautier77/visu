@@ -6,12 +6,12 @@ Created on Wed Dec 19 11:43:05 2018
 
 """
 
-from pyqtgraph.Qt.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QWidget,QGridLayout
-from pyqtgraph.Qt.QtWidgets import QCheckBox,QLabel,QSizePolicy,QSpinBox,QPushButton,QMainWindow,QMessageBox
+from PyQt6.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QWidget,QGridLayout
+from PyQt6.QtWidgets import QCheckBox,QLabel,QSizePolicy,QSpinBox,QPushButton,QMainWindow,QMessageBox
 from pyqtgraph.Qt import QtCore,QtGui 
-from pyqtgraph.Qt.QtCore import Qt
-from pyqtgraph.Qt.QtWidgets import QShortcut,QAction
-from pyqtgraph.Qt.QtGui import QIcon
+
+from PyQt6.QtGui import QShortcut,QAction
+from PyQt6.QtGui import QIcon
 import sys,time
 import pyqtgraph as pg # pyqtgraph biblio permettent l'affichage 
 import numpy as np
@@ -41,7 +41,7 @@ class WINPOINTING(QMainWindow):
         self.isWinOpen=False
         self.setWindowTitle('Pointing')
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
-        self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+        self.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
         self.left=100
         self.top=30
         self.width=800
@@ -382,7 +382,7 @@ class WINPOINTING(QMainWindow):
         
 if __name__ == "__main__":
     appli = QApplication(sys.argv) 
-    appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+    appli.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
     e = WINPOINTING(name='VISU')  
     e.show()
     appli.exec_()         

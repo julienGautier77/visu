@@ -17,20 +17,22 @@ created 2021/11/02 : new design
 
 
 
+import pyqtgraph as pg  #pip install pyqtgraph (https://github.com/pyqtgraph/pyqtgraph.git)
 
-from pyqtgraph.Qt.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QWidget,QPushButton,QGridLayout
-from pyqtgraph.Qt.QtWidgets import QInputDialog,QSlider,QCheckBox,QLabel,QSizePolicy,QMenu,QMessageBox
-from pyqtgraph.Qt.QtWidgets import QShortcut,QDockWidget,QToolBar,QMainWindow,QToolButton,QAction,QStatusBar,QFrame
-from pyqtgraph.Qt import QtCore,QtGui 
-from pyqtgraph.Qt.QtCore import Qt,pyqtSlot
-from pyqtgraph.Qt.QtGui import QIcon
-import pylab
+from PyQt6.QtWidgets import QApplication, QVBoxLayout,QHBoxLayout,QPushButton
+from PyQt6.QtWidgets import QInputDialog,QSlider,QLabel,QSizePolicy,QMenu,QMessageBox,QFileDialog
+from PyQt6.QtWidgets import QMainWindow,QToolButton,QStatusBar,QFrame
+from PyQt6.QtGui import QShortcut,QAction
+from PyQt6 import QtCore,QtGui
+from PyQt6.QtCore import pyqtSlot,Qt
+from PyQt6.QtGui import QIcon
+
 import sys,time,os
-import pyqtgraph as pg # pip install pyqtgraph (https://github.com/pyqtgraph/pyqtgraph.git)
+
 import numpy as np
 import qdarkstyle # pip install qdarkstyle https://github.com/ColinDuquesnoy/QDarkStyleSheet  sur conda
 from scipy.interpolate import splrep, sproot #
-from scipy.ndimage.filters import gaussian_filter,median_filter
+from scipy.ndimage import gaussian_filter,median_filter
 from PIL import Image
 from visu.winspec import SpeFile
 from visu.visualLight import SEELIGHT
@@ -390,7 +392,7 @@ class SEE(QMainWindow) :
         self.fileName.setStyleSheet("font:10pt")
         self.fileName.setMaximumHeight(30)
         self.fileName.setMaximumWidth(200000)
-        #self.fileName.setAlignment(Qt.AlignRight)
+        self.fileName.setAlignment(Qt.AlignmentFlag.AlignVCenter)
         self.statusBar.addWidget(self.labelFileName)
         self.statusBar.addWidget(self.fileName)
         
@@ -398,12 +400,12 @@ class SEE(QMainWindow) :
         self.labelFrameName.setStyleSheet("font:8pt;")
         self.labelFrameName.setMinimumHeight(30)
         self.labelFrameName.setMaximumWidth(70)
-        # self.labelFrameName.setAlignment(Qt.AlignRight)
+        self.labelFrameName.setAlignment(Qt.AlignmentFlag.AlignRight)
         self.frameName=QLabel()
         self.frameName.setStyleSheet("font:8pt")
         self.frameName.setMaximumHeight(30)
         self.frameName.setMaximumWidth(100)
-        # self.frameName.setAlignment(Qt.AlignRight)
+        self.frameName.setAlignment(Qt.AlignmentFlag.AlignRight)
         self.statusBar.addPermanentWidget(self.labelFrameName)
         self.statusBar.addPermanentWidget(self.frameName)
         
@@ -432,8 +434,8 @@ class SEE(QMainWindow) :
         self.checkBoxHist.triggered.connect(self.HIST)
         self.ImageMenu.addAction(self.checkBoxHist)
         
-        self.ColorBox=QAction('&LookUp Table',self)
-        menuColor=QMenu()
+        #self.ColorBox=QMenu('&LookUp Table',self) #
+        menuColor=QMenu('LookUp Table',self)
         menuColor.addAction('thermal',self.Setcolor)
         menuColor.addAction('flame',self.Setcolor)
         menuColor.addAction('yellowy',self.Setcolor)
@@ -445,8 +447,8 @@ class SEE(QMainWindow) :
         menuColor.addAction('plasma',self.Setcolor)      
         menuColor.addAction('magma',self.Setcolor)            
         
-        self.ColorBox.setMenu(menuColor)
-        self.ImageMenu.addAction(self.ColorBox)
+        #self.ColorBox.setMenu(menuColor)
+        self.ImageMenu.addMenu(menuColor)
         
         
         self.checkBoxBg=QAction('Background Substraction On',self)
@@ -492,15 +494,15 @@ class SEE(QMainWindow) :
         
         
         if self.winFilter=='on':
-            self.filtreBox=QAction('&Filters',self)
-            menu=QMenu()
-            menu.addAction('&Gaussian',self.Gauss)
-            menu.addAction('&Median',self.Median)
-            menu.addAction('&Threshold',self.Threshold)
-            menu.addAction('&Origin',self.Orig)
+            #self.filtreBox=QAction('&Filters',self)
+            self.menuFilter=QMenu('&Filters',self)
+            self.menuFilter.addAction('&Gaussian',self.Gauss)
+            self.menuFilter.addAction('&Median',self.Median)
+            self.menuFilter.addAction('&Threshold',self.Threshold)
+            self.menuFilter.addAction('&Origin',self.Orig)
             
-            self.filtreBox.setMenu(menu)
-            self.ProcessMenu.addAction(self.filtreBox)
+            #self.filtreBox.setMenu(menu)
+            self.ProcessMenu.addMenu(self.menuFilter)
         
         if self.plot3D=="on":
             self.box3d=QPushButton('3D', self)
@@ -572,7 +574,7 @@ class SEE(QMainWindow) :
         self.winImage = pg.GraphicsLayoutWidget()
         self.winImage.setContentsMargins(0,0,0,0)
         self.winImage.setAspectLocked(True)
-        self.winImage.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.winImage.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.winImage.ci.setContentsMargins(0,0,0,0)
         self.vbox2.addWidget(self.winImage)
         self.vbox2.setContentsMargins(0,0,0,0)
@@ -670,7 +672,7 @@ class SEE(QMainWindow) :
         self.plotCercle=pg.CircleROI([self.xc,self.yc],[80,80],pen='g')
         self.plotRectZoom=pg.RectROI([self.xc,self.yc],[4*self.rx,self.ry],pen='w')
         self.plotRectZoom.addScaleHandle((0,0),center=(1,1))
-        #self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5()) # dark style
+        self.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6')) # dark style
         
         
         
@@ -1419,7 +1421,7 @@ class SEE(QMainWindow) :
         sigma, ok=QInputDialog.getInt(self,'Gaussian Filter ','Enter sigma value (radius)')
         if ok:
             self.sigma=sigma
-            self.filtreBox.setText('F: Gaussian')
+            self.menuFilter.setTitle('F: Gaussian')
             self.Display(self.data)
         
         
@@ -1429,7 +1431,7 @@ class SEE(QMainWindow) :
         sigma, ok=QInputDialog.getInt(self,'Median Filter ','Enter sigma value (radius)')
         if ok:
             self.sigma=sigma
-            self.filtreBox.setText('F: Median')
+            self.menuFilter.setTitle('F: Median')
             self.Display(self.data)
         
     def Threshold(self):
@@ -1437,7 +1439,7 @@ class SEE(QMainWindow) :
         threshold, ok=QInputDialog.getInt(self,'Threshold Filter ','Enter thresold value')
         if ok:
             self.threshold=threshold
-            self.filtreBox.setText('F: Thresold')
+            self.menuFilter.setTitle('F: Thresold')
             self.Display(self.data)
     def Orig(self):
         """
@@ -1446,7 +1448,7 @@ class SEE(QMainWindow) :
         self.data=self.dataOrg
         self.filter='origin'
         self.Display(self.data)
-        self.filtreBox.setText('Filters')
+        self.menuFilter.setTitle('Filters')
         #print('original data')
         
     def OpenF(self,fileOpen=False):
@@ -1456,7 +1458,7 @@ class SEE(QMainWindow) :
         if fileOpen==False:
             
             chemin=self.conf.value(self.name+"/path")
-            fname=QtGui.QFileDialog.getOpenFileNames(self,"Open File",chemin,"Images (*.txt *.spe *.TIFF *.sif *.tif);;Text File(*.txt);;Ropper File (*.SPE);;Andor File(*.sif);; TIFF file(*.TIFF)")
+            fname=QFileDialog.getOpenFileNames(self,"Open File",chemin,"Images (*.txt *.spe *.TIFF *.sif *.tif);;Text File(*.txt);;Ropper File (*.SPE);;Andor File(*.sif);; TIFF file(*.TIFF)")
            
             self.openedFiles=fname[0]
             
@@ -1519,7 +1521,7 @@ class SEE(QMainWindow) :
     def OpenFNewWin(self):
         
         chemin=self.conf.value(self.name+"/path")
-        fname=QtGui.QFileDialog.getOpenFileNames(self,"Open File",chemin,"Images (*.txt *.spe *.TIFF *.sif *.tif);;Text File(*.txt);;Ropper File (*.SPE);;Andor File(*.sif);; TIFF file(*.TIFF)")
+        fname=QFileDialog.getOpenFileNames(self,"Open File",chemin,"Images (*.txt *.spe *.TIFF *.sif *.tif);;Text File(*.txt);;Ropper File (*.SPE);;Andor File(*.sif);; TIFF file(*.TIFF)")
            
             
         self.openedFiles=fname[0]
@@ -1575,7 +1577,7 @@ class SEE(QMainWindow) :
         # save data  in TIFF or Text  files
         
         if self.winOpt.checkBoxTiff.isChecked()==True: 
-            fname=QtGui.QFileDialog.getSaveFileName(self,"Save data as TIFF",self.path)
+            fname=QFileDialog.getSaveFileName(self,"Save data as TIFF",self.path)
             self.path=os.path.dirname(str(fname[0]))
             fichier=fname[0]
         
@@ -1591,7 +1593,7 @@ class SEE(QMainWindow) :
             self.fileName.setText(fname[0]+'.TIFF') 
             
         else :
-            fname=QtGui.QFileDialog.getSaveFileName(self,"Save data as txt",self.path)
+            fname=QFileDialog.getSaveFileName(self,"Save data as txt",self.path)
             self.path=os.path.dirname(str(fname[0]))
             fichier=fname[0]
             self.dataS=np.rot90(self.data,1)
@@ -1812,7 +1814,7 @@ def runVisu(file=None,path=None) :
     import visu
     
     appli = QApplication(sys.argv)   
-    appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqtgraph.Qt())
+    appli.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
     e = visu.visual2.SEE2(file=file,path=path)
     e.show()
     appli.exec_() 
@@ -1821,11 +1823,11 @@ def runVisu(file=None,path=None) :
 if __name__ == "__main__":
     
     appli = QApplication(sys.argv) 
-    appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqtgraph.Qt())
+    appli.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
     pathVisu="/Users/juliengautier/Desktop/confTest.ini"
     
     name="testVisu"
-    conf=QtCore.QSettings(pathVisu, QtCore.QSettings.IniFormat)
+    conf=QtCore.QSettings(pathVisu, QtCore.QSettings.Format.IniFormat)
     
     #file='FP__2201_2019_01_17_13_17_59.TIFF'
     #path='/Users/juliengautier/Dropbox (LOA)/Data_Analysis_LOA/Laser X/Manip Janvier 2019/FP/2019-01-16'

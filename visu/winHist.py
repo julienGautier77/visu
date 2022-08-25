@@ -9,17 +9,12 @@ modified 2019/08/13 : add motors RSAI position and zoom windows
 
 
 import qdarkstyle 
-from pyqtgraph.Qt import QtCore,QtGui 
-from pyqtgraph.Qt.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QPushButton,QStatusBar,QAction,QMainWindow
-from pyqtgraph.Qt.QtWidgets import QMenu,QWidget,QTableWidget,QTableWidgetItem,QAbstractItemView,QComboBox
-import sys,time,os
-import pylab
-from pyqtgraph.Qt.QtGui import QIcon
-from scipy import ndimage
-from visu.WinCut import GRAPHCUT
-from visu.winZoom import ZOOM
+from PyQt6 import QtCore 
+from PyQt6.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QMainWindow
+from PyQt6.QtWidgets import QWidget,QTableWidget,QTableWidgetItem,QAbstractItemView
+import sys,os
+from PyQt6.QtGui import QIcon
 import pathlib
-import numpy as np
 
 class HISTORY(QMainWindow):
     
@@ -27,7 +22,7 @@ class HISTORY(QMainWindow):
         
         super().__init__()
         self.parent=parent
-        self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+        self.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
         p = pathlib.Path(__file__)
         sepa=os.sep
         if conf==None:
@@ -75,7 +70,7 @@ class HISTORY(QMainWindow):
         self.table.setHorizontalHeaderLabels(('File',''))
         self.table.setAlternatingRowColors(True)
         self.table.resizeColumnsToContents()
-        self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)# no modifiable
+        self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)# no modifiable
         
         vLayout.addLayout(hLayout2)
         
@@ -134,7 +129,7 @@ class HISTORY(QMainWindow):
     
 if __name__ == "__main__":
     appli = QApplication(sys.argv) 
-    appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+    appli.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
     e = HISTORY() 
     e.show()
     appli.exec_()         

@@ -6,11 +6,12 @@ Created on Wed Feb 13 16:02:40 2019
 @author: juliengautier
 """
 
-import qdarkstyle 
-from pyqtgraph.Qt import QtCore,QtGui 
-from pyqtgraph.Qt.QtWidgets import QApplication,QCheckBox,QVBoxLayout,QHBoxLayout,QPushButton,QDoubleSpinBox
-from pyqtgraph.Qt.QtWidgets import QWidget,QLabel,QTextEdit,QSpinBox,QLineEdit,QMessageBox
-from pyqtgraph.Qt.QtGui import QIcon
+import qdarkstyle
+from PyQt6.QtCore import pyqtSignal as Signal
+from PyQt6 import QtCore,QtGui 
+from PyQt6.QtWidgets import QApplication,QCheckBox,QVBoxLayout,QHBoxLayout,QPushButton
+from  PyQt6.QtWidgets import QWidget,QLabel,QSpinBox,QLineEdit,QMessageBox
+from PyQt6.QtGui import QIcon 
 import sys,os
 import numpy as np
 import socket as _socket
@@ -38,7 +39,7 @@ class OPTION(QWidget):
         sepa=os.sep
         self.icon=str(p.parent) + sepa+'icons' +sepa
         self.isWinOpen=False
-        self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+        self.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
        
         self.setWindowTitle('Options Auto Save & visualisation')
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
@@ -235,7 +236,7 @@ class THREADCLIENT(QtCore.QThread):
     
     '''Second thread for controling one acquisition independtly
     '''
-    newShotnumber=QtCore.Signal(int) # signal to send 
+    newShotnumber=Signal(int)#QtCore.Signal(int) # signal to send 
     
     def __init__(self, parent):
         
@@ -283,7 +284,7 @@ class THREADCLIENT(QtCore.QThread):
      
 if __name__ == "__main__":
     appli = QApplication(sys.argv) 
-    appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+    appli.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
     e = OPTION() 
     e.show()
     appli.exec_() 

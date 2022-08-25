@@ -7,12 +7,15 @@ Windows for plot
 """
 
 import pyqtgraph as pg # pyqtgraph biblio permettent l'affichage 
-
-import qdarkstyle # pip install qdakstyle https://github.com/ColinDuquesnoy/QDarkStyleSheet  sur conda
-from pyqtgraph.Qt.QtWidgets import QApplication,QHBoxLayout,QAction,QWidget,QStatusBar,QMainWindow,QVBoxLayout,QLabel,QPushButton,QMessageBox
-from pyqtgraph.Qt.QtGui import QIcon,QColorDialog,QInputDialog,QGridLayout,QDoubleSpinBox,QTableWidget,QTableWidgetItem
-import sys,time
 from pyqtgraph.Qt import QtCore,QtGui 
+import qdarkstyle # pip install qdakstyle https://github.com/ColinDuquesnoy/QDarkStyleSheet  sur conda
+from PyQt6.QtWidgets  import QApplication,QHBoxLayout,QWidget,QStatusBar,QMainWindow,QVBoxLayout,QLabel,QPushButton,QMessageBox
+from PyQt6.QtWidgets import QColorDialog,QInputDialog,QGridLayout,QDoubleSpinBox,QTableWidget,QTableWidgetItem
+from PyQt6.QtGui import QAction
+from PyQt6.QtGui import QIcon
+
+import sys,time
+
 import numpy as np
 import pathlib,os
 from scipy.optimize import curve_fit
@@ -84,7 +87,7 @@ class WINDOWMEAS(QWidget):
         self.icon=str(p.parent) + sepa+'icons' +sepa
         self.setWindowTitle(self.title)
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
-        self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+        self.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
         self.setup()
         self.setGeometry(50, 100, 200, 350)
     
@@ -238,7 +241,7 @@ class GRAPHCUT(QMainWindow):
         
         self.setWindowTitle(self.title)
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
-        self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+        self.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
         
         self.symbol=symbol
         self.axis=None
@@ -943,7 +946,7 @@ class GRAPHCUT(QMainWindow):
     
 if __name__ == "__main__":
     appli = QApplication(sys.argv) 
-    appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+    appli.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
     e = GRAPHCUT()  
     a=[2,3,7,100,1000]
     b=[2,4,5,100,2000]

@@ -15,12 +15,13 @@ import numpy as np
 import qdarkstyle # pip install qdakstyle https://github.com/ColinDuquesnoy/QDarkStyleSheet  sur conda
 import pathlib
 
-from pyqtgraph.Qt.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QWidget,QPushButton,QGridLayout
-from pyqtgraph.Qt.QtWidgets import QInputDialog,QSlider,QCheckBox,QLabel,QSizePolicy,QMenu,QMessageBox
-from pyqtgraph.Qt.QtWidgets import QShortcut
-from pyqtgraph.Qt import QtCore,QtGui 
-from pyqtgraph.Qt.QtCore import Qt
-from pyqtgraph.Qt.QtGui import QIcon
+from PyQt6.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QWidget,QPushButton,QGridLayout
+from PyQt6.QtWidgets import QInputDialog,QSlider,QCheckBox,QLabel,QSizePolicy,QMenu,QMessageBox
+from PyQt6.QtGui import QShortcut
+from PyQt6 import QtCore,QtGui 
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QIcon
+
 import pylab
 import pyqtgraph as pg # pip install pyqtgraph (https://github.com/pyqtgraph/pyqtgraph.git)
 
@@ -53,7 +54,7 @@ class WINFFT(QWidget):
         self.isWinOpen=False
         self.setWindowTitle('FFT')
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
-        self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+        self.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
         self.setup()      
         
     
@@ -97,7 +98,7 @@ class SEEFFT(QWidget) :
         
         super(SEEFFT, self).__init__()
         p = pathlib.Path(__file__)
-        self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+        self.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
         if conf==None:
             conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
         else :self.conf=conf
@@ -297,7 +298,7 @@ class SEEFFT(QWidget) :
         self.winImage = pg.GraphicsLayoutWidget()
         self.winImage.setContentsMargins(0,0,0,0)
         self.winImage.setAspectLocked(True)
-        self.winImage.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.winImage.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.winImage.ci.setContentsMargins(0,0,0,0)
         
         vbox2=QVBoxLayout()
@@ -957,7 +958,7 @@ class SEEFFT(QWidget) :
        
 if __name__ == "__main__":
     appli = QApplication(sys.argv) 
-    appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+    appli.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
     e = WINFFT(name='VISU')  
     e.show()
     appli.exec_()    

@@ -124,7 +124,7 @@ class GRAPH3D(QWidget):
 if __name__ == "__main__":
     z = pg.gaussianFilter(np.random.normal(size=(50,50)), (1,1))
     appli = QApplication(sys.argv) 
-    appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+    appli.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
     e = GRAPH3D() 
     e.Plot3D(data=z)
     e.show()

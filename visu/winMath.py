@@ -37,7 +37,7 @@ class WINMATH(QWidget):
         sepa=os.sep
         self.icon=str(p.parent) + sepa+'icons' +sepa
         self.isWinOpen=False
-        self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+        self.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
        
         self.setWindowTitle('Math operations')
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
@@ -213,7 +213,7 @@ class WINMATH(QWidget):
         
 if __name__ == "__main__":
     appli = QApplication(sys.argv) 
-    appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+    appli.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
     e = WINMATH()
     e.show()
     appli.exec_()        
