@@ -15,4 +15,4 @@ setup(name='visu',version=visu.__version__,packages=find_packages(),author='Juli
         "Programming Language :: Python :: 3",
         "License :: Free for non-commercial use",
         "Operating System :: OS Independent","Topic :: Scientific/Engineering :: Visualization"],
-      url='https://github.com/julienGautier77/visu',install_requires=['pyqtgraph==0.11.1'])
+      url='https://github.com/julienGautier77/visu',install_requires=['pyqtgraph','matplotlib','PyQt6','qdarkstyle','scipy',])
