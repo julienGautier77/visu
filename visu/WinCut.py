@@ -7,10 +7,11 @@ Windows for plot
 """
 
 import pyqtgraph as pg # pyqtgraph biblio permettent l'affichage 
-from pyqtgraph.Qt import QtCore,QtGui 
 import qdarkstyle # pip install qdakstyle https://github.com/ColinDuquesnoy/QDarkStyleSheet  sur conda
+
+from PyQt6 import QtCore,QtGui 
 from PyQt6.QtWidgets  import QApplication,QHBoxLayout,QWidget,QStatusBar,QMainWindow,QVBoxLayout,QLabel,QPushButton,QMessageBox
-from PyQt6.QtWidgets import QColorDialog,QInputDialog,QGridLayout,QDoubleSpinBox,QTableWidget,QTableWidgetItem
+from PyQt6.QtWidgets import QColorDialog,QInputDialog,QGridLayout,QDoubleSpinBox,QTableWidget,QTableWidgetItem,QFileDialog
 from PyQt6.QtGui import QAction
 from PyQt6.QtGui import QIcon
 
@@ -234,7 +235,7 @@ class GRAPHCUT(QMainWindow):
         self.path=None
         self.axisOn=False
         if conf==None:
-            self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+            self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.Format.IniFormat)
         else :
             self.conf=conf
         self.name=name
@@ -483,7 +484,7 @@ class GRAPHCUT(QMainWindow):
 
         if fileOpen==False:
             chemin=self.conf.value(self.name+"/path")
-            fname=QtGui.QFileDialog.getOpenFileName(self,"Open File",chemin," 1D data (*.txt )")
+            fname=QFileDialog.getOpenFileName(self,"Open File",chemin," 1D data (*.txt )")
             fichier=fname[0]
         else:
             fichier=str(fileOpen)
@@ -497,17 +498,17 @@ class GRAPHCUT(QMainWindow):
             
         else :
             msg = QMessageBox()
-            msg.setIcon(QMessageBox.Critical)
+            msg.setIcon(QMessageBox.Icon.Critical)
             msg.setText("Wrong file format !")
             msg.setInformativeText("The format of the file must be : .txt ")
             msg.setWindowTitle("Warning ...")
-            msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+            msg.setWindowFlags(QtCore.Qt.WindowType.WindowStaysOnTopHint)
             msg.exec_()
     
 
     def SaveF (self):
         
-        fname=QtGui.QFileDialog.getSaveFileName(self,"Save data as txt",self.path)
+        fname=QFileDialog.getSaveFileName(self,"Save data as txt",self.path)
         self.path=os.path.dirname(str(fname[0]))
         fichier=fname[0]
         

@@ -30,7 +30,7 @@ class WINENCERCLED(QWidget):
         self.parent=parent
         p = pathlib.Path(__file__)
         if conf==None:
-            self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+            self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.Format.IniFormat)
         else :
             self.conf=conf
         

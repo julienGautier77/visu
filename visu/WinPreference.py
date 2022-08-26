@@ -29,7 +29,7 @@ class PREFERENCES(QWidget):
         p = pathlib.Path(__file__)
         
         if conf==None:
-            self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+            self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.Format.IniFormat)
             print(str(p.parent))
         else :
             self.conf=conf

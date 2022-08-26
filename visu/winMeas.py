@@ -9,11 +9,12 @@ modified 2019/08/13 : add motors RSAI position and zoom windows
 
 
 import qdarkstyle 
-from pyqtgraph.Qt import QtCore,QtGui 
+from PyQt6 import QtCore,QtGui 
 from PyQt6.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QMainWindow
 from PyQt6.QtWidgets import QWidget,QTableWidget,QTableWidgetItem,QAbstractItemView,QComboBox,QInputDialog
 from PyQt6.QtGui import QAction
 from PyQt6.QtGui import QIcon
+
 from scipy import ndimage
 from visu.WinCut import GRAPHCUT
 from visu.winZoom import ZOOM
@@ -34,6 +35,7 @@ class MEAS(QMainWindow):
         p = pathlib.Path(__file__)
         sepa=os.sep
         if conf==None:
+            print('tt')
             self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
         else :
             self.conf=conf
@@ -575,7 +577,7 @@ class MEAS(QMainWindow):
             fene.show()
         else:
             # fene.activateWindow()
-            fene.raise_()
+            #fene.raise_()
             fene.showNormal()
             
     def motorChange(self):

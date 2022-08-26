@@ -45,7 +45,7 @@ class WINFFT(QWidget):
         self.name=name
         p = pathlib.Path(__file__)
         if conf==None:
-            self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+            self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.Format.IniFormat)
         else :
             self.conf=conf
         sepa=os.sep
@@ -100,7 +100,7 @@ class SEEFFT(QWidget) :
         p = pathlib.Path(__file__)
         self.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
         if conf==None:
-            conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+            conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.Format.IniFormat)
         else :self.conf=conf
         self.name=name
         sepa=os.sep
@@ -529,20 +529,20 @@ class SEEFFT(QWidget) :
                 self.data=self.data-self.winOpt.dataBg
             except :
                 msg = QMessageBox()
-                msg.setIcon(QMessageBox.Critical)
+                msg.setIcon(QMessageBox.Icon.Critical)
                 msg.setText("Background not soustracred !")
                 msg.setInformativeText("Background file error  ")
                 msg.setWindowTitle("Warning ...")
-                msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+                msg.setWindowFlags(QtCore.Qt.WindowType.WindowStaysOnTopHint)
                 msg.exec_()
                 
         if self.checkBoxBg.isChecked()==True and self.winOpt.dataBgExist==False:
                 msg = QMessageBox()
-                msg.setIcon(QMessageBox.Critical)
+                msg.setIcon(QMessageBox.Icon.Critical)
                 msg.setText("Background not soustracred !")
                 msg.setInformativeText("Background file not selected in options menu ")
                 msg.setWindowTitle("Warning ...")
-                msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+                msg.setWindowFlags(QtCore.Qt.WindowType.WindowStaysOnTopHint)
                 msg.exec_()
             
             

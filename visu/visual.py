@@ -110,14 +110,14 @@ class SEE(QMainWindow) :
         if "confpath"in kwds :   #confpath path.file pour le fichier ini.
             self.confpath=kwds["confpath"]
             if self.confpath==None:
-                self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+                self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.Format.IniFormat)
             else:
-                self.conf=QtCore.QSettings(self.confpath, QtCore.QSettings.IniFormat)
+                self.conf=QtCore.QSettings(self.confpath, QtCore.QSettings.Format.IniFormat)
             print ('configuration path of visu : ',self.confpath)
             
             # print ('conf path visu',self.confpath,self.conf)
         else:
-            self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+            self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.Format.IniFormat)
         
         if "conf"in kwds:               #conf : le QSetting
             self.conf=kwds["conf"]
@@ -400,12 +400,12 @@ class SEE(QMainWindow) :
         self.labelFrameName.setStyleSheet("font:8pt;")
         self.labelFrameName.setMinimumHeight(30)
         self.labelFrameName.setMaximumWidth(70)
-        self.labelFrameName.setAlignment(Qt.AlignmentFlag.AlignRight)
+        self.labelFrameName.setAlignment(Qt.AlignmentFlag.AlignVCenter)
         self.frameName=QLabel()
         self.frameName.setStyleSheet("font:8pt")
         self.frameName.setMaximumHeight(30)
         self.frameName.setMaximumWidth(100)
-        self.frameName.setAlignment(Qt.AlignmentFlag.AlignRight)
+        self.frameName.setAlignment(Qt.AlignmentFlag.AlignVCenter)
         self.statusBar.addPermanentWidget(self.labelFrameName)
         self.statusBar.addPermanentWidget(self.frameName)
         
@@ -937,20 +937,21 @@ class SEE(QMainWindow) :
                 self.data=self.data-self.winOpt.dataBg
             except :
                 msg = QMessageBox()
-                msg.setIcon(QMessageBox.Critical)
+                msg.setIcon(QMessageBox.Icon.Critical)
                 msg.setText("Background not soustracred !")
                 msg.setInformativeText("Background file error  ")
                 msg.setWindowTitle("Warning ...")
-                msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+                msg.setWindowFlags(QtCore.Qt.WindowType.WindowStaysOnTopHint)
                 msg.exec_()
                 
         if self.checkBoxBg.isChecked()==True and self.winOpt.dataBgExist==False:
                 msg = QMessageBox()
-                msg.setIcon(QMessageBox.Critical)
+                msg.setIcon(QMessageBox.Icon.Critical)
                 msg.setText("Background not soustracted !")
                 msg.setInformativeText("Background file not selected in options menu ")
                 msg.setWindowTitle("Warning ...")
-                msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+                msg.setWindowFlags(QtCore.Qt.WindowType.WindowStaysOnTopHint)
+                
                 msg.exec_()
                 
         
@@ -1502,7 +1503,7 @@ class SEE(QMainWindow) :
             msg.setText("Wrong file format !")
             msg.setInformativeText("The format of the file must be : .SPE  .TIFF .sif  png jpeg or .txt ")
             msg.setWindowTitle("Warning ...")
-            msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+            msg.setWindowFlags(QtCore.Qt.WindowType.WindowStaysOnTopHint)
             msg.exec_()
             
         chemin=os.path.dirname(fichier)
@@ -1554,7 +1555,7 @@ class SEE(QMainWindow) :
             msg.setText("Wrong file format !")
             msg.setInformativeText("The format of the file must be : .SPE  .TIFF .sif  png jpeg or .txt ")
             msg.setWindowTitle("Warning ...")
-            msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+            msg.setWindowFlags(QtCore.Qt.WindowType.WindowStaysOnTopHint)
             msg.exec_()
             
         chemin=os.path.dirname(fichier)

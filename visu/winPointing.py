@@ -7,10 +7,10 @@ Created on Wed Dec 19 11:43:05 2018
 """
 
 from PyQt6.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QWidget,QGridLayout
-from PyQt6.QtWidgets import QCheckBox,QLabel,QSizePolicy,QSpinBox,QPushButton,QMainWindow,QMessageBox
-from pyqtgraph.Qt import QtCore,QtGui 
+from PyQt6.QtWidgets import QLabel,QMainWindow,QMessageBox,QFileDialog
+from PyQt6 import QtCore,QtGui 
 
-from PyQt6.QtGui import QShortcut,QAction
+from PyQt6.QtGui import QAction
 from PyQt6.QtGui import QIcon
 import sys,time
 import pyqtgraph as pg # pyqtgraph biblio permettent l'affichage 
@@ -31,7 +31,7 @@ class WINPOINTING(QMainWindow):
         self.parent=parent
         p = pathlib.Path(__file__)
         if conf==None:
-            self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+            self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.Format.IniFormat)
         else :
             self.conf=conf
         
@@ -300,7 +300,7 @@ class WINPOINTING(QMainWindow):
 
         if fileOpen==False:
             chemin=self.conf.value(self.name+"/path")
-            fname=QtGui.QFileDialog.getOpenFileName(self,"Open File",chemin," 1D data (*.txt )")
+            fname=QFileDialog.getOpenFileName(self,"Open File",chemin," 1D data (*.txt )")
             fichier=fname[0]
         else:
             fichier=str(fileOpen)
@@ -336,17 +336,17 @@ class WINPOINTING(QMainWindow):
             self.PVYAff.setText('%.2f' % YPV)
         else :
             msg = QMessageBox()
-            msg.setIcon(QMessageBox.Critical)
+            msg.setIcon(QMessageBox.Icon.Critical)
             msg.setText("Wrong file format !")
             msg.setInformativeText("The format of the file must be : .txt ")
             msg.setWindowTitle("Warning ...")
-            msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+            msg.setWindowFlags(QtCore.Qt.WindowType.WindowStaysOnTopHint)
             msg.exec_()
     
 
     def SaveF (self):
         
-        fname=QtGui.QFileDialog.getSaveFileName(self,"Save data as txt",self.path)
+        fname=QFileDialog.getSaveFileName(self,"Save data as txt",self.path)
         self.path=os.path.dirname(str(fname[0]))
         fichier=fname[0]
         

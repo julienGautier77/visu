@@ -26,7 +26,7 @@ class HISTORY(QMainWindow):
         p = pathlib.Path(__file__)
         sepa=os.sep
         if conf==None:
-            self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+            self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.Format.IniFormat)
         else :
             self.conf=conf
         self.confMot=confMot   
