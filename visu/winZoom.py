@@ -8,8 +8,8 @@ windows for see max ,mean ,sum in a bigger windows
 
 
 import qdarkstyle # pip install qdakstyle https://github.com/ColinDuquesnoy/QDarkStyleSheet  sur conda
-from PyQt5.QtWidgets import QApplication,QHBoxLayout,QWidget,QLabel
-from PyQt5.QtGui import QIcon
+from PyQt6.QtWidgets import QApplication,QHBoxLayout,QWidget,QLabel
+from PyQt6.QtGui import QIcon
 import sys,time
 
 import pathlib,os
@@ -27,7 +27,7 @@ class ZOOM(QWidget):
         self.setup()
         self.setWindowTitle(self.title)
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
-        self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+        self.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
     
     def setup(self):
         hLayout2=QHBoxLayout()
@@ -64,7 +64,7 @@ class ZOOM(QWidget):
     
 if __name__ == "__main__":
     appli = QApplication(sys.argv) 
-    appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+    appli.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
     e = ZOOM()  
     e.show()
     appli.exec_()     

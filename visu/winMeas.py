@@ -9,17 +9,19 @@ modified 2019/08/13 : add motors RSAI position and zoom windows
 
 
 import qdarkstyle 
-from pyqtgraph.Qt import QtCore,QtGui 
-from PyQt5.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QPushButton,QStatusBar,QAction,QMainWindow
-from PyQt5.QtWidgets import QMenu,QWidget,QTableWidget,QTableWidgetItem,QAbstractItemView,QComboBox,QInputDialog
-import sys,time,os
-import pylab
-from PyQt5.QtGui import QIcon
+from PyQt6 import QtCore,QtGui 
+from PyQt6.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QMainWindow
+from PyQt6.QtWidgets import QWidget,QTableWidget,QTableWidgetItem,QAbstractItemView,QComboBox,QInputDialog
+from PyQt6.QtGui import QAction
+from PyQt6.QtGui import QIcon
+
 from scipy import ndimage
 from visu.WinCut import GRAPHCUT
 from visu.winZoom import ZOOM
 import pathlib
 import numpy as np
+import sys,time,os
+
 
 class MEAS(QMainWindow):
     
@@ -29,10 +31,11 @@ class MEAS(QMainWindow):
         
         super().__init__()
         self.parent=parent
-        self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+        self.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
         p = pathlib.Path(__file__)
         sepa=os.sep
         if conf==None:
+            print('tt')
             self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
         else :
             self.conf=conf
@@ -205,7 +208,7 @@ class MEAS(QMainWindow):
         self.table.horizontalHeader().setVisible(True)
         self.table.setAlternatingRowColors(True)
         self.table.resizeColumnsToContents()
-        self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)# no modifiable
+        self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)# no modifiableEditTriggers=QAbstractItemView.editTriggers(QAbstractItemView.NoEditTriggers)
         
         vLayout.addLayout(hLayout1)
         vLayout.addLayout(hLayout2)
@@ -574,7 +577,7 @@ class MEAS(QMainWindow):
             fene.show()
         else:
             # fene.activateWindow()
-            fene.raise_()
+            #fene.raise_()
             fene.showNormal()
             
     def motorChange(self):
@@ -613,7 +616,7 @@ class MEAS(QMainWindow):
     
 if __name__ == "__main__":
     appli = QApplication(sys.argv) 
-    appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+    appli.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
     e = MEAS() 
     e.show()
     appli.exec_()         

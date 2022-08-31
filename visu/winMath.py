@@ -6,10 +6,12 @@ Created on Fri Oct 30 16:21:09 2020
 """
 
 import qdarkstyle 
-from pyqtgraph.Qt import QtCore,QtGui 
-from PyQt5.QtWidgets import QApplication,QCheckBox,QVBoxLayout,QHBoxLayout,QPushButton,QDoubleSpinBox
-from PyQt5.QtWidgets import QWidget,QLabel,QTextEdit,QSpinBox,QLineEdit,QMessageBox,QComboBox,QMenu
-from PyQt5.QtGui import QIcon
+
+from PyQt6 import QtCore 
+from PyQt6.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QPushButton
+from PyQt6.QtWidgets import QWidget,QLabel,QMessageBox,QComboBox,QFileDialog
+from PyQt6.QtGui import QIcon
+
 import sys,os
 import numpy as np
 from visu.andor import SifFile
@@ -30,14 +32,14 @@ class WINMATH(QWidget):
         self.data2=[]
         self.parent=parent
         if conf==None:
-            self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+            self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.Format.IniFormat)
         else :
             self.conf=conf
         self.name=name
         sepa=os.sep
         self.icon=str(p.parent) + sepa+'icons' +sepa
         self.isWinOpen=False
-        self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+        self.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
        
         self.setWindowTitle('Math operations')
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
@@ -108,11 +110,11 @@ class WINMATH(QWidget):
         
         if np.shape(self.data1)==0 or np.shape(self.data2) == 0:
             msg = QMessageBox()
-            msg.setIcon(QMessageBox.Critical)
+            msg.setIcon(QMessageBox.Icon.Critical)
             msg.setText("Select Files !")
             msg.setInformativeText("Select 2 images files  ")
             msg.setWindowTitle("Warning ...")
-            msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+            msg.setWindowFlags(QtCore.Qt.WindowType.WindowStaysOnTopHint)
             msg.exec_()
             
             
@@ -120,11 +122,11 @@ class WINMATH(QWidget):
             
         elif len (self.data1) != len(self.data2) :
             msg = QMessageBox()
-            msg.setIcon(QMessageBox.Critical)
+            msg.setIcon(QMessageBox.Icon.Critical)
             msg.setText("Wrong shape!")
             msg.setInformativeText("The files must have have the same shape  ")
             msg.setWindowTitle("Warning ...")
-            msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+            msg.setWindowFlags(QtCore.Qt.WindowType.WindowStaysOnTopHint)
             msg.exec_()
             
         else :
@@ -158,7 +160,7 @@ class WINMATH(QWidget):
         if fileOpen==False:
             
             chemin=self.conf.value(self.name+"/path")
-            fname=QtGui.QFileDialog.getOpenFileName(self,"Open File",chemin,"Images (*.txt *.spe *.TIFF *.sif *.tif);;Text File(*.txt);;Ropper File (*.SPE);;Andor File(*.sif);; TIFF file(*.TIFF)")
+            fname=QFileDialog.getOpenFileName(self,"Open File",chemin,"Images (*.txt *.spe *.TIFF *.sif *.tif);;Text File(*.txt);;Ropper File (*.SPE);;Andor File(*.sif);; TIFF file(*.TIFF)")
             
             fichier=fname[0]
             self.openedFiles=fichier
@@ -213,7 +215,7 @@ class WINMATH(QWidget):
         
 if __name__ == "__main__":
     appli = QApplication(sys.argv) 
-    appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+    appli.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
     e = WINMATH()
     e.show()
     appli.exec_()        

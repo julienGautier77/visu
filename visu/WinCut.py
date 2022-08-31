@@ -7,12 +7,16 @@ Windows for plot
 """
 
 import pyqtgraph as pg # pyqtgraph biblio permettent l'affichage 
-
 import qdarkstyle # pip install qdakstyle https://github.com/ColinDuquesnoy/QDarkStyleSheet  sur conda
-from PyQt5.QtWidgets import QApplication,QHBoxLayout,QAction,QWidget,QStatusBar,QMainWindow,QVBoxLayout,QLabel,QPushButton,QMessageBox
-from PyQt5.QtGui import QIcon,QColorDialog,QInputDialog,QGridLayout,QDoubleSpinBox,QTableWidget,QTableWidgetItem
+
+from PyQt6 import QtCore,QtGui 
+from PyQt6.QtWidgets  import QApplication,QHBoxLayout,QWidget,QStatusBar,QMainWindow,QVBoxLayout,QLabel,QPushButton,QMessageBox
+from PyQt6.QtWidgets import QColorDialog,QInputDialog,QGridLayout,QDoubleSpinBox,QTableWidget,QTableWidgetItem,QFileDialog
+from PyQt6.QtGui import QAction
+from PyQt6.QtGui import QIcon
+
 import sys,time
-from pyqtgraph.Qt import QtCore,QtGui 
+
 import numpy as np
 import pathlib,os
 from scipy.optimize import curve_fit
@@ -84,7 +88,7 @@ class WINDOWMEAS(QWidget):
         self.icon=str(p.parent) + sepa+'icons' +sepa
         self.setWindowTitle(self.title)
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
-        self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+        self.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
         self.setup()
         self.setGeometry(50, 100, 200, 350)
     
@@ -231,14 +235,14 @@ class GRAPHCUT(QMainWindow):
         self.path=None
         self.axisOn=False
         if conf==None:
-            self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+            self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.Format.IniFormat)
         else :
             self.conf=conf
         self.name=name
         
         self.setWindowTitle(self.title)
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
-        self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+        self.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
         
         self.symbol=symbol
         self.axis=None
@@ -480,7 +484,7 @@ class GRAPHCUT(QMainWindow):
 
         if fileOpen==False:
             chemin=self.conf.value(self.name+"/path")
-            fname=QtGui.QFileDialog.getOpenFileName(self,"Open File",chemin," 1D data (*.txt )")
+            fname=QFileDialog.getOpenFileName(self,"Open File",chemin," 1D data (*.txt )")
             fichier=fname[0]
         else:
             fichier=str(fileOpen)
@@ -494,17 +498,17 @@ class GRAPHCUT(QMainWindow):
             
         else :
             msg = QMessageBox()
-            msg.setIcon(QMessageBox.Critical)
+            msg.setIcon(QMessageBox.Icon.Critical)
             msg.setText("Wrong file format !")
             msg.setInformativeText("The format of the file must be : .txt ")
             msg.setWindowTitle("Warning ...")
-            msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+            msg.setWindowFlags(QtCore.Qt.WindowType.WindowStaysOnTopHint)
             msg.exec_()
     
 
     def SaveF (self):
         
-        fname=QtGui.QFileDialog.getSaveFileName(self,"Save data as txt",self.path)
+        fname=QFileDialog.getSaveFileName(self,"Save data as txt",self.path)
         self.path=os.path.dirname(str(fname[0]))
         fichier=fname[0]
         
@@ -943,7 +947,7 @@ class GRAPHCUT(QMainWindow):
     
 if __name__ == "__main__":
     appli = QApplication(sys.argv) 
-    appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+    appli.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
     e = GRAPHCUT()  
     a=[2,3,7,100,1000]
     b=[2,4,5,100,2000]

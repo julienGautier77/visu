@@ -19,9 +19,11 @@ It can open .spe .SPE, .sif and .TIFF files
 ## Requirements
 *   python 3.x
 *   Numpy
-*   PyQt5
+*   matplotlib
+*   scipy
+*   PyQt6
 *   pyqtgraph (https://github.com/pyqtgraph/pyqtgraph.git) 
-    * Pip install pyqtgraph==0.11.1
+    * Pip install pyqtgraph
 *   qdarkstyle (https://github.com/ColinDuquesnoy/QDarkStyleSheet.git)
     * pip install qdarkstyle
 *  sifread.py
@@ -46,14 +48,14 @@ Or :
     import visu
     
     appli = QApplication(sys.argv)   
-    appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+   
     e = visu.visual.SEE() 
     e.show()
     appli.exec_()
     
   ### To  insert in  a  code
   visu is a  QtWidgets it can be use like  a  widget :  
-  from PyQt5.QtWidgets import QApplication,QWidget  
+  from PyQt6.QtWidgets import QApplication,QWidget  
   widgetVisu=visu.visual.SEE()   
   
 -----------------------------------------

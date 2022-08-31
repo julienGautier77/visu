@@ -1,7 +1,7 @@
 # -*- coding: UTF-8
 """
 Pilotage des controleurs RSAI via les ddl PilmotTango.dll et openMD.dll
-python 3.X pyQT5
+python 3.X pyqtgraph.Qt
 system 32 bit (at least python MSC v.1900 32 bit (Intel)) 
 @author: Gautier julien loa
 Created on Tue Jan 4 10:42:10 2018
@@ -13,7 +13,7 @@ import ctypes
 import time
 
 try:
-    from PyQt5.QtCore import QSettings
+    from pyqtgraph.Qt.QtCore import QSettings
 except:
     from PyQt4.QtCore import QSettings
 

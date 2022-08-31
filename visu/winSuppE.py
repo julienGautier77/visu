@@ -6,12 +6,12 @@ Created on Wed Dec 19 11:43:05 2018
 
 """
 
-from PyQt5.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QWidget,QGridLayout
-from PyQt5.QtWidgets import QCheckBox,QLabel,QSizePolicy,QSpinBox,QPushButton
-from pyqtgraph.Qt import QtCore,QtGui 
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QShortcut
-from PyQt5.QtGui import QIcon
+from PyQt6.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QWidget,QGridLayout
+from PyQt6.QtWidgets import QCheckBox,QLabel,QSizePolicy,QSpinBox,QSizePolicy
+from PyQt6 import QtCore,QtGui 
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QShortcut
+from PyQt6.QtGui import QIcon
 import sys,time
 import pyqtgraph as pg # pyqtgraph biblio permettent l'affichage 
 import numpy as np
@@ -30,7 +30,7 @@ class WINENCERCLED(QWidget):
         self.parent=parent
         p = pathlib.Path(__file__)
         if conf==None:
-            self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+            self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.Format.IniFormat)
         else :
             self.conf=conf
         
@@ -40,7 +40,7 @@ class WINENCERCLED(QWidget):
         self.isWinOpen=False
         self.setWindowTitle('Encercled')
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
-        self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+        self.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
         self.left=100
         self.top=30
         self.width=800
@@ -173,7 +173,7 @@ class WINENCERCLED(QWidget):
         self.winImage = pg.GraphicsLayoutWidget()
         self.winImage.setContentsMargins(0,0,0,0)
         self.winImage.setAspectLocked(True)
-        self.winImage.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.winImage.setSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.MinimumExpanding)
         #self.winImage.ci.setContentsMargins(0,0,0,0)
         
         vbox2=QVBoxLayout()
@@ -598,7 +598,7 @@ class WINENCERCLED(QWidget):
         
 if __name__ == "__main__":
     appli = QApplication(sys.argv) 
-    appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+    appli.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
     e = WINENCERCLED(name='VISU')  
     e.show()
     appli.exec_()         

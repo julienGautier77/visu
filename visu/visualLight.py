@@ -17,35 +17,29 @@ created 2021/11/02 : new design
 
 
 
-
-from PyQt5.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QWidget,QPushButton,QGridLayout
-from PyQt5.QtWidgets import QInputDialog,QSlider,QCheckBox,QLabel,QSizePolicy,QMenu,QMessageBox
-from PyQt5.QtWidgets import QShortcut,QDockWidget,QToolBar,QMainWindow,QToolButton,QAction,QStatusBar
-from pyqtgraph.Qt import QtCore,QtGui 
-from PyQt5.QtCore import Qt,pyqtSlot
-from PyQt5.QtGui import QIcon
-import pylab
-import sys,time,os
+from ctypes import alignment
 import pyqtgraph as pg # pip install pyqtgraph (https://github.com/pyqtgraph/pyqtgraph.git)
+from PyQt6 import QtCore,QtGui
+from PyQt6.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QWidget
+from PyQt6.QtWidgets import QCheckBox,QLabel,QSizePolicy,QMenu,QMessageBox,QFileDialog
+from PyQt6.QtWidgets import QMainWindow,QStatusBar
+from PyQt6.QtGui import QShortcut,QAction
+from PyQt6.QtCore import pyqtSlot,Qt
+from PyQt6.QtGui import QIcon
+import sys,time,os
+
 import numpy as np
 import qdarkstyle # pip install qdarkstyle https://github.com/ColinDuquesnoy/QDarkStyleSheet  sur conda
 from scipy.interpolate import splrep, sproot #
-from scipy.ndimage.filters import gaussian_filter,median_filter
+from scipy.ndimage import gaussian_filter,median_filter
 from PIL import Image
 from visu.winspec import SpeFile
-from visu.winSuppE import WINENCERCLED
-from visu.WinCut import GRAPHCUT
 from visu.winMeas import MEAS
 from visu.WinOption import OPTION
 from visu.WinPreference import PREFERENCES
 from visu.andor import SifFile
-from visu.winFFT import WINFFT
-from visu.winMath import WINMATH
 from visu.winPointing import WINPOINTING
-try :
-    from visu.Win3D import GRAPH3D #conda install pyopengl
-except :
-    print ('')
+
     
 import pathlib
 import visu
@@ -100,14 +94,14 @@ class SEELIGHT(QMainWindow) :
         if "confpath"in kwds :   #confpath path.file pour le fichier ini.
             self.confpath=kwds["confpath"]
             if self.confpath==None:
-                self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+                self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.Format.IniFormat)
             else:
-                self.conf=QtCore.QSettings(self.confpath, QtCore.QSettings.IniFormat)
+                self.conf=QtCore.QSettings(self.confpath, QtCore.QSettings.Format.IniFormat)
             print ('configuration path of visu : ',self.confpath)
             
             # print ('conf path visu',self.confpath,self.conf)
         else:
-            self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+            self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.Format.IniFormat)
         
         if "conf"in kwds:               #conf : le QSetting
             self.conf=kwds["conf"]
@@ -317,18 +311,18 @@ class SEELIGHT(QMainWindow) :
         self.statusBar.addPermanentWidget(self.label_CrossValue)
         
         
-        # self.labelFileName=QLabel("File :")
-        # self.labelFileName.setStyleSheet("font:8pt;")
-        # self.labelFileName.setMinimumHeight(30)
-        # self.labelFileName.setMaximumWidth(40)
+        self.labelFileName=QLabel("File :")
+        self.labelFileName.setStyleSheet("font:8pt;")
+        self.labelFileName.setMinimumHeight(30)
+        self.labelFileName.setMaximumWidth(40)
         
-        # self.fileName=QLabel()
-        # self.fileName.setStyleSheet("font:8pt")
-        # self.fileName.setMaximumHeight(30)
-        # self.fileName.setMaximumWidth(200000)
-        # #self.fileName.setAlignment(Qt.AlignRight)
-        # self.statusBar.addWidget(self.labelFileName)
-        # self.statusBar.addWidget(self.fileName)
+        self.fileName=QLabel()
+        self.fileName.setStyleSheet("font:8pt")
+        self.fileName.setMaximumHeight(30)
+        self.fileName.setMaximumWidth(200000)
+        self.fileName.setAlignment(Qt.AlignmentFlag.AlignVCenter)
+        self.statusBar.addWidget(self.labelFileName)
+        self.statusBar.addWidget(self.fileName)
          
         self.checkBoxScale=QAction(QtGui.QIcon(self.icon+"expand.png"),' Auto Scale on',self)
         self.checkBoxScale.setCheckable(True)
@@ -351,8 +345,8 @@ class SEELIGHT(QMainWindow) :
         self.checkBoxHist.triggered.connect(self.HIST)
         self.ImageMenu.addAction(self.checkBoxHist)
         
-        self.ColorBox=QAction('&LookUp Table',self)
-        menuColor=QMenu()
+        #self.ColorBox=QAction('&LookUp Table',self)
+        menuColor=QMenu('&LookUp Table',self)
         menuColor.addAction('thermal',self.Setcolor)
         menuColor.addAction('flame',self.Setcolor)
         menuColor.addAction('yellowy',self.Setcolor)
@@ -364,8 +358,8 @@ class SEELIGHT(QMainWindow) :
         menuColor.addAction('plasma',self.Setcolor)      
         menuColor.addAction('magma',self.Setcolor)            
         
-        self.ColorBox.setMenu(menuColor)
-        self.ImageMenu.addAction(self.ColorBox)
+        #self.ColorBox.setMenu(menuColor)
+        self.ImageMenu.addMenu(menuColor)
         
         
         self.checkBoxBg=QAction('Background Substraction On',self)
@@ -414,7 +408,7 @@ class SEELIGHT(QMainWindow) :
         self.winImage = pg.GraphicsLayoutWidget()
         self.winImage.setContentsMargins(0,0,0,0)
         self.winImage.setAspectLocked(True)
-        self.winImage.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.winImage.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.winImage.ci.setContentsMargins(0,0,0,0)
         self.vbox2.addWidget(self.winImage)
         self.vbox2.setContentsMargins(0,0,0,0)
@@ -480,7 +474,7 @@ class SEELIGHT(QMainWindow) :
         self.setCentralWidget(MainWidget)
         self.plotRectZoom=pg.RectROI([self.xc/2,self.yc/2],[2*self.rx,2*self.ry],pen='w')
         self.plotRectZoom.addScaleHandle((0,0),center=(1,1))
-        #self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5()) # dark style
+        #self.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6')) # dark style
         
         
         self.Display(self.data)
@@ -586,7 +580,7 @@ class SEELIGHT(QMainWindow) :
                 msg.setText("Background not soustracred !")
                 msg.setInformativeText("Background file error  ")
                 msg.setWindowTitle("Warning ...")
-                msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+                msg.setWindowFlags(QtCore.Qt.WindowType.WindowStaysOnTopHint)
                 msg.exec_()
                 
         if self.checkBoxBg.isChecked()==True and self.winOpt.dataBgExist==False:
@@ -595,7 +589,7 @@ class SEELIGHT(QMainWindow) :
                 msg.setText("Background not soustracted !")
                 msg.setInformativeText("Background file not selected in options menu ")
                 msg.setWindowTitle("Warning ...")
-                msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+                msg.setWindowFlags(QtCore.Qt.WindowType.WindowStaysOnTopHint)
                 msg.exec_()
             
         
@@ -888,7 +882,7 @@ class SEELIGHT(QMainWindow) :
         if fileOpen==False:
             
             chemin=self.conf.value(self.name+"/path")
-            fname=QtGui.QFileDialog.getOpenFileNames(self,"Open File",chemin,"Images (*.txt *.spe *.TIFF *.sif *.tif);;Text File(*.txt);;Ropper File (*.SPE);;Andor File(*.sif);; TIFF file(*.TIFF)")
+            fname=QFileDialog.getOpenFileNames(self,"Open File",chemin,"Images (*.txt *.spe *.TIFF *.sif *.tif);;Text File(*.txt);;Ropper File (*.SPE);;Andor File(*.sif);; TIFF file(*.TIFF)")
             
             fichier=fname[0]
             self.openedFiles=fichier
@@ -927,11 +921,11 @@ class SEELIGHT(QMainWindow) :
 #            self.data=self.data[250:495,:]
         else :
             msg = QMessageBox()
-            msg.setIcon(QMessageBox.Critical)
+            msg.setIcon(QMessageBox.Icon.Critical)
             msg.setText("Wrong file format !")
             msg.setInformativeText("The format of the file must be : .SPE  .TIFF .sif  png jpeg or .txt ")
             msg.setWindowTitle("Warning ...")
-            msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+            msg.setWindowFlags(QtCore.Qt.WindowType.WindowStaysOnTopHint)
             msg.exec_()
             
         chemin=os.path.dirname(fichier)
@@ -949,7 +943,7 @@ class SEELIGHT(QMainWindow) :
         # save data  in TIFF or Text  files
         
         if self.winOpt.checkBoxTiff.isChecked()==True: 
-            fname=QtGui.QFileDialog.getSaveFileName(self,"Save data as TIFF",self.path)
+            fname=QFileDialog.getSaveFileName(self,"Save data as TIFF",self.path)
             self.path=os.path.dirname(str(fname[0]))
             fichier=fname[0]
         
@@ -965,7 +959,7 @@ class SEELIGHT(QMainWindow) :
             self.fileName.setText(fname[0]+'.TIFF') 
             
         else :
-            fname=QtGui.QFileDialog.getSaveFileName(self,"Save data as txt",self.path)
+            fname=QFileDialog.getSaveFileName(self,"Save data as txt",self.path)
             self.path=os.path.dirname(str(fname[0]))
             fichier=fname[0]
             self.dataS=np.rot90(self.data,1)
@@ -1067,7 +1061,7 @@ class SEELIGHT(QMainWindow) :
             fene.show()
         else:
             #fene.activateWindow()
-            fene.raise_()
+            #fene.raise_()
             fene.showNormal()
     
     
@@ -1113,13 +1107,13 @@ class SEELIGHT(QMainWindow) :
         
 def runVisu() :
         
-    from PyQt5.QtWidgets import QApplication
+    from pyqtgraph.Qt.QtWidgets import QApplication
     import sys
     import qdarkstyle
     import visu
     
     appli = QApplication(sys.argv)   
-    appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+    appli.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
     e = visu.visual2.SEE2()
     e.show()
     appli.exec_() 
@@ -1128,7 +1122,7 @@ def runVisu() :
 if __name__ == "__main__":
     
     appli = QApplication(sys.argv) 
-    appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+    appli.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
     e = SEELIGHT(aff='left',roiCross=True,crossON=True,toolBar=False)
     e.show()
     appli.exec_() 

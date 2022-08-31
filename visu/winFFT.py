@@ -15,12 +15,13 @@ import numpy as np
 import qdarkstyle # pip install qdakstyle https://github.com/ColinDuquesnoy/QDarkStyleSheet  sur conda
 import pathlib
 
-from PyQt5.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QWidget,QPushButton,QGridLayout
-from PyQt5.QtWidgets import QInputDialog,QSlider,QCheckBox,QLabel,QSizePolicy,QMenu,QMessageBox
-from PyQt5.QtWidgets import QShortcut
-from pyqtgraph.Qt import QtCore,QtGui 
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QIcon
+from PyQt6.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QWidget,QPushButton,QGridLayout
+from PyQt6.QtWidgets import QInputDialog,QSlider,QCheckBox,QLabel,QSizePolicy,QMenu,QMessageBox
+from PyQt6.QtGui import QShortcut
+from PyQt6 import QtCore,QtGui 
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QIcon
+
 import pylab
 import pyqtgraph as pg # pip install pyqtgraph (https://github.com/pyqtgraph/pyqtgraph.git)
 
@@ -44,7 +45,7 @@ class WINFFT(QWidget):
         self.name=name
         p = pathlib.Path(__file__)
         if conf==None:
-            self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+            self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.Format.IniFormat)
         else :
             self.conf=conf
         sepa=os.sep
@@ -53,7 +54,7 @@ class WINFFT(QWidget):
         self.isWinOpen=False
         self.setWindowTitle('FFT')
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
-        self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+        self.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
         self.setup()      
         
     
@@ -97,9 +98,9 @@ class SEEFFT(QWidget) :
         
         super(SEEFFT, self).__init__()
         p = pathlib.Path(__file__)
-        self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+        self.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
         if conf==None:
-            conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+            conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.Format.IniFormat)
         else :self.conf=conf
         self.name=name
         sepa=os.sep
@@ -297,7 +298,7 @@ class SEEFFT(QWidget) :
         self.winImage = pg.GraphicsLayoutWidget()
         self.winImage.setContentsMargins(0,0,0,0)
         self.winImage.setAspectLocked(True)
-        self.winImage.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.winImage.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.winImage.ci.setContentsMargins(0,0,0,0)
         
         vbox2=QVBoxLayout()
@@ -528,20 +529,20 @@ class SEEFFT(QWidget) :
                 self.data=self.data-self.winOpt.dataBg
             except :
                 msg = QMessageBox()
-                msg.setIcon(QMessageBox.Critical)
+                msg.setIcon(QMessageBox.Icon.Critical)
                 msg.setText("Background not soustracred !")
                 msg.setInformativeText("Background file error  ")
                 msg.setWindowTitle("Warning ...")
-                msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+                msg.setWindowFlags(QtCore.Qt.WindowType.WindowStaysOnTopHint)
                 msg.exec_()
                 
         if self.checkBoxBg.isChecked()==True and self.winOpt.dataBgExist==False:
                 msg = QMessageBox()
-                msg.setIcon(QMessageBox.Critical)
+                msg.setIcon(QMessageBox.Icon.Critical)
                 msg.setText("Background not soustracred !")
                 msg.setInformativeText("Background file not selected in options menu ")
                 msg.setWindowTitle("Warning ...")
-                msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+                msg.setWindowFlags(QtCore.Qt.WindowType.WindowStaysOnTopHint)
                 msg.exec_()
             
             
@@ -957,7 +958,7 @@ class SEEFFT(QWidget) :
        
 if __name__ == "__main__":
     appli = QApplication(sys.argv) 
-    appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+    appli.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
     e = WINFFT(name='VISU')  
     e.show()
     appli.exec_()    

@@ -9,10 +9,10 @@ Windows for plot
 import pyqtgraph as pg # pyqtgraph biblio permettent l'affichage 
 
 import qdarkstyle # pip install qdakstyle https://github.com/ColinDuquesnoy/QDarkStyleSheet  sur conda
-from PyQt5.QtWidgets import QApplication,QHBoxLayout,QWidget,QVBoxLayout,QCheckBox,QLabel,QPushButton,QMessageBox
-from PyQt5.QtGui import QIcon
+from pyqtgraph.Qt.QtWidgets import QApplication,QHBoxLayout,QWidget,QVBoxLayout,QCheckBox,QLabel,QPushButton,QMessageBox
+from pyqtgraph.Qt.QtGui import QIcon
 import sys,time
-from PyQt5.QtCore import Qt
+from pyqtgraph.Qt.QtCore import Qt
 from pyqtgraph.Qt import QtCore,QtGui 
 import numpy as np
 import pathlib,os
@@ -124,7 +124,7 @@ class GRAPH3D(QWidget):
 if __name__ == "__main__":
     z = pg.gaussianFilter(np.random.normal(size=(50,50)), (1,1))
     appli = QApplication(sys.argv) 
-    appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+    appli.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
     e = GRAPH3D() 
     e.Plot3D(data=z)
     e.show()

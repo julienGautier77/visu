@@ -6,11 +6,12 @@ Created on Wed Feb 13 16:02:40 2019
 @author: juliengautier
 """
 
-import qdarkstyle 
-from pyqtgraph.Qt import QtCore,QtGui 
-from PyQt5.QtWidgets import QApplication,QCheckBox,QVBoxLayout,QHBoxLayout,QPushButton,QDoubleSpinBox
-from PyQt5.QtWidgets import QWidget,QLabel,QTextEdit,QSpinBox,QLineEdit,QMessageBox
-from PyQt5.QtGui import QIcon
+import qdarkstyle
+from PyQt6.QtCore import pyqtSignal as Signal
+from PyQt6 import QtCore,QtGui 
+from PyQt6.QtWidgets import QApplication,QCheckBox,QVBoxLayout,QHBoxLayout,QPushButton
+from  PyQt6.QtWidgets import QWidget,QLabel,QSpinBox,QLineEdit,QMessageBox,QFileDialog
+from PyQt6.QtGui import QIcon 
 import sys,os
 import numpy as np
 import socket as _socket
@@ -31,14 +32,14 @@ class OPTION(QWidget):
         p = pathlib.Path(__file__)
         
         if conf==None:
-            self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+            self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.Format.IniFormat)
         else :
             self.conf=conf
         self.name=name
         sepa=os.sep
         self.icon=str(p.parent) + sepa+'icons' +sepa
         self.isWinOpen=False
-        self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+        self.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
        
         self.setWindowTitle('Options Auto Save & visualisation')
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
@@ -148,7 +149,7 @@ class OPTION(QWidget):
         
     def PathChanged(self) :
        
-        self.pathAutoSave=str(QtGui.QFileDialog.getExistingDirectory(self,"Select Directory",self.pathAutoSave))
+        self.pathAutoSave=str(QFileDialog.getExistingDirectory(self,"Select Directory",self.pathAutoSave))
         self.pathBox.setText(self.pathAutoSave)
         self.conf.setValue(self.name+"/pathAutoSave",str(self.pathAutoSave))
         
@@ -173,7 +174,7 @@ class OPTION(QWidget):
     
     def selectBg(self):
         
-        fname=QtGui.QFileDialog.getOpenFileName(self,"Select a background file",self.pathBg,"Images (*.txt *.spe *.TIFF *.sif);;Text File(*.txt);;Ropper File (*.SPE);;Andor File(*.sif);; TIFF file(*.TIFF)")
+        fname=QFileDialog.getOpenFileName(self,"Select a background file",self.pathBg,"Images (*.txt *.spe *.TIFF *.sif);;Text File(*.txt);;Ropper File (*.SPE);;Andor File(*.sif);; TIFF file(*.TIFF)")
         fichier=fname[0]
         ext=os.path.splitext(fichier)[1]
         self.fileBgBox.setText(fichier)
@@ -201,11 +202,11 @@ class OPTION(QWidget):
             
         else :
             msg = QMessageBox()
-            msg.setIcon(QMessageBox.Critical)
+            msg.setIcon(QMessageBox.Icon.Critical)
             msg.setText("Wrong file format !")
             msg.setInformativeText("The format of the file must be : .SPE  .TIFF .sif or .txt ")
             msg.setWindowTitle("Warning ...")
-            msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+            msg.setWindowFlags(QtCore.Qt.WindowType.WindowStaysOnTopHint)
             msg.exec_()
             self.dataBgExist=False
     
@@ -235,7 +236,7 @@ class THREADCLIENT(QtCore.QThread):
     
     '''Second thread for controling one acquisition independtly
     '''
-    newShotnumber=QtCore.Signal(int) # signal to send 
+    newShotnumber=Signal(int)#QtCore.Signal(int) # signal to send 
     
     def __init__(self, parent):
         
@@ -283,7 +284,7 @@ class THREADCLIENT(QtCore.QThread):
      
 if __name__ == "__main__":
     appli = QApplication(sys.argv) 
-    appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+    appli.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
     e = OPTION() 
     e.show()
     appli.exec_() 

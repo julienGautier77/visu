@@ -7,14 +7,12 @@ Created on Mon Apr 12 21:39:01 2021
 """
 
 
-from PyQt5.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QWidget,QPushButton,QGridLayout
-from PyQt5.QtWidgets import QInputDialog,QSlider,QCheckBox,QLabel,QSizePolicy,QMenu,QMessageBox
-from PyQt5.QtWidgets import QShortcut,QDockWidget,QToolBar,QMainWindow,QToolButton,QAction,QStatusBar
-from PyQt5.QtGui import QIcon
+from PyQt6.QtWidgets import QApplication,QVBoxLayout,QWidget
+from PyQt6.QtWidgets import QLabel
+from PyQt6.QtGui import QIcon
 
-from pyqtgraph.Qt import QtCore,QtGui 
-from PyQt5.QtCore import Qt,pyqtSlot
-from PyQt5.QtGui import QIcon
+from PyQt6.QtCore import Qt
+from pyqtgraph.Qt.QtGui import QIcon
 import visu
 import pathlib,os,sys
 import qdarkstyle
@@ -44,7 +42,7 @@ class ABOUT(QWidget):
         
         text1=QLabel('Visualization  Version :  '+self.version)
         text1.setStyleSheet("font:22pt")
-        text1.setAlignment(Qt.AlignCenter)
+        text1.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         text2=QLabel("<a href=\"https://loa.ensta-paris.fr/fr/accueil/\">Laboratoire d'optique Appliquée</a>")
         text2.setAlignment(Qt.AlignCenter)
@@ -82,7 +80,7 @@ class ABOUT(QWidget):
         
 if __name__ == "__main__":
     appli = QApplication(sys.argv) 
-    appli.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+    appli.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
     e = ABOUT()  
     e.show()
     appli.exec_()     
