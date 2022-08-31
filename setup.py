@@ -9,7 +9,7 @@ open('README.md').read()
 from setuptools import setup, find_packages
 import visu
 
-setup(name='visu',version=visu.__version__,packages=find_packages(),author='Julien Gautier',author_email='julien.gautier@ensta.fr',
+setup(name='visu',packages=find_packages(),version=visu.__version__,author='Julien Gautier',author_email='julien.gautier@ensta.fr',
       description='Data visualization',include_package_data=True,package_data={'visu': ['incons/*.*']},
       classifiers=[
         "Programming Language :: Python :: 3",
