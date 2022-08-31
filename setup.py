@@ -9,10 +9,18 @@ open('README.md').read()
 from setuptools import setup, find_packages
 #import visu
 
-setup(name='visu',version=2022.9,packages=find_packages(),author='Julien Gautier',author_email='julien.gautier@ensta.fr',
-      description='Data visualization',include_package_data=True,package_data={'visu': ['incons/*.*']},
+setup(name='visu',version=2022.9,
+      packages=find_packages(),
+      author='Julien Gautier',
+      author_email='julien.gautier@ensta.fr',
+      description='Data visualization',
+      include_package_data=True,
+      package_data={'visu': ['incons/*.*']},
       classifiers=[
         "Programming Language :: Python :: 3",
         "License :: Free for non-commercial use",
-        "Operating System :: OS Independent","Topic :: Scientific/Engineering :: Visualization"],
-      url='https://github.com/julienGautier77/visu',install_requires=['pyqtgraph','matplotlib','PyQt6','qdarkstyle','scipy',])
+        "Operating System :: OS Independent",
+        "Topic :: Scientific/Engineering :: Visualization"
+      ],
+      url='https://github.com/julienGautier77/visu',
+      install_requires=['pyqtgraph','matplotlib','PyQt6','qdarkstyle','scipy',])
