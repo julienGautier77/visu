@@ -42,7 +42,7 @@ It can open .spe .SPE, .sif and .TIFF files
 
 Or :
 
-    from PyQt5.QtWidgets import QApplication
+    from PyQt6.QtWidgets import QApplication
     import sys
     import qdarkstyle
     import visu
