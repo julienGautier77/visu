@@ -20,8 +20,9 @@ import sys,time
 import numpy as np
 import pathlib,os
 from scipy.optimize import curve_fit
-# from scipy.ndimage.filters import gaussian_filter # pour la reduction du bruit
-# from scipy.interpolate import splrep, sproot # pour calcul fwhm et fit 
+from scipy.ndimage import gaussian_filter,median_filter
+#from scipy.ndimage.filters import gaussian_filter # pour la reduction du bruit
+from scipy.interpolate import splrep, sproot # pour calcul fwhm et fit 
 
 
 
@@ -652,13 +653,19 @@ class GRAPHCUT(QMainWindow):
             self.dimx=np.shape(self.cutData)[0]
             self.minX=0
             self.data=self.cutData
-            self.pCut.setData(self.data)
+            if self.clearPlot==False:
+                self.pCut=self.winPLOT.plot(self.cutData,clear=self.clearPlot,symbol=self.symbol,symbolPen=self.symbolPen,symbolBrush=self.symbolBrush,pen=self.pen)
+            else: 
+                self.pCut.setData(self.data)
             self.axisOn=False
         else:
             self.axis=np.array(axis)
             self.dimx=max(self.axis)
             self.minX=min(self.axis)
-            self.pCut.setData(y=self.cutData,x=self.axis)
+            if self.clearPlot==False:
+                self.pCut=self.winPLOT.plot(y=self.cutData,x=self.axis,clear=self.clearPlot,symbol=self.symbol,symbolPen=self.symbolPen,symbolBrush=self.symbolBrush,pen=self.pen)
+            else: 
+                self.pCut.setData(y=self.cutData,x=self.axis)
             self.axisOn=True
             
         self.zoomRectupdate()
@@ -988,12 +995,13 @@ class GRAPHCUT(QMainWindow):
 if __name__ == "__main__":
 
     appli = QApplication(sys.argv) 
-    # appli.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
+    #appli.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
     e = GRAPHCUT()  
     
     a=[2,3,7,100,1000]
     b=[2,4,5,100,2000]
     e.PLOT(a,b)
     e.show()
-    appli.exec_()     
+    
+    appli.exec()     
         
