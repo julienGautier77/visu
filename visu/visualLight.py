@@ -976,7 +976,7 @@ class SEELIGHT(QMainWindow) :
         
         # Do display and save origin data when new data is  sent to  visu
         self.data=data
-       
+        self.data=np.rot90(self.data,self.winPref.rotateValue)
         self.dimy=np.shape(self.data)[1]
         self.dimx=np.shape(self.data)[0]
         self.dataOrgScale=self.data
