@@ -1,0 +1,11 @@
+Metadata-Version: 2.1
+Name: visu
+Version: 2022.1
+Summary: Data visualization
+Home-page: https://github.com/julienGautier77/visu
+Author: Julien Gautier
+Author-email: julien.gautier@ensta.fr
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: Free for non-commercial use
+Classifier: Operating System :: OS Independent
+Classifier: Topic :: Scientific/Engineering :: Visualization
