@@ -14,13 +14,15 @@ from PyQt6.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QMainWindow
 from PyQt6.QtWidgets import QWidget,QTableWidget,QTableWidgetItem,QAbstractItemView,QComboBox,QInputDialog
 from PyQt6.QtGui import QAction
 from PyQt6.QtGui import QIcon
-
+import pyqtgraph as pg
 from scipy import ndimage
 from visu.WinCut import GRAPHCUT
 from visu.winZoom import ZOOM
 import pathlib
 import numpy as np
-import sys,time,os
+import sys,time,os,pylab
+from scipy.interpolate import splrep, sproot #
+from scipy.ndimage import gaussian_filter
 
 
 class MEAS(QMainWindow):
@@ -74,6 +76,12 @@ class MEAS(QMainWindow):
         self.winCoupeXcmass=GRAPHCUT(parent=self,conf=self.conf,name=self.name,symbol='t',pen=None)
         self.winCoupeYcmass=GRAPHCUT(parent=self,conf=self.conf,name=self.name,symbol='t',pen=None)
         self.winCoupeSumThreshold=GRAPHCUT(parent=self,conf=self.conf,name=self.name,symbol='t',pen=None)
+        
+        self.winCoupeV1=GRAPHCUT(parent=self,conf=self.conf,name=self.name,symbol='t',pen=None)
+        self.winCoupeV2=GRAPHCUT(parent=self,conf=self.conf,name=self.name,symbol='t',pen=None)
+        self.winCoupeV3=GRAPHCUT(parent=self,conf=self.conf,name=self.name,symbol='t',pen=None)
+        self.winCoupeV4=GRAPHCUT(parent=self,conf=self.conf,name=self.name,symbol='t',pen=None)
+        
         self.signalTrans=dict()
         
         self.Maxx=[]
@@ -87,6 +95,12 @@ class MEAS(QMainWindow):
         self.labelsVert=[]
         self.posMotor=[]
         self.SummThre=[]
+
+        self.V1=[] # vecteur des differentes valeur de v1
+        self.V2=[]
+        self.V3=[]
+        self.V4=[]
+
         self.winZoomMax=ZOOM()
         self.winZoomSum=ZOOM()
         self.winZoomMean=ZOOM()
@@ -98,6 +112,11 @@ class MEAS(QMainWindow):
         self.maxx=0
         self.summ=0
         self.moy=0
+        self.v1=0
+        self.v2=0
+        self.v3=0
+        self.v4=0
+
         self.label='Shoot'
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
         self.setGeometry(100, 300, 700, 300)
@@ -106,8 +125,24 @@ class MEAS(QMainWindow):
         self.nomFichier=file
         
     def setup(self):
-        
-            
+        ## add widget to see the roi
+        self.winImage = pg.GraphicsLayoutWidget()
+        self.winImage.setContentsMargins(0,0,0,0)
+        self.winImage.setAspectLocked(True)
+        self.winImage.setWindowTitle('ROI MEASUREMENTS')
+        self.p1=self.winImage.addPlot()
+        self.p1.showAxis('right',show=True)
+        self.p1.showAxis('top',show=True)
+        self.p1.showAxis('left',show=True)
+        self.p1.showAxis('bottom',show=True)
+        self.imh=pg.ImageItem()
+       
+        self.p1.addItem(self.imh)
+        self.action()
+        #create the roi
+        self.roi1=pg.EllipseROI([0,0],[10,10],pen='r',movable=False)
+        self.p1.addItem(self.roi1)
+
         vLayout=QVBoxLayout()
         
         hLayout1=QHBoxLayout()
@@ -150,6 +185,10 @@ class MEAS(QMainWindow):
         self.PlotMenu.addAction('Mean',self.PlotMEAN)
         self.PlotMenu.addAction('x center mass',self.PlotXCMASS)
         self.PlotMenu.addAction('y center mass',self.PlotYCMASS)
+        self.PlotMenu.addAction('v1',self.PlotV1)
+        self.PlotMenu.addAction('v2',self.PlotV2)
+        self.PlotMenu.addAction('v3',self.PlotV3)
+        self.PlotMenu.addAction('v4',self.PlotV4)
         
         
         
@@ -178,10 +217,10 @@ class MEAS(QMainWindow):
         self.table=QTableWidget()
         hLayout2.addWidget(self.table)
         
-        self.table.setColumnCount(10)
+        self.table.setColumnCount(14)
         #self.table.setRowCount(10)
        
-        self.table.setHorizontalHeaderLabels(('File','Max','Min','x max','y max','Sum','Mean','Size','x c.mass','y c.mass'))
+        self.table.setHorizontalHeaderLabels(('File','Max','Min','x max','y max','Sum','Mean','Size','x c.mass','y c.mass','V1','V2','V3','V4'))
         
         if self.confMot!=None:
             self.motorNameBox=QComboBox()
@@ -241,6 +280,11 @@ class MEAS(QMainWindow):
         self.labelsVert=[]
         self.posMotor=[]
         self.SummThre=[]
+        self.V1=[]
+        self.V2=[]
+        self.V3=[]
+        self.V4=[]
+
     def saveF(self):
        
         fname=QtGui.QFileDialog.getSaveFileName(self,"Save Measurements as txt file",self.path)
@@ -391,8 +435,40 @@ class MEAS(QMainWindow):
         self.signalTrans['label']=self.label
        
         self.signalPlot.emit(self.signalTrans)
+
+    def PlotV1 (self) :
+        self.open_widget(self.winCoupeV1)
+        self.winCoupeV1.SetTITLE('Plot V1')
+        
+        self.signalTrans['data']=self.V1
+        self.signalTrans['axis']=self.posMotor
+        self.signalTrans['label']=self.label
+        self.signalPlot.emit(self.signalTrans)
+
+    def PlotV2 (self) :
+        self.open_widget(self.winCoupeV2)
+        self.winCoupeV2.SetTITLE('Plot V2')
+        self.signalTrans['data']=self.V2
+        self.signalTrans['axis']=self.posMotor
+        self.signalTrans['label']=self.label 
+        self.signalPlot.emit(self.signalTrans)
     
+    def PlotV3 (self) :
+        self.open_widget(self.winCoupeV3)
+        self.winCoupeV3.SetTITLE('Plot V3')
+        self.signalTrans['data']=self.V3
+        self.signalTrans['axis']=self.posMotor
+        self.signalTrans['label']=self.label 
+        self.signalPlot.emit(self.signalTrans)
     
+    def PlotV4 (self) :
+        self.open_widget(self.winCoupeV4)
+        self.winCoupeV4.SetTITLE('Plot V4')
+        self.signalTrans['data']=self.V4
+        self.signalTrans['axis']=self.posMotor
+        self.signalTrans['label']=self.label 
+        self.signalPlot.emit(self.signalTrans)
+
     def Threshold(self):
         
         threshold, ok=QInputDialog.getInt(self,'Threshold Filter ','Enter thresold value')
@@ -423,6 +499,9 @@ class MEAS(QMainWindow):
         self.ycmass=round(self.ycmass,3)
         self.xs=data.shape[0]
         self.ys=data.shape[1]
+
+        (self.v1,self.v2,self.v3,self.v4)=self.FONC(self.data)
+
         self.table.setRowCount(self.shoot+1)
         self.table.setItem(self.shoot, 0, QTableWidgetItem(str(self.nomFichier)))
         self.table.setItem(self.shoot, 1, QTableWidgetItem(str(self.maxx)))
@@ -434,7 +513,10 @@ class MEAS(QMainWindow):
         self.table.setItem(self.shoot, 7, QTableWidgetItem(  (str(self.xs) +'*'+ str(self.ys) ) ))
         self.table.setItem(self.shoot, 8, QTableWidgetItem( str(self.xcmass) ) )
         self.table.setItem(self.shoot, 9, QTableWidgetItem( str(self.ycmass) ) )
-        
+        self.table.setItem(self.shoot, 10, QTableWidgetItem( str(self.v1) ) )
+        self.table.setItem(self.shoot, 11, QTableWidgetItem( str(self.v2) ) )
+        self.table.setItem(self.shoot, 12, QTableWidgetItem( str(self.v3) ) )
+        self.table.setItem(self.shoot, 13, QTableWidgetItem( str(self.v4) ) )
         
         
         if self.confMot!=None:
@@ -474,12 +556,12 @@ class MEAS(QMainWindow):
             
             
         else:
-            self.TableSauv.append( '%s,%.1f,%.1f,%i,%i,%.1f,%.3f,%.2f,%.2f,%.2f,%.2f,%.2f'% (self.nomFichier,self.maxx,self.minn,self.xmax,self.ymax,self.summ,self.moy,self.xs,self.ys,self.xcmass,self.ycmass,Posi) )
-            self.table.setItem(self.shoot, 10, QTableWidgetItem( str(Posi ) ) )
+            self.TableSauv.append( '%s,%.1f,%.1f,%i,%i,%.1f,%.3f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f'% (self.nomFichier,self.maxx,self.minn,self.xmax,self.ymax,self.summ,self.moy,self.xs,self.ys,self.xcmass,self.ycmass,self.v1,self.v2,self.v3,self.v4,Posi) )
+            self.table.setItem(self.shoot, 14, QTableWidgetItem( str(Posi ) ) )
             if self.confMot!=None:
                 self.table.setColumnCount(11)
             else :
-                self.table.setColumnCount(10)
+                self.table.setColumnCount(14)
         
         
         self.table.selectRow(self.shoot)
@@ -491,10 +573,13 @@ class MEAS(QMainWindow):
         self.Ymax.append(self.ymax)
         self.Xcmass.append(self.xcmass)
         self.Ycmass.append(self.ycmass)
-        
-        
-        self.table.setVerticalHeaderLabels(self.labelsVert)
+        self.V1.append(self.v1)
+        self.V2.append(self.v2)
+        self.V3.append(self.v3)
+        self.V4.append(self.v4)
 
+        self.table.setVerticalHeaderLabels(self.labelsVert)
+        self.table.resizeColumnsToContents()
 
         #  plot Update plot
         if self.winCoupeMax.isWinOpen==True:
@@ -514,7 +599,15 @@ class MEAS(QMainWindow):
         if self.winCoupeYcmass.isWinOpen==True:
             self.PlotYCMASS()
         if self.winCoupeSumThreshold.isWinOpen==True:
-            self.PlotSUMTHRESHOLD()   
+            self.PlotSUMTHRESHOLD()  
+        if self.winCoupeV1.isWinOpen==True:
+            self.PlotV1() 
+        if self.winCoupeV2.isWinOpen==True:
+            self.PlotV2() 
+        if self.winCoupeV3.isWinOpen==True:
+            self.PlotV3() 
+        if self.winCoupeV4.isWinOpen==True:
+            self.PlotV4() 
         # update zoom windows  
         
         if self.winZoomMax.isWinOpen==True:
@@ -613,6 +706,83 @@ class MEAS(QMainWindow):
             
         if self.unitChange==0:
             self.unitChange=1 #avoid /0 
+    
+    def FONC(self,data):
+        #fuction 
+
+        
+        self.imh.setImage(self.data,autoLevels=True,autoDownsample=True)
+
+        (xc,yc)=pylab.unravel_index(self.data.argmax(),self.data.shape) #prend le max #
+        #ndimage.center_of_mass(data) # calcul center of mass pas bien 
+        xc=int(xc)
+        yc=int(yc)
+        
+        # Cut of the image 
+        self.dimy=np.shape(self.data)[1]
+        self.dimx=np.shape(self.data)[0]
+        coupeX=self.data[int(xc),:]
+        coupeY=self.data[:,int(yc)]
+        xxx=np.arange(0,int(self.dimx),1)
+        yyy=np.arange(0,int(self.dimy),1)
+        
+        rx=int(self.PMAX(yyy, coupeX, order=3,p=0.9))
+        ry=int(self.PMAX(xxx, coupeY, order=3,p=0.9))
+        
+        
+        self.roi1.setPos([xc-(rx/2),yc-(ry/2)])
+        self.roi1.setSize([rx,ry])
+        
+
+        sum=self.roi1.getArrayRegion(self.data,self.imh).sum()
+        
+        v1=xc
+        v2=yc
+        v3=round(sum,3)
+        v4=98
+        self.winImage.show()
+        return (v1,v2,v3,v4)
+
+    def PMAX(self,x, y, order=3,p=0.9):
+        """
+            Determine   E*P of a peaked set of points, x and y.
+    
+        """
+        y=gaussian_filter(y,5) # filtre for reducing noise
+        half_max = np.amax(y)*p
+        s = splrep(x, y - half_max,k=order) # F
+        roots = sproot(s) # Given the knots .
+        if len(roots) > 2:
+            print('plus de 2 point : ',len(roots))
+            pass
+            return np.around(abs(roots[1] - roots[0]),decimals=2)
+
+           
+        elif len(roots) < 2:
+            # print(len(roots))
+            pass
+            return 0
+        else:
+            return np.around(abs(roots[1] - roots[0]),decimals=2)
+    
+    def action(self):
+        # mousse action:
+        self.proxy=pg.SignalProxy(self.p1.scene().sigMouseMoved, rateLimit=60, slot=self.mouseMoved)
+        # self.p1.scene().sigMouseClicked.connect(self.mouseClick)
+        self.vb=self.p1.vb
+
+    def mouseMoved(self,evt):
+        pos = evt[0]  ## using signal proxy turns original arguments into a tuple
+        if self.p1.sceneBoundingRect().contains(pos):
+            mousePoint = self.vb.mapSceneToView(pos)
+            xMouse = int(mousePoint.x())
+            yMouse= int(mousePoint.y())
+            if ((xMouse>0 and xMouse<self.dimx-1) and (yMouse>0 and yMouse<self.dimy-1) ):
+                val = self.data[xMouse, yMouse]
+            else:
+                val=0
+            self.p1.setTitle("pixel: (%d, %d)  value: %.3g" % (xMouse, yMouse, val))       
+                
     
 if __name__ == "__main__":
     appli = QApplication(sys.argv) 

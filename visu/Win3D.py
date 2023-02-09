@@ -9,16 +9,17 @@ Windows for plot
 import pyqtgraph as pg # pyqtgraph biblio permettent l'affichage 
 
 import qdarkstyle # pip install qdakstyle https://github.com/ColinDuquesnoy/QDarkStyleSheet  sur conda
-from pyqtgraph.Qt.QtWidgets import QApplication,QHBoxLayout,QWidget,QVBoxLayout,QCheckBox,QLabel,QPushButton,QMessageBox
-from pyqtgraph.Qt.QtGui import QIcon
+from PyQt6.QtWidgets import QApplication, QVBoxLayout,QHBoxLayout,QMainWindow
+from PyQt6.QtGui import QIcon
+import matplotlib.pyplot as plt
 import sys,time
-from pyqtgraph.Qt.QtCore import Qt
-from pyqtgraph.Qt import QtCore,QtGui 
+from PyQt6 import QtCore,QtGui
+from PyQt6.QtCore import pyqtSlot,Qt 
 import numpy as np
 import pathlib,os
 import pyqtgraph.opengl as gl
 
-class GRAPH3D(QWidget):
+class GRAPH3D(QMainWindow):
     
     def __init__(self,symbol=True,title='Plot3D',conf=None,name='VISU'):
         super(GRAPH3D, self).__init__()
@@ -56,16 +57,16 @@ class GRAPH3D(QWidget):
         ## Add a grid to the view
         self.w = gl.GLViewWidget()
         g = gl.GLGridItem()
-        g.scale(10,10,1)
-        g.setDepthValue(10)  # draw grid after surfaces since they may be translucent
-        #self.w.addItem(g)
+        # g.scale(20,20,1)
+        # g.setDepthValue(220)  # draw grid after surfaces since they may be translucent
+        # self.w.addItem(g)
         vLayout.addWidget(self.w)
         self.w.setCameraPosition(distance=1000)
-        self.setLayout(vLayout)
+        self.setCentralWidget(self.w)
         #self.w.show()
         
     def Plot3D(self,data,axisX=None,axisY=None,symbol=True,pen=True,label=None):
-        
+        print('ici plot 3d')
         self.data=data
         self.dimx=np.shape(self.data)[0]
         self.dimy=np.shape(self.data)[1]
@@ -76,21 +77,22 @@ class GRAPH3D(QWidget):
         if self.axisX==None or self.axisY==None:
             
             
-            x = np.linspace(-12, 12, self.dimx)
-            y = np.linspace(-12, 12, self.dimy)
+            # x = np.linspace(-50, 50, self.dimx)
+            # y = np.linspace(-50, 50, self.dimy)
            
            
             
             z=self.data#[:self.dimx,:self.dimy]
-            cm = pg.ColorMap([0, 0.5, 1], 
-                 [(1., 0., 0., 1.), 
-                  (0., 0., 1., 1.), 
-                      (0., 1., 0., 1.)])
+            zmax=z.max()
+            zmin=z.min()
+            if zmax==0:
+                zmax=1
+            z=z/((zmax))
             
-            colors = cm.map((z+z.min()) / (z.max()-z.min()), mode='float')
-            
-            p1 = gl.GLSurfacePlotItem(z=z, colors=colors,shader='heightColor')#.reshape(50*50,4))
-            #p1.shader()['colorMap'] = np.array([0.7, 2, 0.5, 0.2, 0.7, 0.7, 0.2, 0, 2])
+            p1 = gl.GLSurfacePlotItem(z=z, shader='heightColor',computeNormals=False, smooth=False)#.reshape(50*50,4))
+            # p1.shader()['colorMap'] = np.array([0.2, 2, 0.5, 0.2, 1, 1, 0.2, 0, 2])
+            p1.scale(1,1, zmax)  
+              
             self.w.addItem(p1)
         else:
             print('')
