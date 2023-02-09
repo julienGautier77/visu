@@ -1879,7 +1879,7 @@ if __name__ == "__main__":
     
     #file='FP__2201_2019_01_17_13_17_59.TIFF'
     #path='/Users/juliengautier/Dropbox (LOA)/Data_Analysis_LOA/Laser X/Manip Janvier 2019/FP/2019-01-16'
-    e = SEE(aff='left',roiCross=True,fft='on',plot3d='on')#,color="red")#,conf=conf,name=name)
+    e = SEE(aff='left',roiCross=True,fft='on',plot3d='off')#,color="red")#,conf=conf,name=name)
     e.show()
     appli.exec_() 
 
