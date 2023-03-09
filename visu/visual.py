@@ -19,7 +19,7 @@ created 2021/11/02 : new design
 
 import pyqtgraph as pg  #pip install pyqtgraph (https://github.com/pyqtgraph/pyqtgraph.git)
 
-from PyQt6.QtWidgets import QApplication, QVBoxLayout,QHBoxLayout
+from PyQt6.QtWidgets import QApplication, QVBoxLayout,QHBoxLayout,QPushButton
 from PyQt6.QtWidgets import QInputDialog,QSlider,QLabel,QSizePolicy,QMenu,QMessageBox,QFileDialog
 from PyQt6.QtWidgets import QMainWindow,QToolButton,QStatusBar,QFrame
 from PyQt6.QtGui import QShortcut,QAction
@@ -187,16 +187,14 @@ class SEE(QMainWindow) :
         if self.encercled=="on":
             self.winEncercled=WINENCERCLED(parent=self,conf=self.conf,name=self.name)
         
-        
         if "plot3d" in kwds :
             self.plot3D=kwds["plot3d"]
         else:
             self.plot3D="off"
             
-        if self.plot3D=="on":
-            from visu.Win3D import GRAPH3D
-            self.Widget3D=GRAPH3D(self.conf,name=self.name)
-            print('3D actif')
+        # if self.plot3D=="on":
+            
+        #     self.Widget3D=GRAPH3D(self.conf,name=self.name)
         
         
         if "math" in kwds:
@@ -507,9 +505,8 @@ class SEE(QMainWindow) :
             self.ProcessMenu.addMenu(self.menuFilter)
         
         if self.plot3D=="on":
-            self.box3d=QAction('3D')
-            self.AnalyseMenu.addAction(self.box3d)
-            self.box3d.triggered.connect(self.Graph3D)
+            self.box3d=QPushButton('3D', self)
+            self.toolBar.addWidget(self.box3d)
         
         if self.meas=='on':
             self.MeasButton=QAction(QtGui.QIcon(self.icon+"laptop.png"),'Measure',self)
@@ -545,10 +542,6 @@ class SEE(QMainWindow) :
         self.circleButton=QAction(QtGui.QIcon(self.icon+"Red_circle.png"),'add  Cercle',self)
         self.toolBar.addAction(self.circleButton)
         
-        self.polyButton=QAction(QtGui.QIcon(self.icon+"pentagon.png"),'add  pentagone',self)
-        self.toolBar.addAction(self.polyButton)
-
-
         self.PlotButton=QAction(QtGui.QIcon(self.icon+"analytics.png"),'Plot Profile',self)
         self.PlotButton.triggered.connect(self.CUT)
         self.PlotButton.setShortcut("ctrl+k")
@@ -674,14 +667,11 @@ class SEE(QMainWindow) :
         #self.setContentsMargins(1,1,1,1)
         #self.plotLine=pg.LineSegmentROI(positions=((self.dimx/2-100,self.dimy/2),(self.dimx/2+100,self.dimy/2)), movable=True,angle=0,pen='b')
         self.plotLine=pg.LineSegmentROI(positions=((0,200),(200,200)), movable=True,angle=0,pen='w')
-        
-        self.plotPoly=pg.PolyLineROI([[80, 60], [90, 30], [60, 40], [50,30]], pen='g', closed=True)
+        #self.plotLine=pg.PolyLineROI(positions=((0,200),(200,200),(300,200)), movable=True,angle=0,pen='w')
         self.plotRect=pg.RectROI([self.xc,self.yc],[4*self.rx,self.ry],pen='g')
         self.plotCercle=pg.CircleROI([self.xc,self.yc],[80,80],pen='g')
         self.plotRectZoom=pg.RectROI([self.xc,self.yc],[4*self.rx,self.ry],pen='w')
         self.plotRectZoom.addScaleHandle((0,0),center=(1,1))
-
-
         self.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6')) # dark style
         
         
@@ -694,14 +684,13 @@ class SEE(QMainWindow) :
         self.ligneButton.triggered.connect(self.LIGNE)
         self.rectangleButton.triggered.connect(self.Rectangle)
         self.circleButton.triggered.connect(self.CERCLE)
-        self.polyButton.triggered.connect(self.POLY)
         
         self.plotLine.sigRegionChangeFinished.connect(self.LigneChanged)
         self.plotRect.sigRegionChangeFinished.connect(self.RectChanged)
         self.plotCercle.sigRegionChangeFinished.connect(self.CercChanged)
-        self.plotPoly.sigRegionChangeFinished.connect(self.PolyChanged)
         
-        
+        # if self.plot3D=="on":
+        #     self.box3d.clicked.connect(self.Graph3D)
             
         self.winPref.closeEventVar.connect(self.ScaleImg)
         
@@ -759,7 +748,6 @@ class SEE(QMainWindow) :
         try :
             self.p1.removeItem(self.plotRect)
             self.p1.removeItem(self.plotCercle)
-            self.p1.removeItem(self.plotPoly)
         except:pass
     
         if self.ite=='line':
@@ -795,7 +783,6 @@ class SEE(QMainWindow) :
         try :
             self.p1.removeItem(self.plotLine)
             self.p1.removeItem(self.plotCercle)
-            self.p1.removeItem(self.plotPoly)
         except:pass
         
         if self.ite=='rect':
@@ -819,8 +806,6 @@ class SEE(QMainWindow) :
         try :
             self.p1.removeItem(self.plotRect)
             self.p1.removeItem(self.plotLine)
-            self.p1.removeItem(self.plotPoly)
-            
         except:pass
         #self.p1.clear()
         if self.ite=='cercle':
@@ -836,26 +821,6 @@ class SEE(QMainWindow) :
         self.cut=(self.plotCercle.getArrayRegion(self.data,self.imh))
         self.cut1=self.cut.mean(axis=1)
     
-    def POLY(self) : 
-        #plot a line
-        try :
-            self.p1.removeItem(self.plotRect)
-            self.p1.removeItem(self.plotCercle)
-        except:pass
-    
-        if self.ite=='poly':
-            self.p1.removeItem(self.plotPoly)
-            self.ite=None
-        else: 
-            self.ite='poly'
-            self.p1.addItem(self.plotPoly)
-            self.PolyChanged()
-
-    def PolyChanged(self):
-        # take ROI
-        self.cut=(self.plotPoly.getArrayRegion(self.data,self.imh))
-        self.cut1=self.cut.mean(axis=1)
-
     def CUT(self): 
         # plot on a separated widget the ROI plot profile
         if self.ite=='line':
@@ -875,10 +840,10 @@ class SEE(QMainWindow) :
             # self.winCoupe.PLOT(self.cut1)#,symbol=False)
             self.signalPlot.emit(self.signalTrans)
    
-    def Graph3D (self):
+    # def Graph3D (self):
         
-        self.open_widget(self.Widget3D)
-        self.Widget3D.Plot3D(self.data)
+    #     self.open_widget(self.Widget3D)
+    #     self.Widget3D.Plot3D(self.data)
         
         
     def Measurement(self) :
@@ -899,13 +864,6 @@ class SEE(QMainWindow) :
                 self.signalMeas.emit(self.cut)
                 # self.winM.Display(self.cut)
         
-        if self.ite=='poly':
-            self.PolyChanged()
-            if self.meas=="on":
-                self.winM.setFile(self.nomFichier)
-                self.open_widget(self.winM)
-                self.signalMeas.emit(self.cut)
-
         # if self.ite=='line':
         #     self.LigneChanged()
         #     self.winM.setFile(self.nomFichier)
@@ -1062,8 +1020,6 @@ class SEE(QMainWindow) :
                 self.CUT()
             if self.ite=='cercle':
                 self.CercChanged()
-            if self.ite=='poly':
-                self.PolyChanged()
         if self.meas=="on":       
             if self.winM.isWinOpen==True: #  measurement update
                 if self.ite=='rect':
@@ -1072,18 +1028,15 @@ class SEE(QMainWindow) :
                 elif self.ite=='cercle':
                     self.CercChanged()
                     self.Measurement()
-                elif self.ite=='poly':
-                    self.PolyChanged()
-                    self.Measurement()
                 else :
                     self.Measurement()
         if self.fft=='on':        
             if self.winFFT.isWinOpen==True: # fft update
                 self.winFFT.Display(self.data)
                 
-        if self.plot3D=="on":
-            if self.Widget3D.isWinOpen==True:
-                self.Graph3D()
+        # if self.plot3D=="on":
+        #     if self.Widget3D.isWinOpen==True:
+        #         self.Graph3D()
         if self.winPointing.isWinOpen==True:
             self.Pointing()
         if self.winZoomMax.isWinOpen==True:
@@ -1213,9 +1166,9 @@ class SEE(QMainWindow) :
             
             if self.maxGraphBox.isChecked()==True  and self.bloqKeyboard==False  : # find and fix the cross on the maximum of the image
                 
-                #dataF=gaussian_filter(self.data,3)
+                dataF=gaussian_filter(self.data,3)
                 # dataF=self.data
-                (self.xc,self.yc)=np.unravel_index(self.data.argmax(),self.data.shape) #take the max ndimage.measurements.center_of_mass(dataF)#
+                (self.xc,self.yc)=np.unravel_index(dataF.argmax(),self.data.shape) #take the max ndimage.measurements.center_of_mass(dataF)#
                 self.vLine.setPos(self.xc)
                 self.hLine.setPos(self.yc)
                 if self.roiCross==True:
@@ -1879,7 +1832,7 @@ if __name__ == "__main__":
     
     #file='FP__2201_2019_01_17_13_17_59.TIFF'
     #path='/Users/juliengautier/Dropbox (LOA)/Data_Analysis_LOA/Laser X/Manip Janvier 2019/FP/2019-01-16'
-    e = SEE(aff='left',roiCross=True,fft='on',plot3d='off')#,color="red")#,conf=conf,name=name)
+    e = SEE(aff='left',roiCross=True)#,color="red")#,conf=conf,name=name)
     e.show()
     appli.exec_() 
 
