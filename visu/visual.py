@@ -1166,9 +1166,9 @@ class SEE(QMainWindow) :
             
             if self.maxGraphBox.isChecked()==True  and self.bloqKeyboard==False  : # find and fix the cross on the maximum of the image
                 
-                dataF=gaussian_filter(self.data,3)
+                #dataF=gaussian_filter(self.data,3)
                 # dataF=self.data
-                (self.xc,self.yc)=np.unravel_index(dataF.argmax(),self.data.shape) #take the max ndimage.measurements.center_of_mass(dataF)#
+                (self.xc,self.yc)=np.unravel_index(self.data.argmax(),self.data.shape) #take the max ndimage.measurements.center_of_mass(dataF)#
                 self.vLine.setPos(self.xc)
                 self.hLine.setPos(self.yc)
                 if self.roiCross==True:
