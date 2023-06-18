@@ -26,7 +26,7 @@ from PyQt6.QtGui import QShortcut,QAction
 from PyQt6 import QtCore,QtGui
 from PyQt6.QtCore import pyqtSlot,Qt
 from PyQt6.QtGui import QIcon
-
+from PyQt6.QtGui import QFont
 import sys,time,os
 
 import numpy as np
@@ -368,7 +368,7 @@ class SEE(QMainWindow) :
         self.maxGraphBox=QAction('Set Cross on the max',self)
         self.maxGraphBox.setCheckable(True)
         self.maxGraphBox.setChecked(False)
-        self.maxGraphBox.triggered.connect(self.Coupe)
+        self.maxGraphBox.triggered.connect(self.Maxcross)
         self.AnalyseMenu.addAction(self.maxGraphBox)
         
         
@@ -435,20 +435,20 @@ class SEE(QMainWindow) :
         self.ImageMenu.addAction(self.checkBoxHist)
         
         #self.ColorBox=QMenu('&LookUp Table',self) #
-        menuColor=QMenu('LookUp Table',self)
-        menuColor.addAction('thermal',self.Setcolor)
-        menuColor.addAction('flame',self.Setcolor)
-        menuColor.addAction('yellowy',self.Setcolor)
-        menuColor.addAction('bipolar',self.Setcolor)
-        menuColor.addAction('spectrum',self.Setcolor)
-        menuColor.addAction('cyclic',self.Setcolor)
-        menuColor.addAction('viridis',self.Setcolor) 
-        menuColor.addAction('inferno',self.Setcolor)
-        menuColor.addAction('plasma',self.Setcolor)      
-        menuColor.addAction('magma',self.Setcolor)            
+        self.menuColor=QMenu('&LookUp Table')
+        self.menuColor.addAction('thermal',self.Setcolor)
+        self.menuColor.addAction('flame',self.Setcolor)
+        self.menuColor.addAction('yellowy',self.Setcolor)
+        self.menuColor.addAction('bipolar',self.Setcolor)
+        self.menuColor.addAction('spectrum',self.Setcolor)
+        self.menuColor.addAction('cyclic',self.Setcolor)
+        self.menuColor.addAction('viridis',self.Setcolor) 
+        self.menuColor.addAction('inferno',self.Setcolor)
+        self.menuColor.addAction('plasma',self.Setcolor)      
+        self.menuColor.addAction('magma',self.Setcolor)            
         
         #self.ColorBox.setMenu(menuColor)
-        self.ImageMenu.addMenu(menuColor)
+        self.ImageMenu.addMenu(self.menuColor)
         
         
         self.checkBoxBg=QAction('Background Substraction On',self)
@@ -495,7 +495,7 @@ class SEE(QMainWindow) :
         
         if self.winFilter=='on':
             #self.filtreBox=QAction('&Filters',self)
-            self.menuFilter=QMenu('&Filters',self)
+            self.menuFilter=QMenu('&Filters')
             self.menuFilter.addAction('&Gaussian',self.Gauss)
             self.menuFilter.addAction('&Median',self.Median)
             self.menuFilter.addAction('&Threshold',self.Threshold)
@@ -503,7 +503,12 @@ class SEE(QMainWindow) :
             
             #self.filtreBox.setMenu(menu)
             self.ProcessMenu.addMenu(self.menuFilter)
-        
+    
+        self.removeHP=QAction('Hot Pixel Removed On',self)
+        self.removeHP.setCheckable(True)
+        self.removeHP.setChecked(False)
+        self.ProcessMenu.addAction(self.removeHP)
+
         if self.plot3D=="on":
             self.box3d=QPushButton('3D', self)
             self.toolBar.addWidget(self.box3d)
@@ -594,7 +599,7 @@ class SEE(QMainWindow) :
         self.p1.showAxis('bottom',show=False)
         
         if self.bloqKeyboard==True:
-            self.vLine = pg.InfiniteLine(angle=90, movable=False,pen='r')
+            self.vLine = pg.InfiniteLine(angle=90, movable=False,pen='r') # fixed or not cross 
             self.hLine = pg.InfiniteLine(angle=0, movable=False,pen='r')
         else:
             self.vLine = pg.InfiniteLine(angle=90, movable=False,pen='y')
@@ -606,8 +611,11 @@ class SEE(QMainWindow) :
         self.ry=int(self.conf.value(self.name+"/ry"))
         self.vLine.setPos(self.xc)
         self.hLine.setPos(self.yc)
-       
         
+        self.vLineCrossMax=pg.InfiniteLine(angle=90, movable=False,pen='g') # cross the max
+        self.hLineCrossMax=pg.InfiniteLine(angle=0, movable=False,pen='g')
+        self.labelCmax= pg.TextItem(angle=0)
+
         self.ro1=pg.EllipseROI([self.xc,self.yc],[self.rx,self.ry],pen='r',movable=False)
         self.ro1.setPos([self.xc-(self.rx/2),self.yc-(self.ry/2)])
         
@@ -963,8 +971,13 @@ class SEE(QMainWindow) :
         if self.filter=='median':
             self.data=median_filter(self.data,size=self.sigma)
             #print('median filter')
-        if self.filter=='threshold':
+        if self.filter=='threshold': # 0 si sous le seuil 
             self.data=np.where( self.data<self.threshold,0,self.data)
+        
+        if self.removeHP.isChecked()==True:
+            # Remove hot pixel if data=data.max remplace by mean otherwise by data
+            self.data=np.where( self.data==self.data.max(),self.data.mean(),self.data)
+            
         #### fluence 
         if self.winPref.checkBoxFluence.isChecked()==1: # fluence on 
            energy=self.winPref.energy.value()
@@ -1158,22 +1171,60 @@ class SEE(QMainWindow) :
         else:
             return np.around(abs(roots[1] - roots[0]),decimals=2)
         
-       
+    def Maxcross(self):
+        if self.maxGraphBox.isChecked()==True: # Set another cross on the maximum in green
+                self.p1.addItem(self.vLineCrossMax, ignoreBounds=False)
+                self.p1.addItem(self.hLineCrossMax, ignoreBounds=False)
+                self.p1.addItem(self.labelCmax)
+                self.labelCmax.setColor('g')
+                self.labelCmax.setTextWidth(60)
+                f=QFont()
+                f.setPointSize(9)
+                self.labelCmax.setFont(f)
+                self.Coupe()
+        else :
+            try :
+
+                self.p1.removeItem(self.vLineCrossMax)
+                self.p1.removeItem(self.hLineCrossMax)
+                self.p1.removeItem(self.labelCmax)
+            except:
+                pass       
+
     def Coupe(self):
         # make  plot profile on cross
         
-        if self.checkBoxPlot.isChecked()==True:
-            
-            if self.maxGraphBox.isChecked()==True  and self.bloqKeyboard==False  : # find and fix the cross on the maximum of the image
-                
+        if self.maxGraphBox.isChecked()==True: # Set another cross on the maximum in green
                 #dataF=gaussian_filter(self.data,3)
                 # dataF=self.data
-                (self.xc,self.yc)=np.unravel_index(self.data.argmax(),self.data.shape) #take the max ndimage.measurements.center_of_mass(dataF)#
-                self.vLine.setPos(self.xc)
-                self.hLine.setPos(self.yc)
-                if self.roiCross==True:
-                    self.ro1.setPos([self.xc-(self.rx/2),self.yc-(self.ry/2)])
+                if self.ite=='rect':
+                    dataforMax=(self.plotRect.getArrayRegion(self.data,self.imh))
+                    x=self.plotRect.pos()[0]
+                    y=self.plotRect.pos()[1]
+                elif self.ite=='cercle':
+                    dataforMax=(self.plotCercle.getArrayRegion(self.data,self.imh))
+                    x=self.plotCercle.pos()[0]
+                    y=self.plotCercle.pos()[1]
+                else :
+                    dataforMax=self.data
+                    x=0
+                    y=0
+                (self.xcMax,self.ycMax)=np.unravel_index(dataforMax.argmax(),dataforMax.shape) #take the max ndimage.measurements.center_of_mass(dataF)#
+                self.xcMax=round(self.xcMax+x,1)
+                self.ycMax=round(self.ycMax+y,1)
+                self.vLineCrossMax.setPos(self.xcMax)
+                self.hLineCrossMax.setPos(self.ycMax)
+                self.labelCmax.setText("x=%s y=%s .=%s" % (str(self.xcMax), str(self.ycMax), str(round(self.data[int(self.xcMax),int(self.ycMax)],1))))
+                self.labelCmax.setPos(int(self.xcMax),int(self.ycMax))
+                
+
+                # if self.roiCross==True:
+                #     self.ro1.setPos([self.xc-(self.rx/2),self.yc-(self.ry/2)])
+
+        if self.checkBoxPlot.isChecked()==True:
             
+            
+
                 
             try :
                 dataCross=self.data[int(self.xc),int(self.yc)]
@@ -1437,10 +1488,10 @@ class SEE(QMainWindow) :
         
     def Threshold(self):
         self.filter='threshold'
-        threshold, ok=QInputDialog.getInt(self,'Threshold Filter ','Enter thresold value')
+        threshold, ok=QInputDialog.getInt(self,'Threshold Filter ','Enter threshold value')
         if ok:
             self.threshold=threshold
-            self.menuFilter.setTitle('F: Thresold')
+            self.menuFilter.setTitle('F: Threshold')
             self.Display(self.data)
     def Orig(self):
         """
@@ -1609,7 +1660,7 @@ class SEE(QMainWindow) :
     @pyqtSlot (object) 
     def newDataReceived(self,data):
         
-        # Do display and save origin data when new data is  sent to  visu
+        # Do display and save origin data when new dDisplayata is  sent to  visu
         
         self.data=data
         self.ImgFrame.animateClick() # change icon data when receive image

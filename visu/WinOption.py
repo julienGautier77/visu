@@ -190,11 +190,11 @@ class OPTION(QWidget):
             dataSPE=SpeFile(fichier)
             data1=dataSPE.data[0]#.transpose() # first frame
             self.dataBg=data1#np.flipud(data1)
-        elif ext=='.TIFF' or ext=='.tiff' : # tiff File
+        elif ext=='.TIFF':# tiff File
             from PIL import Image
             dat=Image.open(fichier)
+            dat=np.rot90(dat,3)
             self.dataBg=np.array(dat)
-            self.dataBg=np.rot90(self.dataBg,-1)
         elif ext=='.sif': 
             from andor import SifFile
             sifop=SifFile()
