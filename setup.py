@@ -9,7 +9,7 @@ open('README.md').read()
 from setuptools import setup, find_packages
 #import visu
 
-setup(name='visu',version=2023.06,
+setup(name='visu',version=2023.07,
       packages=find_packages(),
       author='Julien Gautier',
       author_email='julien.gautier@ensta.fr',
