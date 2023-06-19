@@ -1898,7 +1898,7 @@ def runVisu(file=None,path=None) :
     
     appli = QApplication(sys.argv)   
     appli.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
-    e = visu.visual2.SEE2(file=file,path=path)
+    e = visu.visual.SEE(file=file,path=path)
     e.show()
     appli.exec_() 
 
