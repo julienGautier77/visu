@@ -547,6 +547,10 @@ class SEE(QMainWindow) :
         self.circleButton=QAction(QtGui.QIcon(self.icon+"Red_circle.png"),'add  Cercle',self)
         self.toolBar.addAction(self.circleButton)
         
+
+        self.pentaButton=QAction(QtGui.QIcon(self.icon+"pentagon.png"),'add  Pentagon',self)
+        self.toolBar.addAction(self.pentaButton)
+
         self.PlotButton=QAction(QtGui.QIcon(self.icon+"analytics.png"),'Plot Profile',self)
         self.PlotButton.triggered.connect(self.CUT)
         self.PlotButton.setShortcut("ctrl+k")
@@ -673,11 +677,12 @@ class SEE(QMainWindow) :
         
         self.setCentralWidget(MainWidget)
         #self.setContentsMargins(1,1,1,1)
-        #self.plotLine=pg.LineSegmentROI(positions=((self.dimx/2-100,self.dimy/2),(self.dimx/2+100,self.dimy/2)), movable=True,angle=0,pen='b')
+        
         self.plotLine=pg.LineSegmentROI(positions=((0,200),(200,200)), movable=True,angle=0,pen='w')
-        #self.plotLine=pg.PolyLineROI(positions=((0,200),(200,200),(300,200)), movable=True,angle=0,pen='w')
+        
         self.plotRect=pg.RectROI([self.xc,self.yc],[4*self.rx,self.ry],pen='g')
         self.plotCercle=pg.CircleROI([self.xc,self.yc],[80,80],pen='g')
+        self.plotPentagon=pg.PolyLineROI([[self.xc,self.yc],[4*self.rx,self.ry],[self.rx,4*self.ry],[4*self.rx,4*self.ry]],closed=True,pos=[80,80],pen='g')
         self.plotRectZoom=pg.RectROI([self.xc,self.yc],[4*self.rx,self.ry],pen='w')
         self.plotRectZoom.addScaleHandle((0,0),center=(1,1))
         self.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6')) # dark style
@@ -686,16 +691,16 @@ class SEE(QMainWindow) :
         
     def actionButton(self):
         # action of button
-        
-       
         self.ro1.sigRegionChangeFinished.connect(self.roiChanged)
         self.ligneButton.triggered.connect(self.LIGNE)
         self.rectangleButton.triggered.connect(self.Rectangle)
         self.circleButton.triggered.connect(self.CERCLE)
+        self.pentaButton.triggered.connect(self.PENTAGON)
         
         self.plotLine.sigRegionChangeFinished.connect(self.LigneChanged)
         self.plotRect.sigRegionChangeFinished.connect(self.RectChanged)
         self.plotCercle.sigRegionChangeFinished.connect(self.CercChanged)
+        self.plotPentagon.sigRegionChangeFinished.connect(self.PentaChanged)
         
         # if self.plot3D=="on":
         #     self.box3d.clicked.connect(self.Graph3D)
@@ -756,6 +761,7 @@ class SEE(QMainWindow) :
         try :
             self.p1.removeItem(self.plotRect)
             self.p1.removeItem(self.plotCercle)
+            self.p1.removeItem(self.plotPentagon)
         except:pass
     
         if self.ite=='line':
@@ -791,6 +797,7 @@ class SEE(QMainWindow) :
         try :
             self.p1.removeItem(self.plotLine)
             self.p1.removeItem(self.plotCercle)
+            self.p1.removeItem(self.plotPentagon)
         except:pass
         
         if self.ite=='rect':
@@ -814,6 +821,7 @@ class SEE(QMainWindow) :
         try :
             self.p1.removeItem(self.plotRect)
             self.p1.removeItem(self.plotLine)
+            self.p1.removeItem(self.plotPentagon)
         except:pass
         #self.p1.clear()
         if self.ite=='cercle':
@@ -826,7 +834,27 @@ class SEE(QMainWindow) :
         
     def CercChanged(self):
         # take ROI
+        print('CerchChange')
         self.cut=(self.plotCercle.getArrayRegion(self.data,self.imh))
+        self.cut1=self.cut.mean(axis=1)
+
+
+    def PENTAGON(self):
+        try :
+            self.p1.removeItem(self.plotRect)
+            self.p1.removeItem(self.plotLine)
+            self.p1.removeItem(self.plotCercle)
+        except:pass
+        #self.p1.clear()
+        if self.ite=='pentagon':
+            self.p1.removeItem(self.plotPentagon)
+            self.ite=None
+        else:
+            self.p1.addItem(self.plotPentagon) 
+            self.ite='pentagon'
+
+    def PentaChanged(self):
+        self.cut=(self.plotPentagon.getArrayRegion(self.data,self.imh))
         self.cut1=self.cut.mean(axis=1)
     
     def CUT(self): 
@@ -872,11 +900,13 @@ class SEE(QMainWindow) :
                 self.signalMeas.emit(self.cut)
                 # self.winM.Display(self.cut)
         
-        # if self.ite=='line':
-        #     self.LigneChanged()
-        #     self.winM.setFile(self.nomFichier)
-        #     self.open_widget(self.winM)
-        #     self.winM.Display(self.cut)
+        if self.ite=='pentagon':
+             self.PentaChanged()
+             if self.meas=="on":
+                self.winM.setFile(self.nomFichier)
+                self.open_widget(self.winM)
+                self.signalMeas.emit(self.cut)
+             
         
         if self.ite==None:
             if self.meas=="on":
@@ -896,6 +926,9 @@ class SEE(QMainWindow) :
             pData=self.cut
         elif self.ite=='cercle':
             self.CercChanged() 
+            pData=self.cut
+        elif self.ite=='pentagon':
+            self.PentaChanged() 
             pData=self.cut
         elif self.ite==None:
             pData=self.data
@@ -1040,6 +1073,9 @@ class SEE(QMainWindow) :
                     self.Measurement()
                 elif self.ite=='cercle':
                     self.CercChanged()
+                    self.Measurement()
+                elif self.ite=='pentagon':
+                    self.PentaChanged()
                     self.Measurement()
                 else :
                     self.Measurement()
@@ -1205,6 +1241,9 @@ class SEE(QMainWindow) :
                     dataforMax=(self.plotCercle.getArrayRegion(self.data,self.imh))
                     x=self.plotCercle.pos()[0]
                     y=self.plotCercle.pos()[1]
+                    dataforMax=(self.plotPenta.getArrayRegion(self.data,self.imh))
+                    x=self.plotPentagon.pos()[0]
+                    y=self.plotPentagon.pos()[1]
                 else :
                     dataforMax=self.data
                     x=0
@@ -1493,6 +1532,7 @@ class SEE(QMainWindow) :
             self.threshold=threshold
             self.menuFilter.setTitle('F: Threshold')
             self.Display(self.data)
+
     def Orig(self):
         """
         return data without filter
@@ -1526,8 +1566,7 @@ class SEE(QMainWindow) :
                 self.sliderImage.setMaximum(self.nbOpenedImage - 1)
                 self.sliderImage.setValue(0)
                 self.sliderImage.setEnabled(True)
-                
-                
+                  
         else:
             fichier=str(fileOpen)
                 
@@ -1574,15 +1613,8 @@ class SEE(QMainWindow) :
         
         chemin=self.conf.value(self.name+"/path")
         fname=QFileDialog.getOpenFileNames(self,"Open File",chemin,"Images (*.txt *.spe *.TIFF *.sif *.tif);;Text File(*.txt);;Ropper File (*.SPE);;Andor File(*.sif);; TIFF file(*.TIFF)")
-           
-            
         self.openedFiles=fname[0]
-            
-            
         fichier=self.openedFiles[0]
-                
-       
-                
         ext=os.path.splitext(fichier)[1]
         
         if ext=='.txt': # text file
@@ -1622,7 +1654,6 @@ class SEE(QMainWindow) :
     
     def SliderImgFct(self):# open multiimage
         nbImgToOpen=int(self.sliderImage.value())
-
         self.OpenF(fileOpen=self.openedFiles[nbImgToOpen])
         
     def SaveF (self):

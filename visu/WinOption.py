@@ -185,6 +185,7 @@ class OPTION(QWidget):
         
         if ext=='.txt': # text file
             self.dataBg=np.loadtxt(str(fichier))
+            self.dataBg=np.rot90(self.dataBg,3)
         elif ext=='.spe' or ext=='.SPE': # SPE file
             from winspec import SpeFile
             dataSPE=SpeFile(fichier)
