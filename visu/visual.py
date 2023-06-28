@@ -811,12 +811,14 @@ class SEE(QMainWindow) :
         
     def RectChanged(self):
         # take ROI
+        
         self.cut=(self.plotRect.getArrayRegion(self.data,self.imh))
         if self.winPref.plotRectOpt.currentIndex()==0:
             self.cut1=self.cut.mean(axis=1)
         else:
             self.cut1=self.cut.sum(axis=1)
-        if self.plotRect.pos()[0]<=0:
+        if self.plotRect.pos()[0]<0:
+            
             self.plotRect.setPos([0,self.plotRect.pos()[1]])
         
     def CERCLE(self) : 
