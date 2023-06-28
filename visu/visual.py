@@ -816,6 +816,8 @@ class SEE(QMainWindow) :
             self.cut1=self.cut.mean(axis=1)
         else:
             self.cut1=self.cut.sum(axis=1)
+        if self.plotRect.pos()[0]<=0:
+            self.plotRect.setPos([0,self.plotRect.pos()[1]])
         
     def CERCLE(self) : 
         try :
