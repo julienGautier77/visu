@@ -1,5 +1,0 @@
-pyqtgraph
-matplotlib
-PyQt6
-qdarkstyle
-scipy
