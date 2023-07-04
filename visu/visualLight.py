@@ -17,7 +17,7 @@ created 2021/11/02 : new design
 
 
 
-from ctypes import alignment
+
 import pyqtgraph as pg # pip install pyqtgraph (https://github.com/pyqtgraph/pyqtgraph.git)
 from PyQt6 import QtCore,QtGui
 from PyQt6.QtWidgets import QApplication,QVBoxLayout,QHBoxLayout,QWidget
@@ -30,8 +30,6 @@ import sys,time,os
 
 import numpy as np
 import qdarkstyle # pip install qdarkstyle https://github.com/ColinDuquesnoy/QDarkStyleSheet  sur conda
-from scipy.interpolate import splrep, sproot #
-from scipy.ndimage import gaussian_filter,median_filter
 from PIL import Image
 from visu.winspec import SpeFile
 from visu.winMeas import MEAS
@@ -85,7 +83,7 @@ class SEELIGHT(QMainWindow) :
         sepa=os.sep
         self.icon=str(p.parent) + sepa+'icons' +sepa
         self.colorBar='flame'
-        
+        self.isWinOpen=True
         self.nomFichier=''
         
         
@@ -215,7 +213,7 @@ class SEELIGHT(QMainWindow) :
         self.actionButton()
         self.activateWindow()
         self.raise_()
-        self.showNormal()
+        #self.showNormal()
         
         
         

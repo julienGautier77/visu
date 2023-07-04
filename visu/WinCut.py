@@ -207,8 +207,6 @@ class WINDOWMEAS(QWidget):
         else:
             return np.around(abs(roots[1] - roots[0]),decimals=2),half_max
     
-    
-    
     def closeEvent(self, event):
         """ when closing the window
         """
@@ -325,8 +323,6 @@ class GRAPHCUT(QMainWindow):
        
         self.AnalyseMenu.addAction(self.fwhmAction)
         
-        
-        
         # self.maxGraphBox=QAction('Set Cross on the max',self)
         # self.maxGraphBox.setCheckable(True)
         # self.maxGraphBox.setChecked(False)
@@ -348,9 +344,6 @@ class GRAPHCUT(QMainWindow):
         self.actionLigneWidth=QAction('Set line width',self)
         self.actionLigneWidth.triggered.connect(self.setWidthLine)
         self.ImageMenu.addAction(self.actionLigneWidth)
-        
-        
-        
         
         self.label_CrossValue=QLabel()
         self.label_CrossValue.setStyleSheet("font:13pt")
@@ -435,9 +428,6 @@ class GRAPHCUT(QMainWindow):
         self.fitAction.triggered.connect(lambda:self.open_widget(self.measWidget))
         self.fitAction.triggered.connect(lambda:self.measWidget.Display(cutData=self.cutData,axis=self.axis, axisOn= self.axisOn,fwhm=self.fwhmAction.isChecked(), fit=self.fit,fitA=self.fitA,fitMu=self.fitMu,fitSigma=self.fitSigma))
         
-        
-        
-        
         self.vLine = pg.InfiniteLine(angle=90, movable=False,pen='y')
         self.hLine = pg.InfiniteLine(angle=0, movable=False,pen='y')
     
@@ -464,7 +454,6 @@ class GRAPHCUT(QMainWindow):
         
         self.setCentralWidget(MainWidget)
         
-        
         self.pCut=self.winPLOT.plot(symbol=self.symbol,symbolPen=self.symbolPen,symbolBrush=self.symbolBrush,pen=self.pen,clear=self.clearPlot)
         pen=pg.mkPen(color='r',width=3)
         self.pFit=self.winPLOT.plot(pen=pen)
@@ -472,7 +461,6 @@ class GRAPHCUT(QMainWindow):
 #        pass
     def addLegend(self)   :
         self.winPLOT.addLegend(offset=(300,100))
-
 
     def actionButton(self):
         
@@ -515,7 +503,6 @@ class GRAPHCUT(QMainWindow):
         fname=QFileDialog.getSaveFileName(self,"Save data as txt",self.path)
         self.path=os.path.dirname(str(fname[0]))
         fichier=fname[0]
-        
         #ext=os.path.splitext(fichier)[1]
         #print(ext)
         print(fichier,' is saved')
@@ -528,10 +515,7 @@ class GRAPHCUT(QMainWindow):
             saveData=saveData.T
             np.savetxt(str(fichier)+'.txt',saveData)
         
-
-        
     def mouseMoved(self,evt):
-        
         
         if self.checkBoxPlot.isChecked()==False: # mouse mvt
             
@@ -551,15 +535,13 @@ class GRAPHCUT(QMainWindow):
 
                             self.yMc= self.yMouse#self.cutData[self.xc]
                             self.label_Cross.setText('x='+ str(round((self.xMc),2)) + ' y=' + str(round(self.yMc,2)))
-                            
-                                
+                                  
                     else :     
                         if (self.xMouse>-1 and self.xMouse<self.dimx-1): # the cross move only in the graph
                             self.xMc = int(self.xMouse)
                             self.yMc= self.cutData[self.xMc]
                             self.label_Cross.setText('x='+ str(round((self.xMc),2)) + ' y=' + str(round(self.cutData[self.xMc],2)))
                             
-        
         
         ## the cross mouve with the mousse mvt
         if self.checkBoxPlot.isChecked()==1 and self.bloqq==0:
@@ -615,8 +597,7 @@ class GRAPHCUT(QMainWindow):
             self.winPLOT.addItem(self.hLine, ignoreBounds=False)
             self.vLine.setPos(self.xc)
             self.hLine.setPos(self.cutData[self.xc]) # the cross move only in the graph    
-            
-            
+        
         else:
             self.winPLOT.removeItem(self.vLine)
             self.winPLOT.removeItem(self.hLine)
@@ -734,7 +715,6 @@ class GRAPHCUT(QMainWindow):
             
         self.CHANGEPLOT(self.cutData)
     
-    
     def setColorLine(self):
         color=QColorDialog.getColor()
         self.color=str(color.name())
@@ -769,7 +749,6 @@ class GRAPHCUT(QMainWindow):
         
         self.CHANGEPLOT(self.cutData)
        
-    
     def zoomRectAct(self):
         
         if self.plotRectZoomEtat=="Zoom": 
@@ -808,11 +787,9 @@ class GRAPHCUT(QMainWindow):
             self.winPLOT.setYRange(self.yZoomMin,self.yZoomMax)
             #self.pwinPlot.setAspectLocked(True)   
     
-    
     def showRange(self):
         
         self.open_widget(self.widgetRange)
-        
         
     def setRangeOn(self) :       
         self.xZoomMin=(self.widgetRange.xMinBox.value())
@@ -828,7 +805,6 @@ class GRAPHCUT(QMainWindow):
         self.winPLOT.setXRange(self.minX,self.dimx)
         self.plotRectZoomEtat="Zoom"
      
-        
     def lockGraph(self):
         
         if self.lockGraphAction.isChecked():
@@ -860,7 +836,6 @@ class GRAPHCUT(QMainWindow):
     def setFit(self):
         self.fit=self.fitAction.isChecked()
         if self.fitAction.isChecked():
-            
             try :
                 if self.axis==None:
                     xxx=np.arange(0,int(self.dimx),1)
@@ -872,24 +847,18 @@ class GRAPHCUT(QMainWindow):
                 else :
                     xxx=self.axis
             try :
-                
                 Datafwhm,xDataMax=self.fwhm(xxx,self.cutData)
-                
                 xmaxx=self.cutData.max()
                 ymaxx=self.cutData[int(xmaxx)]
-                
-                print(xmaxx,ymaxx)
+                #print(xmaxx,ymaxx)
             except:
                 xmaxx,ymaxx,Datafwhm=0,0,0
               
             init_vals = [ymaxx, xmaxx, Datafwhm,0]  # for [A, mu, sigma,B]
             try :
                 best_vals, covar = curve_fit(self.gauss, xxx, gaussian_filter(self.cutData,5), p0=init_vals)
-        
                 y_fit = self.gauss(xxx, best_vals[0], best_vals[1], best_vals[2],best_vals[3])
-    
                 self.pFit.setData(x=xxx,y=y_fit)
-                
             except:
                 y_fit = [0]
                 #print('no fit')
@@ -906,7 +875,6 @@ class GRAPHCUT(QMainWindow):
     def open_widget(self,fene):
         """ open new widget 
         """
-
         if fene.isWinOpen==False:
             fene.setup
             fene.isWinOpen=True
@@ -944,8 +912,6 @@ class GRAPHCUT(QMainWindow):
         else:
             return np.around(abs(roots[1] - roots[0]),decimals=2),half_max
     
-    
-    
     def gauss(self,x, A, mu, sigma,B ):
         if sigma==0:
             return 0
@@ -976,11 +942,6 @@ class GRAPHCUT(QMainWindow):
             self.pCut=self.winPLOT.plot(y=cutData,x=axis,clear=clearPlot,symbol=symbol,symbolPen=symbolPen,pen=pen,name=legend)
             self.axisOn=True
 
-
-
-         
-       
-    
     def closeEvent(self, event):
         """ when closing the window
         """
@@ -992,16 +953,16 @@ class GRAPHCUT(QMainWindow):
         if self.widgetRange.isWinOpen==True:
             self.widgetRange.close()
     
+
+
 if __name__ == "__main__":
 
     appli = QApplication(sys.argv) 
     #appli.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
     e = GRAPHCUT()  
-    
     a=[2,3,7,100,1000]
     b=[2,4,5,100,2000]
     e.PLOT(a,b)
     e.show()
-    
     appli.exec()     
         

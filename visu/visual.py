@@ -12,7 +12,7 @@ pip install qdarkstyle (https://github.com/ColinDuquesnoy/QDarkStyleSheet.git)
 pip install pyqtgraph (https://github.com/pyqtgraph/pyqtgraph.git)
 conda install pyopengl 3D plot
 
-created 2021/11/02 : new design
+modified  : 2023/07/04 
 """
 
 
@@ -48,6 +48,7 @@ from visu.winPointing import WINPOINTING
 from visu.winHist import HISTORY
 from visu import aboutWindows
 from visu.winZoom import ZOOM
+from visu.winCrop import WINCROP
 # try :
 #     from visu.Win3D import GRAPH3D #conda install pyopengl
 # except :
@@ -86,7 +87,8 @@ class SEE(QMainWindow) :
     signalEng=QtCore.pyqtSignal(object)
     signalPointing=QtCore.pyqtSignal(object)
     signalPlot=QtCore.pyqtSignal(object)
-    
+    signalCrop=QtCore.pyqtSignal(object)
+
     def __init__(self,file=None,path=None,parent=None,**kwds):
         
         super().__init__()
@@ -209,6 +211,8 @@ class SEE(QMainWindow) :
             
         self.winPointing=WINPOINTING(parent=self)
         self.winCoupe=GRAPHCUT(parent=self,symbol=None,conf=self.conf,name=self.name)
+
+        self.winCrop=WINCROP(parent=self,conf=self.conf)
         self.path=path
         self.setWindowTitle('Visualization'+'       v.'+ version)
         self.bloqKeyboard=1#bool((self.conf.value(self.name+"/bloqKeyboard"))  )  # block cross by keyboard
@@ -371,8 +375,6 @@ class SEE(QMainWindow) :
         self.maxGraphBox.triggered.connect(self.Maxcross)
         self.AnalyseMenu.addAction(self.maxGraphBox)
         
-        
-        
         self.label_CrossValue=QLabel()
         self.label_CrossValue.setStyleSheet("font:13pt")
         
@@ -426,7 +428,6 @@ class SEE(QMainWindow) :
         self.checkBoxColor.setChecked(True)
         self.toolBar.addAction(self.checkBoxColor)
         self.ImageMenu.addAction(self.checkBoxColor)
-        
     
         self.checkBoxHist=QAction(QtGui.QIcon(self.icon+"colourBar.png"),'Show colour Bar',self)
         self.checkBoxHist.setCheckable(True)
@@ -446,11 +447,9 @@ class SEE(QMainWindow) :
         self.menuColor.addAction('inferno',self.Setcolor)
         self.menuColor.addAction('plasma',self.Setcolor)      
         self.menuColor.addAction('magma',self.Setcolor)            
-        
         #self.ColorBox.setMenu(menuColor)
         self.ImageMenu.addMenu(self.menuColor)
-        
-        
+    
         self.checkBoxBg=QAction('Background Substraction On',self)
         self.checkBoxBg.setCheckable(True)
         self.checkBoxBg.setChecked(False)
@@ -464,6 +463,9 @@ class SEE(QMainWindow) :
             self.AnalyseMenu.addAction(self.energyBox)
             self.energyBox.triggered.connect(self.Energ)
         
+        self.cropBox=QAction(QtGui.QIcon(self.icon+"yin-yang.png"),'Crop Windows',self)
+        self.AnalyseMenu.addAction(self.cropBox)
+        self.cropBox.triggered.connect(self.Crop)
             
         if self.math=="on":
             self.mathButton=QAction(QtGui.QIcon(self.icon+"math.png"),'Math',self)
@@ -500,7 +502,6 @@ class SEE(QMainWindow) :
             self.menuFilter.addAction('&Median',self.Median)
             self.menuFilter.addAction('&Threshold',self.Threshold)
             self.menuFilter.addAction('&Origin',self.Orig)
-            
             #self.filtreBox.setMenu(menu)
             self.ProcessMenu.addMenu(self.menuFilter)
     
@@ -520,18 +521,13 @@ class SEE(QMainWindow) :
             self.AnalyseMenu.addAction(self.MeasButton)
             
         if self.fft=='on':
-            self.fftButton=QAction('FFT')
+            self.fftButton=QAction('FFT',self)
             self.AnalyseMenu.addAction(self.fftButton)
             self.fftButton.triggered.connect(self.fftTransform)
         
         self.PointingButton=QAction(QtGui.QIcon(self.icon+"recycle.png"),'Pointing',self)
         self.PointingButton.triggered.connect(self.Pointing)
         self.AnalyseMenu.addAction(self.PointingButton)       
-        
-        
-        
-        
-        
         
         self.ZoomRectButton=QAction(QtGui.QIcon(self.icon+"loupe.png"),'Zoom',self)
         self.ZoomRectButton.triggered.connect(self.zoomRectAct)
@@ -682,9 +678,10 @@ class SEE(QMainWindow) :
         
         self.plotRect=pg.RectROI([self.xc,self.yc],[4*self.rx,self.ry],pen='g')
         self.plotCercle=pg.CircleROI([self.xc,self.yc],[80,80],pen='g')
-        self.plotPentagon=pg.PolyLineROI([[self.xc,self.yc],[4*self.rx,self.ry],[self.rx,4*self.ry],[4*self.rx,4*self.ry]],closed=True,pos=[80,80],pen='g')
+        self.plotPentagon=pg.PolyLineROI([[self.xc,self.yc],[5*self.rx,2*self.ry],[4*self.rx,4*self.ry],[3*self.rx,6*self.ry]],closed=True,pos=[80,80],pen='g')
         self.plotRectZoom=pg.RectROI([self.xc,self.yc],[4*self.rx,self.ry],pen='w')
         self.plotRectZoom.addScaleHandle((0,0),center=(1,1))
+
         self.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6')) # dark style
         
         
@@ -804,11 +801,10 @@ class SEE(QMainWindow) :
             self.p1.removeItem(self.plotRect)
             self.ite=None
         else :
+            self.ite='rect'
             self.p1.addItem(self.plotRect)
             self.plotRect.setPos([self.dimx/2,self.dimy/2])
-            self.ite='rect'
-            self.RectChanged()
-        
+       
     def RectChanged(self):
         # take ROI
         
@@ -817,31 +813,57 @@ class SEE(QMainWindow) :
             self.cut1=self.cut.mean(axis=1)
         else:
             self.cut1=self.cut.sum(axis=1)
+        
+        # Rectangle inside view
         if self.plotRect.pos()[0]<0:
             
             self.plotRect.setPos([0,self.plotRect.pos()[1]])
-        
+        if self.plotRect.pos()[0]+self.plotRect.size()[0]>self.dimx:
+            x=self.plotRect.pos()[0]
+            y=self.plotRect.pos()[1]
+            sizex=self.dimx-self.plotRect.pos()[0]
+            sizey=self.plotRect.size()[1]
+            self.plotRect.setSize([sizex,sizey],update=False)
+            self.plotRect.setPos([x,y])
+
+        if  self.plotRect.pos()[1]+self.plotRect.size()[1]>self.dimy:
+            print('laaa')
+            x=self.plotRect.pos()[0]
+            y=self.plotRect.pos()[1]
+            print(x,y)
+            sizex=self.plotRect.size()[0]
+            sizey=self.dimy-self.plotRect.pos()[1]
+            print(x,y,sizex,sizey)
+            self.plotRect.setSize([sizex,sizey],update=False) 
+            self.plotRect.setPos([x,y])
+
+        if self.plotRect.pos()[1]<0:
+            
+            self.plotRect.setPos([self.plotRect.pos()[0],0])  
+
+        self.CropChanged()
+
     def CERCLE(self) : 
+        if self.ite=='cercle':
+            self.p1.removeItem(self.plotCercle)
+            self.ite=None
+        else:
+            self.ite='cercle'
+            self.p1.addItem(self.plotCercle) 
+            self.plotCercle.setPos([self.dimx/2,self.dimy/2])
+            
         try :
             self.p1.removeItem(self.plotRect)
             self.p1.removeItem(self.plotLine)
             self.p1.removeItem(self.plotPentagon)
         except:pass
         #self.p1.clear()
-        if self.ite=='cercle':
-            self.p1.removeItem(self.plotCercle)
-            self.ite=None
-        else:
-            self.p1.addItem(self.plotCercle) 
-            self.plotCercle.setPos([self.dimx/2,self.dimy/2])
-            self.ite='cercle'
-        
+    
     def CercChanged(self):
         # take ROI
-        print('CerchChange')
         self.cut=(self.plotCercle.getArrayRegion(self.data,self.imh))
         self.cut1=self.cut.mean(axis=1)
-
+        self.CropChanged()
 
     def PENTAGON(self):
         try :
@@ -854,13 +876,15 @@ class SEE(QMainWindow) :
             self.p1.removeItem(self.plotPentagon)
             self.ite=None
         else:
-            self.p1.addItem(self.plotPentagon) 
             self.ite='pentagon'
+            self.p1.addItem(self.plotPentagon) 
+            
 
     def PentaChanged(self):
         self.cut=(self.plotPentagon.getArrayRegion(self.data,self.imh))
         self.cut1=self.cut.mean(axis=1)
-    
+        self.CropChanged()
+
     def CUT(self): 
         # plot on a separated widget the ROI plot profile
         if self.ite=='line':
@@ -1015,6 +1039,7 @@ class SEE(QMainWindow) :
             # Remove hot pixel if data=data.max remplace by mean otherwise by data
             self.data=np.where( self.data==self.data.max(),self.data.mean(),self.data)
             
+            
         #### fluence 
         if self.winPref.checkBoxFluence.isChecked()==1: # fluence on 
            energy=self.winPref.energy.value()
@@ -1050,7 +1075,6 @@ class SEE(QMainWindow) :
             self.imh.setImage(self.data,autoLevels=True,autoDownsample=True) #.astype(float)
         else :
             self.imh.setImage(self.data,autoLevels=False,autoDownsample=True)
-        
         
         ####update    
         self.Coupe()#self.PlotXY() # graph update
@@ -1094,7 +1118,11 @@ class SEE(QMainWindow) :
             self.Pointing()
         if self.winZoomMax.isWinOpen==True:
             self.ZoomMAX()   
-            
+        if self.winCrop.isWinOpen==True:
+            #print('emit new crop image')
+            self.signalCrop.emit(self.cropImg)
+
+
         #### autosave
         if self.checkBoxAutoSave.isChecked()==True: ## autosave data
             self.pathAutoSave=str(self.conf.value(self.name+'/pathAutoSave'))
@@ -1128,22 +1156,12 @@ class SEE(QMainWindow) :
                 
             self.fileName.setText(nomFichier)
     
-        
-        
-        
     def mouseClick(self,evt): # block the cross if mousse button clicked
-        
-#            
-#            
-#        else:
+ 
         if self.bloqq==1:
             self.bloqq=0
-            
         else :
             self.bloqq=1
-#            self.conf.setValue(self.name+"/xc",int(self.xc)) # save cross postion in ini file
-#            self.conf.setValue(self.name+"/yc",int(self.yc))
-        
             
     def mouseMoved(self,evt):
         if self.checkBoxPlot.isChecked()==False or self.bloqKeyboard==True :  # if not  cross or crossblocked by  keyboard: 
@@ -1224,7 +1242,6 @@ class SEE(QMainWindow) :
                 self.Coupe()
         else :
             try :
-
                 self.p1.removeItem(self.vLineCrossMax)
                 self.p1.removeItem(self.hLineCrossMax)
                 self.p1.removeItem(self.labelCmax)
@@ -1253,11 +1270,11 @@ class SEE(QMainWindow) :
                     x=0
                     y=0
                 (self.xcMax,self.ycMax)=np.unravel_index(dataforMax.argmax(),dataforMax.shape) #take the max ndimage.measurements.center_of_mass(dataF)#
-                self.xcMax=round(self.xcMax+x,1)
-                self.ycMax=round(self.ycMax+y,1)
+                self.xcMax=round(self.xcMax+x,0)
+                self.ycMax=round(self.ycMax+y,0)
                 self.vLineCrossMax.setPos(self.xcMax)
                 self.hLineCrossMax.setPos(self.ycMax)
-                self.labelCmax.setText("x=%s y=%s .=%s" % (str(self.xcMax), str(self.ycMax), str(round(self.data[int(self.xcMax),int(self.ycMax)],1))))
+                self.labelCmax.setText("(%s,%s)=%s" % (str(self.xcMax), str(self.ycMax), str(round(self.data[int(self.xcMax),int(self.ycMax)],1))))
                 self.labelCmax.setPos(int(self.xcMax),int(self.ycMax))
                 
 
@@ -1266,9 +1283,6 @@ class SEE(QMainWindow) :
 
         if self.checkBoxPlot.isChecked()==True:
             
-            
-
-                
             try :
                 dataCross=self.data[int(self.xc),int(self.yc)]
                 
@@ -1283,7 +1297,6 @@ class SEE(QMainWindow) :
             yyy=np.arange(0,int(self.dimy),1)
             coupeXMax=np.max(coupeX)
             coupeYMax=np.max(coupeY)
-            
             
             if coupeXMax==0: # avoid zero
                 coupeXMax=1
@@ -1312,11 +1325,8 @@ class SEE(QMainWindow) :
                  # normalize the curves
                 self.curve2.setData(20+self.xminR+coupeXnorm,yyy,clear=True)
                 self.curve3.setData(xxx,20+self.yminR+coupeYnorm,clear=True)
-                
-            
             
             ###  fwhm on the  X et Y curves if max  >20 counts if checked in winOpt
-            
             
             if self.winPref.checkBoxFwhm.isChecked()==1: # show fwhm values on graph
                 xCXmax=np.amax(coupeXnorm) # max
@@ -1395,12 +1405,9 @@ class SEE(QMainWindow) :
             self.p1.removeItem(self.textY)
             self.p1.showAxis('left',show=False)
             self.p1.showAxis('bottom',show=False)
-            #self.label_Cross.setText('')
-            #self.label_CrossValue.setText('')
             if self.roiCross==True:
                 self.p1.removeItem(self.ro1)
 
-            
     def paletteup(self):
         # change the color scale
         levels=self.imh.getLevels()
@@ -1444,7 +1451,6 @@ class SEE(QMainWindow) :
             self.cont=(self.plotRect.getArrayRegion(self.data,self.imh))
             xmax=self.cont.max()
             xmin=self.cont.min()
-            
         else:
              xmax=self.data.max()
              xmin=self.data.min()
@@ -1453,19 +1459,14 @@ class SEE(QMainWindow) :
         self.imh.setLevels([xmin, xmax])
         self.hist.setHistogramRange(xmin,xmax)
   
-     
-    
     def Setcolor(self):
         action = self.sender()
         self.colorBar=str(action.text())
-        
         self.hist.gradient.loadPreset(self.colorBar)
     
     def Color(self):
         """ image in colour/n&b
         """
-        
-        
         if self.checkBoxColor.isChecked()==1:
             self.checkBoxColor.setIcon(QtGui.QIcon(self.icon+"colors-icon.png"))
             self.hist.gradient.loadPreset(self.colorBar)
@@ -1482,7 +1483,6 @@ class SEE(QMainWindow) :
         self.conf.setValue(self.name+"/rx",int(self.rx))
         self.conf.setValue(self.name+"/ry",int(self.ry))
       
-        
     def bloquer(self): # block the cross by keyboard
         
         self.bloqKeyboard=bool(True)
@@ -1500,15 +1500,9 @@ class SEE(QMainWindow) :
         self.ro1.setPen('y')
         self.conf.setValue(self.name+"/bloqKeyboard",bool(self.bloqKeyboard))
         
-        
-        
     def HIST(self):
-        #show histogramm
-        if self.checkBoxHist.isChecked()==1:
-            self.winImage.addItem(self.hist)
-        else:
+        #show histogrammself.imh.setImage(self.data,autoLevels=True,autoDownsample=True)
             self.winImage.removeItem(self.hist)
-    
     
     def Gauss(self):
         # gauss filter
@@ -1518,7 +1512,6 @@ class SEE(QMainWindow) :
             self.sigma=sigma
             self.menuFilter.setTitle('F: Gaussian')
             self.Display(self.data)
-        
         
     def Median(self):
         #median  filter
@@ -1555,7 +1548,6 @@ class SEE(QMainWindow) :
             
             chemin=self.conf.value(self.name+"/path")
             fname=QFileDialog.getOpenFileNames(self,"Open File",chemin,"Images (*.txt *.spe *.TIFF *.sif *.tif);;Text File(*.txt);;Ropper File (*.SPE);;Andor File(*.sif);; TIFF file(*.TIFF)")
-           
             self.openedFiles=fname[0]
             
             self.nbOpenedImage=len(self.openedFiles)
@@ -1652,11 +1644,12 @@ class SEE(QMainWindow) :
         
         
         self.newWindow=SEELIGHT(conf=self.conf,name=self.name)
+        self.open_widget(self.newWindow)
         self.newWindow.setWindowTitle(fichier)
         self.newWindow.newDataReceived(data)
     
-    
     def SliderImgFct(self):# open multiimage
+
         nbImgToOpen=int(self.sliderImage.value())
         self.OpenF(fileOpen=self.openedFiles[nbImgToOpen])
         
@@ -1685,7 +1678,6 @@ class SEE(QMainWindow) :
             fichier=fname[0]
             self.dataS=np.rot90(self.data,1)
             ext=os.path.splitext(fichier)[1]
-            #print(ext)
             print(fichier,' is saved')
             self.conf.setValue(self.name+"/path",self.path)
             time.sleep(0.1)
@@ -1695,7 +1687,7 @@ class SEE(QMainWindow) :
     @pyqtSlot (object) 
     def newDataReceived(self,data):
         
-        # Do display and save origin data when new dDisplayata is  sent to  visu
+        # Do display and save origin data when new Displadata signal is  sent to  visu
         
         self.data=data
         self.ImgFrame.animateClick() # change icon data when receive image
@@ -1719,8 +1711,6 @@ class SEE(QMainWindow) :
         self.frameName.setText(str(self.frameNumber))
         self.frameNumber=self.frameNumber+1
 
-    
-    
     def ScaleImg(self):
         #scale Axis px to um
         if self.winPref.checkBoxAxeScale.isChecked()==1:
@@ -1739,7 +1729,6 @@ class SEE(QMainWindow) :
             except:
                 pass
         self.Display(self.data)
-    
     
     def zoomRectAct(self): #zoom fonction Display data on a range difined by a rectangular  roi
         
@@ -1781,14 +1770,12 @@ class SEE(QMainWindow) :
         self.Coupe()  #update profile line
         
     def zoomRectupdate(self):
+        
         if self.plotRectZoomEtat=="ZoomOut":
             self.p1.setXRange(self.xZoomMin,self.xZoomMax)
             self.p1.setYRange(self.yZoomMin,self.yZoomMax)
             self.p1.setAspectLocked(True)
-        # else:
-        #     self.p1.setYRange(0,self.dimy)
-        #     self.p1.setXRange(0,self.dimx)
-        #     print('ra')
+    
             
     def flipAct (self):
         ##flip the image up/down
@@ -1799,7 +1786,6 @@ class SEE(QMainWindow) :
         #flip the image left/right
         self.data=np.fliplr(self.data)
         self.Display(self.data)
-    
     
     def open_widget(self,fene):
         """ open new widget 
@@ -1816,11 +1802,9 @@ class SEE(QMainWindow) :
             # fene.raise_()
             fene.showNormal()
     
-    
     def dragEnterEvent(self, e):
         e.accept()
 
-        
     def dropEvent(self, e):
         #allow to drop image in visu and open it
         l = []
@@ -1835,10 +1819,10 @@ class SEE(QMainWindow) :
                 self.sliderImage.setValue(0)
                 self.sliderImage.setEnabled(True)
                 
-        
         self.OpenF(fileOpen=l[0])
     
     def checkBoxScaleImage(self):
+
         if self.checkBoxScale.isChecked()==True:
             self.checkBoxScale.setIcon(QtGui.QIcon(self.icon+"expand.png"))
             self.checkBoxScale.setText('Auto Scale On')
@@ -1854,22 +1838,45 @@ class SEE(QMainWindow) :
         else :
              self.checkBoxAutoSave.setIcon(QtGui.QIcon(self.icon+"diskette.png"))
              self.checkBoxAutoSave.setText('Auto Save off')
-    
-             
+          
     def fluenceFct(self):
+
         self.sizeFluenceX=self.roiFluence.size()[0]
         self.sizeFluenceY=self.roiFluence.size()[1]
         self.Display(self.data)
     
-    
     def ZoomMAX(self):
+
         self.open_widget(self.winZoomMax)
         self.winZoomMax.SetTITLE('MAX')
         self.maxx=round(self.data.max(),3)
         self.winZoomMax.setZoom(self.maxx)
     
+    def Crop(self):
+        
+        self.open_widget(self.winCrop)
+        self.CropChanged()
+
+    def CropChanged(self):
+        
+        if self.winCrop.isWinOpen:
+            
+            if self.ite=="pentagon":
+                self.cropImg=self.plotPentagon.getArrayRegion(self.data,self.imh)
+            elif self.ite=='rect':
+                self.cropImg=self.plotRect.getArrayRegion(self.data,self.imh)
+            elif self.ite=='cercle':
+                self.cropImg=self.plotCercle.getArrayRegion(self.data,self.imh)
+            else:
+                self.cropImg=self.data
+            self.winCrop.Display(self.cropImg)
+     
     def closeEvent(self,event):
+        
         self.close()
+        time.sleep(0.1)
+        event.accept
+
     def close(self):
         
         # when the window is closed
@@ -1890,6 +1897,8 @@ class SEE(QMainWindow) :
                 self.winFFT.close()
             if self.winFFT1D.isWinOpen==True:
                 self.winFFT1D.close()
+        if self.winCrop.isWinOpen==True:
+            self.winCrop.close()
         
        
         

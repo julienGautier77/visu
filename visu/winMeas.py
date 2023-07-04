@@ -5,6 +5,7 @@ Created on Sun Feb 10 09:44:07 2019
 Window for Measurement
 @author: juliengautier
 modified 2019/08/13 : add motors RSAI position and zoom windows
+modified 2023/07/04 add user function
 """
 
 
@@ -15,13 +16,12 @@ from PyQt6.QtWidgets import QWidget,QTableWidget,QTableWidgetItem,QAbstractItemV
 from PyQt6.QtGui import QAction
 from PyQt6.QtGui import QIcon
 from PyQt6.QtCore import Qt
-from scipy import ndimage
 from visu.WinCut import GRAPHCUT
 from visu.winZoom import ZOOM
 import pathlib
 import numpy as np
 import sys,time,os
-
+from random import *
 
 class MEAS(QMainWindow):
     
@@ -41,7 +41,6 @@ class MEAS(QMainWindow):
             self.conf=conf
         self.confMot=confMot   
         self.name=name
-        
         self.ThresholdState=False
         self.symbol=False
         if self.confMot!=None:    
@@ -62,7 +61,7 @@ class MEAS(QMainWindow):
         self.setWindowTitle('MEASUREMENTS')
         self.shoot=0
         self.nomFichier=''
-        self.TableSauv=['file,Max,Min,x Max,y max,Sum,Mean,Size,x c.mass,y c.mass']
+        self.TableSauv=['file,Max,Min,x Max,y max,Sum,Mean,Size,x c.mass,y c.mass,user1']
         
         self.path=self.conf.value(self.name+"/path")
         self.winCoupeMax=GRAPHCUT(parent=self,conf=self.conf,name=self.name,symbol='t',pen=None)
@@ -74,6 +73,7 @@ class MEAS(QMainWindow):
         self.winCoupeXcmass=GRAPHCUT(parent=self,conf=self.conf,name=self.name,symbol='t',pen=None)
         self.winCoupeYcmass=GRAPHCUT(parent=self,conf=self.conf,name=self.name,symbol='t',pen=None)
         self.winCoupeSumThreshold=GRAPHCUT(parent=self,conf=self.conf,name=self.name,symbol='t',pen=None)
+        self.winCoupeUser1=GRAPHCUT(parent=self,conf=self.conf,name=self.name,symbol='t',pen=None)
         self.signalTrans=dict()
         
         self.Maxx=[]
@@ -87,6 +87,7 @@ class MEAS(QMainWindow):
         self.labelsVert=[]
         self.posMotor=[]
         self.SummThre=[]
+        self.USER1=[]
         self.winZoomMax=ZOOM()
         self.winZoomSum=ZOOM()
         self.winZoomMean=ZOOM()
@@ -95,9 +96,11 @@ class MEAS(QMainWindow):
         self.winZoomCxmax=ZOOM()
         self.winZoomCymax=ZOOM()
         self.winZoomSumThreshold=ZOOM()
+        self.winZoomUser1=ZOOM()
         self.maxx=0
         self.summ=0
         self.moy=0
+        self.user1=0
         self.label='Shoot'
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
         self.setGeometry(100, 300, 1000, 300)
@@ -138,10 +141,6 @@ class MEAS(QMainWindow):
         
         self.fileMenu.addAction(self.saveAct)
         
-        
-        
-        
-        
         self.PlotMenu.addAction('max',self.PlotMAX)
         self.PlotMenu.addAction('min',self.PlotMIN)
         self.PlotMenu.addAction('x max',self.PlotXMAX)
@@ -150,12 +149,8 @@ class MEAS(QMainWindow):
         self.PlotMenu.addAction('Mean',self.PlotMEAN)
         self.PlotMenu.addAction('x center mass',self.PlotXCMASS)
         self.PlotMenu.addAction('y center mass',self.PlotYCMASS)
-        
-        
-        
-       
-        
-        
+        self.PlotMenu.addAction('User 1',self.PlotUSER1)
+
         self.ZoomMenu.addAction('max',self.ZoomMAX)
         self.ZoomMenu.addAction('Sum',self.ZoomSUM)
         self.ZoomMenu.addAction('Mean',self.ZoomMEAN)
@@ -163,25 +158,20 @@ class MEAS(QMainWindow):
         self.ZoomMenu.addAction('Y max',self.ZoomYmax)
         self.ZoomMenu.addAction(' X c.of.m',self.ZoomCxmax)
         self.ZoomMenu.addAction(' Y c.of.m',self.ZoomCymax)
-        
-        
-        
-        
+        self.ZoomMenu.addAction(' User1',self.ZoomUser1)
         
         self.But_reset=QAction('Reset',self)
         # self.PlotMenu.addAction(self.But_reset)
         menubar.addAction(self.But_reset)
         
-        
-        
         hLayout2=QHBoxLayout()
         self.table=QTableWidget()
         hLayout2.addWidget(self.table)
         
-        self.table.setColumnCount(11)
+        self.table.setColumnCount(12)
         #self.table.setRowCount(10)
        
-        self.table.setHorizontalHeaderLabels(('File','Max','Min','x max','y max','Sum','Mean','Size','x c.mass','y c.mass','date'))
+        self.table.setHorizontalHeaderLabels(('File','Max','Min','x max','y max','Sum','Mean','Size','x c.mass','y c.mass','user1','date'))
         header = self.table.horizontalHeader()
         header.setDefaultAlignment(Qt.AlignmentFlag.AlignHCenter)
         header.setDefaultAlignment(Qt.AlignmentFlag.AlignVCenter)
@@ -203,12 +193,11 @@ class MEAS(QMainWindow):
             self.unitBouton.currentIndexChanged.connect(self.unit) 
             for mo in range (0,self.nbMotors):
                 self.motorNameBox.addItem(self.groups[mo])
-            self.table.setColumnCount(12)   
-            self.table.setHorizontalHeaderLabels(('File','Max','Min','x max','y max','Sum','Mean','Size','x c.mass','y c.mass','Motor','date'))
+            self.table.setColumnCount(13)   
+            self.table.setHorizontalHeaderLabels(('File','Max','Min','x max','y max','Sum','Mean','Size','x c.mass','y c.mass','user1','Motor','date'))
             self.motorNameBox.currentIndexChanged.connect(self.motorChange)
             self.motor=str(self.motorNameBox.currentText())
-            
-            
+             
         self.table.horizontalHeader().setVisible(True)
         self.table.setAlternatingRowColors(True)
         self.table.resizeColumnsToContents()
@@ -245,6 +234,9 @@ class MEAS(QMainWindow):
         self.labelsVert=[]
         self.posMotor=[]
         self.SummThre=[]
+        self.USER=[]
+
+
     def saveF(self):
        
         fname=QtGui.QFileDialog.getSaveFileName(self,"Save Measurements as txt file",self.path)
@@ -301,7 +293,12 @@ class MEAS(QMainWindow):
         self.winZoomSumThreshold.SetTITLE('Sum threshold')
         self.winZoomSumThreshold.setZoom(self.summThre)  
     
-    
+    def ZoomUser1(self):
+        self.open_widget(self.winZoomUser1)
+        
+        self.winZoomUser1.SetTITLE('User 1')
+        self.winZoomUser1.setZoom(self.user1) 
+
     def PlotMAX(self):
         self.open_widget(self.winCoupeMax)
         self.winCoupeMax.SetTITLE('Plot Max')
@@ -411,7 +408,16 @@ class MEAS(QMainWindow):
             self.ThresholdState=False
             self.PlotMenu.removeAction('Sum Threshold',self.PlotSUMTHRESHOLD)
             self.ZoomMenu.removeAction(' Sum  with Threshold',self.ZoomSUMThreshold)
-            
+
+    def PlotUSER1 (self):
+        self.open_widget(self.winCoupeUser1)
+        self.winCoupeUser1.SetTITLE('User1')
+        self.signalTrans['data']=self.USER1
+        self.signalTrans['axis']=self.posMotor
+        self.signalTrans['label']=self.label
+        
+        self.signalPlot.emit(self.signalTrans)
+
     def Display(self,data):
         
         self.data=data
@@ -419,6 +425,7 @@ class MEAS(QMainWindow):
         self.minn=round(data.min(),3)
         self.summ=round(data.sum(),3)#)
         self.moy=round(data.mean(),3)
+        self.user1=round(self.FctUser1(),3)
         self.date=time.strftime("%Y_%m_%d_%H_%M_%S")
         
         (self.xmax,self.ymax)=np.unravel_index(data.argmax(),data.shape)
@@ -426,6 +433,7 @@ class MEAS(QMainWindow):
         (self.xcmass,self.ycmass)=ndimage.center_of_mass(data)
         self.xcmass=round(self.xcmass,3)
         self.ycmass=round(self.ycmass,3)
+        print('cdm',self.ycmass)
         self.xs=data.shape[0]
         self.ys=data.shape[1]
         self.table.setRowCount(self.shoot+1)
@@ -439,6 +447,8 @@ class MEAS(QMainWindow):
         self.table.setItem(self.shoot, 7, QTableWidgetItem(  (str(self.xs) +'*'+ str(self.ys) ) ))
         self.table.setItem(self.shoot, 8, QTableWidgetItem( str(self.xcmass) ) )
         self.table.setItem(self.shoot, 9, QTableWidgetItem( str(self.ycmass) ) )
+        self.table.setItem(self.shoot, 10, QTableWidgetItem( str(self.user1) ) )
+
         
         
         
@@ -465,32 +475,32 @@ class MEAS(QMainWindow):
             dataCor=np.where(data<self.threshold,0,data)
             self.summThre=round(dataCor.sum(),3)
             self.SummThre.append(self.summThre)
-            self.TableSauv.append( '%s,%.1f,%.1f,%i,%i,%.1f,%.3f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%s' % (self.nomFichier,self.maxx,self.minn,self.xmax,self.ymax,self.summ,self.moy,self.xs,self.ys,self.xcmass,self.ycmass,Posi,self.summThre,self.date) )
+            self.TableSauv.append( '%s,%.1f,%.1f,%i,%i,%.1f,%.3f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%s' % (self.nomFichier,self.maxx,self.minn,self.xmax,self.ymax,self.summ,self.moy,self.xs,self.ys,self.xcmass,self.ycmass,Posi,self.summThre,self.user1,self.date) )
             
             if self.confMot!=None:
-                self.table.setColumnCount(13)
+                self.table.setColumnCount(14)
                 self.table.setHorizontalHeaderLabels(('File','Max','Min','x max','y max','Sum','Mean','Size','x c.mass','y c.mass','Sum Thr','Motor','date'))
-                self.table.setItem(self.shoot, 11, QTableWidgetItem( str(Posi ) ) )
-                self.table.setItem(self.shoot, 12, QTableWidgetItem( str(self.date) ) )
+                self.table.setItem(self.shoot, 12, QTableWidgetItem( str(Posi ) ) )
+                self.table.setItem(self.shoot, 13, QTableWidgetItem( str(self.date) ) )
             else :
-                self.table.setColumnCount(12)
-                self.table.setHorizontalHeaderLabels(('File','Max','Min','x max','y max','Sum','Mean','Size','x c.mass','y c.mass','Sum Thr','date'))
+                self.table.setColumnCount(13)
+                self.table.setHorizontalHeaderLabels(('File','Max','Min','x max','y max','Sum','Mean','Size','x c.mass','y c.mass','Sum Thr','user1','date'))
                 self.TableSauv=['file,Max,Min,x Max,y max,Sum,Mean,Size,x c.mass,y c.mass,SumCorr,date']
                 self.table.setItem(self.shoot, 11, QTableWidgetItem( str(self.date) ) )
             self.table.setItem(self.shoot, 10, QTableWidgetItem( "{:.3e}".format(self.summThre ) ) )
             
             
         else:
-            self.TableSauv.append( '%s,%.1f,%.1f,%i,%i,%.1f,%.3f,%.2f,%.2f,%.2f,%.2f,%.2f,%s'% (self.nomFichier,self.maxx,self.minn,self.xmax,self.ymax,self.summ,self.moy,self.xs,self.ys,self.xcmass,self.ycmass,Posi,self.date) )
-            self.table.setItem(self.shoot, 10, QTableWidgetItem( str(Posi ) ) )
+            self.TableSauv.append( '%s,%.1f,%.1f,%i,%i,%.1f,%.3f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%s'% (self.nomFichier,self.maxx,self.minn,self.xmax,self.ymax,self.summ,self.moy,self.xs,self.ys,self.xcmass,self.ycmass,self.user1,Posi,self.date) )
+            self.table.setItem(self.shoot, 12, QTableWidgetItem( str(Posi ) ) )
             if self.confMot!=None:
-                self.table.setHorizontalHeaderLabels(('File','Max','Min','x max','y max','Sum','Mean','Size','x c.mass','y c.mass','Motor','date'))
+                self.table.setHorizontalHeaderLabels(('File','Max','Min','x max','y max','Sum','Mean','Size','x c.mass','y c.mass','user1','Motor','date'))
+                self.table.setColumnCount(13)
+                self.table.setItem(self.shoot, 12, QTableWidgetItem( str(self.date) ) )
+            else :
+                self.table.setHorizontalHeaderLabels(('File','Max','Min','x max','y max','Sum','Mean','Size','x c.mass','y c.mass','user1','date'))
                 self.table.setColumnCount(12)
                 self.table.setItem(self.shoot, 11, QTableWidgetItem( str(self.date) ) )
-            else :
-                self.table.setHorizontalHeaderLabels(('File','Max','Min','x max','y max','Sum','Mean','Size','x c.mass','y c.mass','date'))
-                self.table.setColumnCount(11)
-                self.table.setItem(self.shoot, 10, QTableWidgetItem( str(self.date) ) )
         
         
         self.table.selectRow(self.shoot)
@@ -502,6 +512,8 @@ class MEAS(QMainWindow):
         self.Ymax.append(self.ymax)
         self.Xcmass.append(self.xcmass)
         self.Ycmass.append(self.ycmass)
+        self.USER1.append(self.user1)
+
         
         
         self.table.setVerticalHeaderLabels(self.labelsVert)
@@ -526,6 +538,8 @@ class MEAS(QMainWindow):
             self.PlotYCMASS()
         if self.winCoupeSumThreshold.isWinOpen==True:
             self.PlotSUMTHRESHOLD()   
+        if self.winCoupeUser1.isWinOpen==True:
+            self.PlotUSER1()   
         # update zoom windows  
         
         if self.winZoomMax.isWinOpen==True:
@@ -545,7 +559,8 @@ class MEAS(QMainWindow):
             self.ZoomCymAX()   
         if self.winZoomSumThreshold.isWinOpen==True:
             self.ZoomSUMThreshold()
-             
+        if self.winZoomUser1.isWinOpen==True:
+            self.ZoomUser1()     
         self.shoot+=1
       
     def closeEvent(self, event):
@@ -590,7 +605,13 @@ class MEAS(QMainWindow):
             # fene.activateWindow()
             #fene.raise_()
             fene.showNormal()
-            
+
+    def FctUser1(self):
+        a=10*random()
+        print(a)
+        return(a)
+
+
     def motorChange(self):
         
         self.motor=str(self.motorNameBox.currentText())
