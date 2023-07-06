@@ -772,6 +772,30 @@ class SEE(QMainWindow) :
       
     def LigneChanged(self):
         # take ROI 
+        print(self.plotLine.pos())
+        if self.plotLine.pos()[0]<0:
+            self.plotLine.setPos([0,self.plotLine.pos()[1]])
+
+        # if self.plotRect.pos()[0]+self.plotRect.size()[0]>self.dimx:
+        #     x=self.plotRect.pos()[0]
+        #     y=self.plotRect.pos()[1]
+        #     sizex=self.dimx-self.plotRect.pos()[0]
+        #     sizey=self.plotRect.size()[1]
+        #     self.plotRect.setSize([sizex,sizey],update=False)
+        #     self.plotRect.setPos([x,y])
+            
+        # if  self.plotLine.pos()[1]+self.plotLine.size()[1]>self.dimy:
+        #     x=self.plotLine.pos()[0]
+        #     y=self.plotLine.pos()[1]
+        #     sizex=self.plotRect.size()[0]
+        #     sizey=self.dimy-self.plotLine.pos()[1]
+        #     self.plotLine.setSize([sizex,sizey],update=False) 
+        #     self.plotLine.setPos([x,y])
+
+        if self.plotRect.pos()[1]<0:
+            
+            self.plotRect.setPos([self.plotRect.pos()[0],0])  
+
         self.cut=self.plotLine.getArrayRegion(self.data,self.imh)
         
         if self.winPref.checkBoxAxeScale.isChecked()==1:
@@ -814,10 +838,10 @@ class SEE(QMainWindow) :
         else:
             self.cut1=self.cut.sum(axis=1)
         
-        # Rectangle inside view
+        # Rectangle stay inside view
         if self.plotRect.pos()[0]<0:
-            
             self.plotRect.setPos([0,self.plotRect.pos()[1]])
+
         if self.plotRect.pos()[0]+self.plotRect.size()[0]>self.dimx:
             x=self.plotRect.pos()[0]
             y=self.plotRect.pos()[1]
@@ -825,15 +849,12 @@ class SEE(QMainWindow) :
             sizey=self.plotRect.size()[1]
             self.plotRect.setSize([sizex,sizey],update=False)
             self.plotRect.setPos([x,y])
-
+            
         if  self.plotRect.pos()[1]+self.plotRect.size()[1]>self.dimy:
-            print('laaa')
             x=self.plotRect.pos()[0]
             y=self.plotRect.pos()[1]
-            print(x,y)
             sizex=self.plotRect.size()[0]
             sizey=self.dimy-self.plotRect.pos()[1]
-            print(x,y,sizex,sizey)
             self.plotRect.setSize([sizex,sizey],update=False) 
             self.plotRect.setPos([x,y])
 
@@ -1175,21 +1196,21 @@ class SEE(QMainWindow) :
                     self.xMouse = (mousePoint.x())
                     self.yMouse= (mousePoint.y())
                     if ((self.xMouse>0 and self.xMouse<self.dimx-1) and (self.yMouse>0 and self.yMouse<self.dimy-1) ):
-                        self.xc = self.xMouse
-                        self.yc= self.yMouse  
+                        self.xcMouse = self.xMouse
+                        self.ycMouse= self.yMouse  
                         
                         try :
-                            dataCross=self.data[int(self.xc),int(self.yc)]
+                            dataCross=self.data[int(self.xcMouse),int(self.ycMouse)]
                     
                         except :
                             dataCross=0  # evoid to have an error if cross if out of the image
-                            self.xc=0
-                            self.yc=0
+                            self.xcMouse=0
+                            self.ycMouse=0
                         if self.winPref.checkBoxAxeScale.isChecked()==1: # scale axe on 
-                            self.label_Cross.setText('x='+ str(round(int(self.xc)*self.winPref.stepX,2)) + '  um'+' y=' + str(round(int(self.yc)*self.winPref.stepY,2)) +' um')
+                            self.label_Cross.setText('x='+ str(round(int(self.xcMouse)*self.winPref.stepX,2)) + '  um'+' y=' + str(round(int(self.ycMouse)*self.winPref.stepY,2)) +' um')
                         else : 
                             
-                            self.label_Cross.setText('x='+ str(int(self.xc)) + ' y=' + str(int(self.yc)) )
+                            self.label_Cross.setText('x='+ str(int(self.xcMouse)) + ' y=' + str(int(self.ycMouse)) )
                         
                         dataCross=round(dataCross,3) # take data  value  on the cross
                         self.label_CrossValue.setText(' v.=' + str(dataCross)+self.labelValue)
@@ -1210,7 +1231,7 @@ class SEE(QMainWindow) :
                             self.hLine.setPos(self.yc) # the cross move only in the graph    
                             if self.roiCross==True :
                                 self.ro1.setPos([self.xc-(self.rx/2),self.yc-(self.ry/2)])
-                            self.PlotXY()
+                            self.Coupe() #self.PlotXY()
                 
     def fwhm(self,x, y, order=3):
         """
@@ -1285,14 +1306,16 @@ class SEE(QMainWindow) :
             
             try :
                 dataCross=self.data[int(self.xc),int(self.yc)]
+                coupeX=self.data[int(self.xc),:]
+                coupeY=self.data[:,int(self.yc)]
                 
             except :
                 dataCross=0  # evoid to have an error if cross if out of the image
-                self.xc=0
-                self.yc=0
-               
-            coupeX=self.data[int(self.xc),:]
-            coupeY=self.data[:,int(self.yc)]
+                #self.xc=0
+                #self.yc=0
+                coupeX=np.zeros(int(self.dimy))
+                coupeY=np.zeros(int(self.dimx)).T
+                
             xxx=np.arange(0,int(self.dimx),1)
             yyy=np.arange(0,int(self.dimy),1)
             coupeXMax=np.max(coupeX)
