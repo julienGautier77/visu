@@ -22,7 +22,7 @@ import pathlib
 import numpy as np
 import sys,time,os
 from random import *
-
+from scipy import ndimage
 class MEAS(QMainWindow):
     
     signalPlot=QtCore.pyqtSignal(object)
@@ -35,11 +35,11 @@ class MEAS(QMainWindow):
         p = pathlib.Path(__file__)
         sepa=os.sep
         if conf==None:
-            print('tt')
+            
             self.conf=QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
         else :
             self.conf=conf
-        self.confMot=confMot   
+        self.confMot=confMot   # le Qsetting des moteurs
         self.name=name
         self.ThresholdState=False
         self.symbol=False
@@ -433,7 +433,7 @@ class MEAS(QMainWindow):
         (self.xcmass,self.ycmass)=ndimage.center_of_mass(data)
         self.xcmass=round(self.xcmass,3)
         self.ycmass=round(self.ycmass,3)
-        print('cdm',self.ycmass)
+        
         self.xs=data.shape[0]
         self.ys=data.shape[1]
         self.table.setRowCount(self.shoot+1)
@@ -449,9 +449,6 @@ class MEAS(QMainWindow):
         self.table.setItem(self.shoot, 9, QTableWidgetItem( str(self.ycmass) ) )
         self.table.setItem(self.shoot, 10, QTableWidgetItem( str(self.user1) ) )
 
-        
-        
-        
         if self.confMot!=None:
             if self.motor=='Motors':
                 Posi=self.shoot
@@ -465,8 +462,6 @@ class MEAS(QMainWindow):
             Posi=self.shoot
             self.label='Shoot'
             
-        
-        
         self.posMotor.append(Posi)    
         self.table.resizeColumnsToContents()
         self.labelsVert.append('%s'% self.shoot)
@@ -502,7 +497,6 @@ class MEAS(QMainWindow):
                 self.table.setColumnCount(12)
                 self.table.setItem(self.shoot, 11, QTableWidgetItem( str(self.date) ) )
         
-        
         self.table.selectRow(self.shoot)
         self.Maxx.append(self.maxx)
         self.Minn.append(self.minn)
@@ -514,10 +508,7 @@ class MEAS(QMainWindow):
         self.Ycmass.append(self.ycmass)
         self.USER1.append(self.user1)
 
-        
-        
         self.table.setVerticalHeaderLabels(self.labelsVert)
-
 
         #  plot Update plot
         if self.winCoupeMax.isWinOpen==True:
@@ -539,9 +530,9 @@ class MEAS(QMainWindow):
         if self.winCoupeSumThreshold.isWinOpen==True:
             self.PlotSUMTHRESHOLD()   
         if self.winCoupeUser1.isWinOpen==True:
-            self.PlotUSER1()   
+            self.PlotUSER1() 
+
         # update zoom windows  
-        
         if self.winZoomMax.isWinOpen==True:
             self.ZoomMAX()
         if self.winZoomSum.isWinOpen==True:
@@ -607,8 +598,9 @@ class MEAS(QMainWindow):
             fene.showNormal()
 
     def FctUser1(self):
-        a=10*random()
-        print(a)
+        # The USER1 function
+        a=0#10*random()
+        
         return(a)
 
 

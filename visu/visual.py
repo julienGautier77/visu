@@ -88,6 +88,7 @@ class SEE(QMainWindow) :
     signalPointing=QtCore.pyqtSignal(object)
     signalPlot=QtCore.pyqtSignal(object)
     signalCrop=QtCore.pyqtSignal(object)
+    signalDisplayed=QtCore.pyqtSignal(object) # Emit when display a image 
 
     def __init__(self,file=None,path=None,parent=None,**kwds):
         
@@ -172,12 +173,17 @@ class SEE(QMainWindow) :
         else :
             self.winFilter='on'
             
-        if "confMot" in kwds:
+        if "confMotPath" in kwds:
             print('motor accepted')
             if self.meas=="on":
-                self.confMot=kwds["confMot"]
-                # print(self.confMot)
+                self.confMotPath=kwds["confMotPath"] # le path du Qsetting pour les moteurs
+                print("Motors config path",self.confMotPath)
+                self.confMot=QtCore.QSettings(self.confMotPath, QtCore.QSettings.Format.IniFormat)
                 self.winM=MEAS(parent=self,confMot=self.confMot,conf=self.conf,name=self.name)
+        elif "confMot" in kwds:
+            self.confMot=kwds["confMot"] # le Qsetting des moteurs 
+                # print(self.confMot)
+            self.winM=MEAS(parent=self,confMot=self.confMot,conf=self.conf,name=self.name)
         else :
             if self.meas=="on":
                 self.winM=MEAS(parent=self,conf=self.conf,name=self.name)
@@ -710,7 +716,7 @@ class SEE(QMainWindow) :
         self.roiFluence.sigRegionChangeFinished.connect(self.fluenceFct)
         
         if self.parent is not None:
-            self.parent.signalData.connect(self.newDataReceived)
+            self.parent.signalData.connect(self.newDataReceived) #display a image when receive signal
         
     def fullScreen(self):
         if  self.fullscreen==False:
@@ -1143,6 +1149,7 @@ class SEE(QMainWindow) :
             #print('emit new crop image')
             self.signalCrop.emit(self.cropImg)
 
+        self.signalDisplayed.emit(True)
 
         #### autosave
         if self.checkBoxAutoSave.isChecked()==True: ## autosave data
@@ -1174,7 +1181,6 @@ class SEE(QMainWindow) :
                 self.numTir+=1
                 self.winOpt.setTirNumber(self.numTir)
             self.conf.setValue(self.name+"/tirNumber",self.numTir)
-                
             self.fileName.setText(nomFichier)
     
     def mouseClick(self,evt): # block the cross if mousse button clicked
@@ -1236,7 +1242,6 @@ class SEE(QMainWindow) :
     def fwhm(self,x, y, order=3):
         """
             Determine full-with-half-maximum of a peaked set of points, x and y.
-    
         """
         y=gaussian_filter(y,5) # filtre for reducing noise
         half_max = np.amax(y)/2.0
