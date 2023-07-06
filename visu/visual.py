@@ -772,7 +772,7 @@ class SEE(QMainWindow) :
       
     def LigneChanged(self):
         # take ROI 
-        print(self.plotLine.pos())
+        
         if self.plotLine.pos()[0]<0:
             self.plotLine.setPos([0,self.plotLine.pos()[1]])
 
@@ -1099,7 +1099,7 @@ class SEE(QMainWindow) :
         
         ####update    
         self.Coupe()#self.PlotXY() # graph update
-        self.zoomRectupdate() # update rect  
+        self.zoomRectupdate() # update zoom rect  
         
         if self.encercled=="on":
             if self.winEncercled.isWinOpen==True:
@@ -1297,10 +1297,6 @@ class SEE(QMainWindow) :
                 self.hLineCrossMax.setPos(self.ycMax)
                 self.labelCmax.setText("(%s,%s)=%s" % (str(self.xcMax), str(self.ycMax), str(round(self.data[int(self.xcMax),int(self.ycMax)],1))))
                 self.labelCmax.setPos(int(self.xcMax),int(self.ycMax))
-                
-
-                # if self.roiCross==True:
-                #     self.ro1.setPos([self.xc-(self.rx/2),self.yc-(self.ry/2)])
 
         if self.checkBoxPlot.isChecked()==True:
             
