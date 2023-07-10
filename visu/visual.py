@@ -1145,9 +1145,11 @@ class SEE(QMainWindow) :
             self.Pointing()
         if self.winZoomMax.isWinOpen==True:
             self.ZoomMAX()   
+        
         if self.winCrop.isWinOpen==True:
-            #print('emit new crop image')
-            self.signalCrop.emit(self.cropImg)
+            self.CropChanged()
+
+            
 
         self.signalDisplayed.emit(True)
 
@@ -1893,7 +1895,8 @@ class SEE(QMainWindow) :
                 self.cropImg=self.plotCercle.getArrayRegion(self.data,self.imh)
             else:
                 self.cropImg=self.data
-            self.winCrop.Display(self.cropImg)
+            self.signalCrop.emit(self.cropImg)
+            #self.winCrop.Display(self.cropImg)
      
     def closeEvent(self,event):
         

@@ -58,7 +58,9 @@ class WINCROP(QMainWindow):
         
     def setup(self):
         
-        
+        self.toolBar =self.addToolBar('tools')
+        self.toolBar.setMovable(False)
+
         menubar = self.menuBar()
         menubar.setNativeMenuBar(False)
         self.statusBar = QStatusBar()
@@ -66,19 +68,30 @@ class WINCROP(QMainWindow):
         
         self.setStatusBar(self.statusBar)
         self.fileMenu = menubar.addMenu('&File')
+        self.ImageMenu = menubar.addMenu('&Image')
         self.optionMenu = menubar.addMenu('&Options')
         self.openAct = QAction(QtGui.QIcon(self.icon+"Open.png"), 'Open File', self)
         self.openAct.setShortcut('Ctrl+o')
+        self.toolBar.addAction(self.openAct)
         self.openAct.triggered.connect(self.OpenF)
         
         self.fileMenu.addAction(self.openAct)
         
         self.saveAct=QAction(QtGui.QIcon(self.icon+"disketteSave.png"), 'Save file', self)
         self.saveAct.setShortcut('Ctrl+s')
+        self.toolBar.addAction(self.saveAct)
         self.saveAct.triggered.connect(self.SaveF)
         
         self.fileMenu.addAction(self.saveAct)
         
+
+        self.checkBoxScale=QAction(QtGui.QIcon(self.icon+"expand.png"),' Auto Scale on',self)
+        self.checkBoxScale.setCheckable(True)
+        self.checkBoxScale.setChecked(True)
+        self.toolBar.addAction(self.checkBoxScale)
+        self.ImageMenu.addAction(self.checkBoxScale)
+        self.checkBoxScale.triggered.connect(self.checkBoxScaleImage)
+
         self.label_CrossValue=QLabel()
         self.label_CrossValue.setStyleSheet("font:13pt")
         
@@ -88,8 +101,6 @@ class WINCROP(QMainWindow):
         self.label_Cross.setStyleSheet("font:12pt")
         self.statusBar.addPermanentWidget(self.label_Cross)
         self.statusBar.addPermanentWidget(self.label_CrossValue)
-
-
 
         self.vbox2=QVBoxLayout()
         self.winImage = pg.GraphicsLayoutWidget()
@@ -125,17 +136,31 @@ class WINCROP(QMainWindow):
         self.hist.gradient.loadPreset('flame')
 
         if self.parent is not None:
-            # if signal emit in another tgread (see visual)
+            #if signal emit in another thread (see visual)
+            
             self.parent.signalCrop.connect(self.Display)
-        
+
+
+    def checkBoxScaleImage(self):
+
+        if self.checkBoxScale.isChecked()==True:
+            self.checkBoxScale.setIcon(QtGui.QIcon(self.icon+"expand.png"))
+            self.checkBoxScale.setText('Auto Scale On')
+        else :
+             self.checkBoxScale.setIcon(QtGui.QIcon(self.icon+"minimize.png"))
+             self.checkBoxScale.setText('Auto Scale Off')
+
     def Display(self,data,stepX=1,stepY=1):
-        #print('receive new crop image to display')
+        
         self.data=data
         self.dimx=self.data.shape[0]
         self.dimy=self.data.shape[1]
         self.stepX=stepX
         self.stepY=stepY
-        self.imh.setImage(self.data,autoLevels=True,autoDownsample=True)
+        if self.checkBoxScale.isChecked()==1:
+            self.imh.setImage(self.data,autoLevels=True,autoDownsample=True)
+        else :
+            self.imh.setImage(self.data,autoLevels=False,autoDownsample=True)
 
     def shortcut(self):
         # keyboard shortcut
