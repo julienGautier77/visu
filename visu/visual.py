@@ -93,9 +93,9 @@ class SEE(QMainWindow) :
     def __init__(self,file=None,path=None,parent=None,**kwds):
         
         super().__init__()
-        version=__version__
+        self.version=__version__
         self.parent=parent
-        print("data visualisation version :  ",version)
+        print("data visualisation version :  ",self.version)
         p = pathlib.Path(__file__)
         self.fullscreen=False
         self.setAcceptDrops(True)
@@ -220,7 +220,7 @@ class SEE(QMainWindow) :
 
         self.winCrop=WINCROP(parent=self,conf=self.conf)
         self.path=path
-        self.setWindowTitle('Visualization'+'       v.'+ version)
+        self.setWindowTitle('Visualization'+'       v.'+ self.version)
         self.bloqKeyboard=1#bool((self.conf.value(self.name+"/bloqKeyboard"))  )  # block cross by keyboard
         self.bloqq=1 # block the cross by click on mouse
         
