@@ -93,9 +93,9 @@ class SEE(QMainWindow) :
     def __init__(self,file=None,path=None,parent=None,**kwds):
         
         super().__init__()
-        self.version=__version__
+        version=__version__
         self.parent=parent
-        print("data visualisation version :  ",self.version)
+        print("data visualisation version :  ",version)
         p = pathlib.Path(__file__)
         self.fullscreen=False
         self.setAcceptDrops(True)
@@ -220,7 +220,7 @@ class SEE(QMainWindow) :
 
         self.winCrop=WINCROP(parent=self,conf=self.conf)
         self.path=path
-        self.setWindowTitle('Visualization'+'       v.'+ self.version)
+        self.setWindowTitle('Visualization'+'       v.'+ version)
         self.bloqKeyboard=1#bool((self.conf.value(self.name+"/bloqKeyboard"))  )  # block cross by keyboard
         self.bloqq=1 # block the cross by click on mouse
         
@@ -443,8 +443,10 @@ class SEE(QMainWindow) :
         
         #self.ColorBox=QMenu('&LookUp Table',self) #
         self.menuColor=QMenu('&LookUp Table')
-        self.menuColor.addAction('thermal',self.Setcolor)
+        #print(pg.colormap.listMaps('matplotlib'))
+        self.menuColor.addAction('jet',self.Setcolor)
         self.menuColor.addAction('flame',self.Setcolor)
+        self.menuColor.addAction('thermal',self.Setcolor)
         self.menuColor.addAction('yellowy',self.Setcolor)
         self.menuColor.addAction('bipolar',self.Setcolor)
         self.menuColor.addAction('spectrum',self.Setcolor)
@@ -452,7 +454,9 @@ class SEE(QMainWindow) :
         self.menuColor.addAction('viridis',self.Setcolor) 
         self.menuColor.addAction('inferno',self.Setcolor)
         self.menuColor.addAction('plasma',self.Setcolor)      
-        self.menuColor.addAction('magma',self.Setcolor)            
+        self.menuColor.addAction('magma',self.Setcolor)       
+        
+
         #self.ColorBox.setMenu(menuColor)
         self.ImageMenu.addMenu(self.menuColor)
     
@@ -1145,11 +1149,9 @@ class SEE(QMainWindow) :
             self.Pointing()
         if self.winZoomMax.isWinOpen==True:
             self.ZoomMAX()   
-        
         if self.winCrop.isWinOpen==True:
-            self.CropChanged()
-
-            
+            #print('emit new crop image')
+            self.signalCrop.emit(self.cropImg)
 
         self.signalDisplayed.emit(True)
 
@@ -1486,6 +1488,7 @@ class SEE(QMainWindow) :
         self.hist.setHistogramRange(xmin,xmax)
   
     def Setcolor(self):
+        ### set the colorbar color
         action = self.sender()
         self.colorBar=str(action.text())
         self.hist.gradient.loadPreset(self.colorBar)
@@ -1500,7 +1503,7 @@ class SEE(QMainWindow) :
         else:
             self.hist.gradient.loadPreset('grey')
             self.checkBoxColor.setIcon(QtGui.QIcon(self.icon+"circleGray.png"))
-            self.checkBoxColor.setText('Gray')
+            self.checkBoxColor.setText('Grey')
             
     def roiChanged(self):
         
@@ -1528,8 +1531,11 @@ class SEE(QMainWindow) :
         
     def HIST(self):
         #show histogrammself.imh.setImage(self.data,autoLevels=True,autoDownsample=True)
-            self.winImage.removeItem(self.hist)
-    
+            if self.checkBoxHist.isChecked()==False:
+                self.winImage.removeItem(self.hist)
+            else:
+                self.winImage.addItem(self.hist)
+
     def Gauss(self):
         # gauss filter
         self.filter='gauss'
@@ -1587,8 +1593,7 @@ class SEE(QMainWindow) :
                 self.sliderImage.setMinimum(0)
                 self.sliderImage.setMaximum(self.nbOpenedImage - 1)
                 self.sliderImage.setValue(0)
-                self.sliderImage.setEnabled(True)
-                  
+                self.sliderImage.setEnabled(True)        
         else:
             fichier=str(fileOpen)
                 
@@ -1895,8 +1900,7 @@ class SEE(QMainWindow) :
                 self.cropImg=self.plotCercle.getArrayRegion(self.data,self.imh)
             else:
                 self.cropImg=self.data
-            self.signalCrop.emit(self.cropImg)
-            #self.winCrop.Display(self.cropImg)
+            self.winCrop.Display(self.cropImg)
      
     def closeEvent(self,event):
         
