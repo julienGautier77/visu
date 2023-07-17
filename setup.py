@@ -23,4 +23,4 @@ setup(name='visu',version=2023.07,
         "Topic :: Scientific/Engineering :: Visualization"
       ],
       url='https://github.com/julienGautier77/visu',
-      install_requires=['pyqtgraph','matplotlib','PyQt6','qdarkstyle','scipy',])
+      install_requires=['pyqtgraph','matplotlib','PyQt6','qdarkstyle','scipy','six',])
