@@ -487,7 +487,7 @@ class GRAPHCUT(QMainWindow):
         if ext=='.txt': # text file
             #self.cutData=np.loadtxt(str(fichier))
             self.cutData=np.genfromtxt(fichier, delimiter=" ")
-            self.PLOT(self.cutData,symbol=False)
+            self.PLOT(self.cutData)
             
         else :
             msg = QMessageBox()
