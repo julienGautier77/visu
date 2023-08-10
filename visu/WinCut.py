@@ -679,7 +679,7 @@ class GRAPHCUT(QMainWindow):
             self.winPLOT.setLabel('left',self.labelY)
             
         
-        self.PlotXY()
+        #self.PlotXY()
         self.affiCross()
         self.fit=self.fitAction.isChecked()
         if self.fitAction.isChecked():
