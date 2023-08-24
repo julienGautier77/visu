@@ -222,7 +222,7 @@ class SEE(QMainWindow):
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
         self.zo = 1  # zoom initial value
         self.scaleAxis = "off"
-        self.plotRectZoomEtat = ' Zoom'
+        self.plotRectZoomEtat = 'Zoom'
         self.angleImage = 0
 
         self.setup()
@@ -1692,13 +1692,11 @@ class SEE(QMainWindow):
         self.Display(self.data)
 
     def zoomRectAct(self):  # zoom fonction Display data on a range difined by a rectangular  roi
-
+        
         if self.plotRectZoomEtat == "Zoom":
-
             self.p1.addItem(self.plotRectZoom)
-            self.plotRectZoom.setSize(size=(2*self.rx, -2*self.ry), center=None)
+            self.plotRectZoom.setSize(size=(2*self.rx,2*self.ry), center=None)
             self.plotRectZoom.setPos([self.xc-1*self.rx, self.yc-1*self.ry])
-
             self.ZoomRectButton.setIcon(QtGui.QIcon(self.icon+"zoom-in.png"))
             self.plotRectZoomEtat = "ZoomIn"
             self.ZoomRectButton.setText('Zoom In')
