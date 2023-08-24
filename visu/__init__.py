@@ -4,18 +4,15 @@
 Created on Mon Mar 18 10:50:06 2019
 Data vizualisation
 @author: juliengautier
-modified  : 2023/07/04 
+modified  : 2023/08/24 
 """
-__version__='2023.07'
+__version__='2023.08'
 __author__='julien Gautier'
 
 
 from visu import visual
 from visu import visualLight
-
 from visu.visualLight import SEELIGHT
-
-
 from visu.visual import SEE
 from visu.visual import runVisu
 from visu import andor
