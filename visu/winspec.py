@@ -1,6 +1,7 @@
 ''' winspec.py - read SPE files created by WinSpec with Princeton Instruments' cameras. '''
 
-import ctypes, os
+import ctypes
+import os
 import struct
 import numpy as np
 import logging
@@ -19,23 +20,27 @@ spe_byte = ctypes.c_ubyte
 spe_word = ctypes.c_ushort
 spe_dword = ctypes.c_uint
 
-spe_char = ctypes.c_char # 1 byte
-spe_short = ctypes.c_short # 2 bytes
+spe_char = ctypes.c_char  # 1 byte
+spe_short = ctypes.c_short  # 2 bytes
 
 # long is 4 bytes in the manual. It is 8 bytes on my machine
-spe_long = ctypes.c_int # 4 bytes
+spe_long = ctypes.c_int  # 4 bytes
 
-spe_float = ctypes.c_float # 4 bytes
-spe_double = ctypes.c_double # 8 bytes
+spe_float = ctypes.c_float  # 4 bytes
+spe_double = ctypes.c_double  # 8 bytes
+
 
 class ROIinfo(ctypes.Structure):
     pass
 
+
 class AxisCalibration(ctypes.Structure):
     pass
 
+
 class Header(ctypes.Structure):
     pass
+
 
 def print_offsets():
     ''' Print the attribute names, sizes and offsets in the C structure
@@ -57,7 +62,7 @@ def print_offsets():
 
         print('\n{:30s}[{:4s}]\tsize'.format(repr(i), 'offs'))
         
-        for name,obj in inspect.getmembers(i):
+        for name, obj in inspect.getmembers(i):
             if inspect.isdatadescriptor(obj) and not inspect.ismemberdescriptor(obj) \
                 and not inspect.isgetsetdescriptor(obj):
                 
@@ -80,7 +85,7 @@ class SpeFile(object):
     '''
 
     # Map between header datatype field and numpy datatype 
-    _datatype_map = {0 : np.float32, 1 : np.int32, 2 : np.int16, 3 : np.uint16}
+    _datatype_map = {0: np.float32, 1: np.int32, 2: np.int16, 3: np.uint16}
 
     def __init__(self, name):
         ''' Open file `name` to read the header.'''
@@ -128,7 +133,7 @@ class SpeFile(object):
 
         # In python 2.7, apparently file and FileIO cannot be used interchangably
         with open(self.path, mode='rb') as f:
-            f.seek(4100) # Skip header (4100 bytes)
+            f.seek(4100)  # Skip header (4100 bytes)
 
             _count = self.header.xdim * self.header.ydim * self.header.NumFrames
             
@@ -142,9 +147,9 @@ class SpeFile(object):
             self._data = np.rollaxis(self._data, 2, 1)
 
             # flip data
-            if all([self.reversed == True, self.adc == '100 KHz']):
+            if all([self.reversed is True, self.adc == '100 KHz']):
                 pass
-            elif any([self.reversed == True, self.adc == '100 KHz']):
+            elif any([self.reversed is True, self.adc == '100 KHz']):
                 self._data = self._data[:, ::-1, :]
                 log.debug('flipped data because of nonstandard ADC setting ' +\
                         'or reversed setting')
@@ -183,7 +188,6 @@ class SpeFile(object):
         '''
         return self.header.ycalibration.string.decode('ascii')
 
-
     def _make_axes(self):
         '''Construct axes from calibration fields in header file
         '''
@@ -193,9 +197,9 @@ class SpeFile(object):
         xcalib_valid = struct.unpack('?', xcalib.calib_valid)
 
         if xcalib_valid:
-            xcalib_order, = struct.unpack('>B', xcalib.polynom_order) # polynomial order
+            xcalib_order, = struct.unpack('>B', xcalib.polynom_order)  # polynomial order
             px = xcalib.polynom_coeff[:xcalib_order+1]
-            px = np.array(px[::-1]) # reverse coefficients to use numpy polyval
+            px = np.array(px[::-1])  # reverse coefficients to use numpy polyval
             pixels = np.arange(1, self.header.xdim + 1)
             px = np.polyval(px, pixels)
         else:
@@ -204,9 +208,9 @@ class SpeFile(object):
         ycalib_valid = struct.unpack('?', ycalib.calib_valid)
 
         if ycalib_valid:
-            ycalib_order, = struct.unpack('>B', ycalib.polynom_order) # polynomial order
+            ycalib_order, = struct.unpack('>B', ycalib.polynom_order)  # polynomial order
             py = ycalib.polynom_coeff[:ycalib_order+1]
-            py = np.array(py[::-1]) # reverse coefficients to use numpy polyval
+            py = np.array(py[::-1])  # reverse coefficients to use numpy polyval
             pixels = np.arange(1, self.header.ydim + 1)
             py = np.polyval(py, pixels)
         else:
@@ -216,7 +220,6 @@ class SpeFile(object):
         self._yaxis = py
 
         return px, py
-
 
     ''' Data recorded in the file, returned as a numpy array. 
     
@@ -293,7 +296,7 @@ Header._fields_ = [
     ('yDimDet', spe_word),
     ('date', spe_char * DATEMAX),
     ('VirtualChipFlag', spe_short),
-    ('Spare_1', spe_char * 2), # Unused data
+    ('Spare_1', spe_char * 2),  # Unused data
     ('noscan', spe_short),
     ('DetTemperature', spe_float),
     ('DetType', spe_short),
@@ -322,7 +325,7 @@ Header._fields_ = [
     ('YPrePixels', spe_short),
     ('YPostPixels', spe_short),
     ('asynen', spe_short),
-    ('datatype', spe_short), # 0 - float, 1 - long, 2 - short, 3 - ushort
+    ('datatype', spe_short),  # 0 - float, 1 - long, 2 - short, 3 - ushort
     ('PulserMode', spe_short),
     ('PulserOnChipAccums', spe_word),
     ('PulserRepeatExp', spe_dword),
@@ -353,7 +356,7 @@ Header._fields_ = [
     ('ADCbitAdjust', spe_word),
     ('gain', spe_word),
     ('Comments', spe_char * 5 * COMMENTMAX),
-    ('geometric', spe_word), # x01 - rotate, x02 - reverse, x04 flip
+    ('geometric', spe_word),  # x01 - rotate, x02 - reverse, x04 flip
     ('xlabel', spe_char * LABELMAX),
     ('cleans', spe_word),
     ('NumSkpPerCln', spe_word),
@@ -369,8 +372,8 @@ Header._fields_ = [
     ('scramble', spe_short),
     ('ContinuousCleansFlag', spe_short), 
     ('ExternalTriggerFlag', spe_short), 
-    ('lnoscan', spe_long), # Longs are 4 bytes  
-    ('lavgexp', spe_long), # 4 bytes
+    ('lnoscan', spe_long),  # Longs are 4 bytes  
+    ('lavgexp', spe_long),  # 4 bytes
     ('ReadoutTime', spe_float), 
     ('TriggeredModeFlag', spe_short), 
     ('Spare_2', spe_char * 10), 
@@ -379,9 +382,9 @@ Header._fields_ = [
     ('flatFieldApplied', spe_short), 
     ('Spare_3', spe_char * 16), 
     ('kin_trig_mode', spe_short), 
-    ('dlabel', spe_char * LABELMAX), 
-    ('Spare_4', spe_char * 436), 
-    ('PulseFileName', spe_char * HDRNAMEMAX), 
+    ('dlabel', spe_char * LABELMAX),
+    ('Spare_4', spe_char * 436),
+    ('PulseFileName', spe_char * HDRNAMEMAX),
     ('AbsorbFileName', spe_char * HDRNAMEMAX),
     ('NumExpRepeats', spe_dword),
     ('NumExpAccums', spe_dword),

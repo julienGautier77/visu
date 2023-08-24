@@ -1,20 +1,21 @@
 # -*- coding: utf-8 -*-
 
 
-#!/usr/bin/python
-#"""andor.py version 1.0
-#November 2008
-#Michael V. DePalatis <surname at gmail dot com>
+# !/usr/bin/python
+# """andor.py version 1.0
+# November 2008
+# Michael V. DePalatis <surname at gmail dot com>
 #
-#Contains functions to handle Andor SIF image files including
-#conversion to other formats and reading basic information from the SIF
-#file. Little is done in the way of error checking, but this is
-#probably not a real issue as long as you actually pass it a valid SIF
-#file.
-#"""
+# Contains functions to handle Andor SIF image files including
+# conversion to other formats and reading basic information from the SIF
+# file. Little is done in the way of error checking, but this is
+# probably not a real issue as long as you actually pass it a valid SIF
+# file.
+# """
 
-import sys
+
 import numpy as np
+ 
 
 class SifFile:
     """SifFile is the Python representation of an Andor SIF image
@@ -26,7 +27,6 @@ class SifFile:
         if path != "":
             self.open(path)
                 
-
     def __add__(self, other):
         new_sif = self.__class__()
         new_sif.__dict__ = self.__dict__
@@ -95,25 +95,23 @@ class SifFile:
         
         # Read superpixeling data
         line = sif.readline().split()
-        #self.shape = (self.ccd_size[1]/int(line[5]), self.ccd_size[0]/int(line[6]))
+        # self.shape = (self.ccd_size[1]/int(line[5]), self.ccd_size[0]/int(line[6]))
         for i in range(0):
-            line=sif.readline()
-            print (line)
+            line = sif.readline()
+            print(line)
         # Read data
         raw_data = sif.read()
         raw_data = raw_data[len(raw_data) - 4*np.prod(self.ccd_size):]
         
         self.data = np.fromstring(raw_data, dtype=np.float32)
-        #self.data = self.data[:len(self.data)-2]
-        #if line[3] < line[2]:
+        # self.data = self.data[:len(self.data)-2]
+        # if line[3] < line[2]:
         #    self.shape = (len(self.data)/int(line[3]), int(line[3]))
-        #else:
+        # else:
         #    # I'm not sure if this is correct...
         #    # Needs more testing.
         #    self.shape = (int(line[2]), len(self.data)/int(line[2]))
         
-        self.data = np.reshape( self.data,self.ccd_size)
+        self.data = np.reshape(self.data, self.ccd_size)
        
-        zzz=self.data
-        return zzz
-        
+        return self.data

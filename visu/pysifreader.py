@@ -1,34 +1,34 @@
-# coding: latin-1
-
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 # Licence.txt from original archive:
-#	Copyright (c) 2006, Marcel Leutenegger
-#	All rights reserved.
+#   Copyright (c) 2006, Marcel Leutenegger
+# 	All rights reserved.
 #
-#	Redistribution and use in source and binary forms, with or without 
-#	modification, are permitted provided that the following conditions are 
-#	met:
+# 	Redistribution and use in source and binary forms, with or without
+# 	modification, are permitted provided that the following conditions are
+# 	met:
 #
-#	    * Redistributions of source code must retain the above copyright 
-#	      notice, this list of conditions and the following disclaimer.
-#	    * Redistributions in binary form must reproduce the above copyright 
-#	      notice, this list of conditions and the following disclaimer in 
-#	      the documentation and/or other materials provided with the distribution
-#	    * Neither the name of the Ecole Polytechnique Fédérale de Lausanne,
-#	      Laboratoire d'Optique Biomédicale nor the names of its contributors may
-#	      be used to endorse or promote products derived from this software
-#	      without specific prior written permission.
-#	      
-#	THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
-#	AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
-#	IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE 
-#	ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE 
-#	LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
-#	CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF 
-#	SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
-#	INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
-#	CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
-#	ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
-#	POSSIBILITY OF SUCH DAMAGE.
+# 	    * Redistributions of source code must retain the above copyright
+# 	      notice, this list of conditions and the following disclaimer.
+# 	    * Redistributions in binary form must reproduce the above copyright
+# 	      notice, this list of conditions and the following disclaimer in
+# 	      the documentation and/or other materials provided with the distribution
+# 	    * Neither the name of the Ecole Polytechnique Fï¿½dï¿½rale de Lausanne,
+# 	      Laboratoire d'Optique Biomï¿½dicale nor the names of its contributors may
+# 	      be used to endorse or promote products derived from this software
+# 	      without specific prior written permission.
+#  	      
+#	THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# 	AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# 	IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOS
+# 	ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# 	LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+#	CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# 	SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# 	INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# 	CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# 	ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# 	POSSIBILITY OF SUCH DAMAGE.
 
 # pysifreader: Read Andor SIF multi-channel image file.
 #
@@ -82,30 +82,31 @@
 #  available on request.
 #
 
-# Original MATLAB code by: © Marcel Leutenegger, November 2008
+# Original MATLAB code by: ï¿½ Marcel Leutenegger, November 2008
 #  http://www.mathworks.com/matlabcentral/fileexchange/11224
-# Ported to python by André Xuereb, October 2009
+# Ported to python by Andrï¿½ Xuereb, October 2009
 #  <andre.xuereb@soton.ac.uk>
 
+
 class SIFimage:
-#	def printInfo(self):
-#		print ('Temperature: %d deg. C' % self.temperature)
-#		print 'Exposure time: %f s' % self.exposureTime
-#		print 'Time per full image take: %f s' % self.cycleTime
-#		print 'Number of accumulation cycles: %d' % self.accumulateCycles
-#		print 'Time per accumulated image: %f s' % self.accumulateCycleTime
-#		print 'Interval in image series: %f s' % self.stackCycleTime
-#		print 'Time per pixel readout: %f s' % self.pixelReadoutTime
-#		print 'DAC gain: %f' % self.gainDAC
-#		print 'Time to open/close the shutter: %f s/%f s' % (self.shutterTime[0], self.shutterTime[1])
-#		print
-#		print 'CCD type: %s' % self.detectorType
-#		print 'Number of read CCD pixels (x, y): (%d, %d)' % (self.detectorSize[0], self.detectorSize[1])
-#		print
-#		print 'File name: %s' % self.fileName
-#		print 'Sequence number: %d' % self.seqNum
-#		print 'Axis unit of CCD frame: %s' % self.frameAxis
-#		print 'Type of image data: %s' % self.dataType
+    # 	def printInfo(self):
+    # 		print ('Temperature: %d deg. C' % self.temperature)
+ # 		print 'Exposure time: %f s' % self.exposureTime
+	# 		print 'Time per full image take: %f s' % self.cycleTime
+	# 		print 'Number of accumulation cycles: %d' % self.accumulateCycles
+	#		print 'Time per accumulated image: %f s' % self.accumulateCycleTime
+# 		print 'Interval in image series: %f s' % self.stackCycleTime
+# 		print 'Time per pixel readout: %f s' % self.pixelReadoutTime
+# 		print 'DAC gain: %f' % self.gainDAC
+# 		print 'Time to open/close the shutter: %f s/%f s' % (self.shutterTime[0], self.shutterTime[1])
+# 		print
+# 		print 'CCD type: %s' % self.detectorType
+# 		print 'Number of read CCD pixels (x, y): (%d, %d)' % (self.detectorSize[0], self.detectorSize[1])
+# 		print
+# 		print 'File name: %s' % self.fileName
+# 		print 'Sequence number: %d' % self.seqNum
+# 		print 'Axis unit of CCD frame: %s' % self.frameAxis
+# 		print 'Type of image data: %s' % self.dataType
 #		print 'Axis unit of image: %s' % self.imageAxis
 #		print 'Time stamp in image series: %d' % self.timeStamp
 #		print
