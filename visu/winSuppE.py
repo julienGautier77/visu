@@ -125,12 +125,13 @@ class WINENCERCLED(QWidget):
         LabelR1y.setStyleSheet("color:green;font:14pt")
         self.r1yBox = QSpinBox()
         self.r1yBox.setMaximum(2000)
-        self.r2Box.setMaximumWidth(60)
+        
         LabelR2 = QLabel('R2')
         LabelR2.setStyleSheet("color:yellow;font:14pt")
         self.r2Box = QSpinBox()
         self.r2Box.setMaximum(2000)
-        
+        self.r2Box.setMaximumWidth(60)
+
         LabelE1 = QLabel("E1 Sum ")
         LabelE1.setStyleSheet("color:red;font:14pt")
         self.LabelE1Sum = QLabel("? ")
@@ -215,7 +216,7 @@ class WINENCERCLED(QWidget):
         self.hist.autoHistogramRange()
         self.hist.gradient.loadPreset('flame')
         
-        print('iiii()')
+        
         self.curve2 = pg.PlotCurveItem()
         self.curve3 = pg.PlotCurveItem()
         # text pour afficher fwhm sur p1
@@ -440,7 +441,7 @@ class WINENCERCLED(QWidget):
         
         xxx = np.arange(0, int(self.dimx), 1)
         yyy = np.arange(0, int(self.dimy), 1)
-        coupeX = self.data[int(self.xec):]
+        coupeX = self.data[int(self.xec),:]
         coupeXMax = np.max(coupeX)
         
         if coupeXMax == 0:  # evite la div par zero
