@@ -517,9 +517,9 @@ class GRAPHCUT(QMainWindow):
                     self.xMouse = (mousePoint.x())
                     self.yMouse = (mousePoint.y())
                     if self.axisOn is True:
-                
+                        
                         if (self.xMouse > self.axis.min()-10 and self.xMouse < self.axis.max() + 10):  # the cross move only in the graph
-                            self.xMc = int(self.xMouse)
+                            self.xMc = self.xMouse
                             self.yMc = self.yMouse  # self.cutData[self.xc]
                             self.label_Cross.setText('x=' + str(round((self.xMc), 2)) + ' y=' + str(round(self.yMc, 2)))
                     else:
