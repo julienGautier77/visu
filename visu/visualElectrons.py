@@ -214,7 +214,7 @@ class SEEELECTRONS(QMainWindow):
         if "plot3d" in kwds:
             self.plot3D = kwds["plot3d"]
         else:
-            self.plot3D = False
+            self.plot3D = True
 
         # if self.plot3D is True:
 
