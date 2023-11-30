@@ -202,7 +202,7 @@ class SEEELECTRONS(QMainWindow):
         if "spectro" in kwds :
             self.spectro = kwds["spectro"]
         else :
-            self.spectro =False 
+            self.spectro =True
         
         if self.spectro is True:
             self.winSpectro = WINSPECTRO(parent=self,conf=self.conf)
