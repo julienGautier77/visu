@@ -273,7 +273,7 @@ class WINSPECTRO(QMainWindow):
         #self.energy_max = int(np.interp((self.s0-self.dimx+1)/self.ppmm, self.slist[::-1], self.elist[::-1]))
         self.energy_max=(np.interp((self.wmax-self.s0)/self.ppmm, self.slist, self.elist))
         self.energy_min =(np.interp((self.wmin-self.s0)/self.ppmm, self.slist,self.elist))
-        print('Emin:', self.energy_min,'Emax:', self.energy_max)
+        print('Emin:', self.energy_min,'Emax:', self.energy_max,self.ppmm)
         print('Xmin', (self.wmin-self.s0)/self.ppmm,'Xmax', (self.wmax-self.s0)/self.ppmm)
         self.E = np.linspace(self.energy_min,self.energy_max,self.npoints) 
         ds_dE = abs(np.interp(self.E, self.elist, self.dsdelist))
@@ -293,8 +293,8 @@ class WINSPECTRO(QMainWindow):
             for i in range(self.npoints-1):
                 #self.s0 position pixel 0 lanex
                 # position in px of E in the filtered image = mm/0 lanex * ppm +px_zerolanex -pixel fenetre
-                px_float = round(self.ppmm * np.interp(self.E[i], self.elist, self.slist)) - self.wmin 
-                #print('pixel dans data win',px_float,self.E[i])
+                px_float = round(self.ppmm * np.interp(self.E[i], self.elist, self.slist)) - self.wmin + self.s0
+                print('pixel dans data win',px_float,self.E[i],round(self.ppmm * np.interp(self.E[i], self.elist, self.slist)))
                 #print('pixel dans data org',self.ppmm*np.interp(self.E[i], self.elist, self.slist),self.E[i])
                 
                 px0 = int(np.floor( px_float))
