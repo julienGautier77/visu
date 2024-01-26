@@ -1017,7 +1017,7 @@ class SEEELECTRONS(QMainWindow):
             if self.meas is True:
                 self.winM.setFile(self.nomFichier)
                 self.open_widget(self.winM)
-                MeasData=[self.cut,self.xini,self.yini]
+                MeasData=[self.cut,self.xini,self.yini,0,0]
                 self.signalMeas.emit(MeasData)
                 # self.winM.Display(self.cut)
 
@@ -1026,7 +1026,7 @@ class SEEELECTRONS(QMainWindow):
             if self.meas is True:
                 self.winM.setFile(self.nomFichier)
                 self.open_widget(self.winM)
-                MeasData=[self.cut,self.xini,self.yini]
+                MeasData=[self.cut,self.xini,self.yini,0,0]
                 self.signalMeas.emit(MeasData)
                 # self.winM.Display(self.cut)
 
@@ -1035,14 +1035,14 @@ class SEEELECTRONS(QMainWindow):
             if self.meas is True:
                 self.winM.setFile(self.nomFichier)
                 self.open_widget(self.winM)
-                MeasData=[self.cut,0,0]
+                MeasData=[self.cut,0,0,0,0]
                 self.signalMeas.emit(MeasData)
 
         if self.ite is None:
             if self.meas is True:
                 self.winM.setFile(self.nomFichier)
                 self.open_widget(self.winM)
-                MeasData=[self.data,0,0]
+                MeasData=[self.data,0,0,0,0]
                 self.signalMeas.emit(MeasData)
 
     def Pointing(self):
@@ -2079,6 +2079,6 @@ def runVisu(file=None, path=None):
 if __name__ == "__main__":
     appli = QApplication(sys.argv)
     appli.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
-    e = SEE(path='/home/gautier/Documents/python/electrons/', file='spectroEtoile.TIFF',aff='left', roiCross=True, spectro=True)  # ,color="red")#,conf=conf,name=name)
+    e = SEEELECTRONS(path='/home/gautier/Documents/python/electrons/', file='spectroEtoile.TIFF',aff='left', roiCross=True, spectro=True)  # ,color="red")#,conf=conf,name=name)
     e.show()
     appli.exec_()

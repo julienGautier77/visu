@@ -683,14 +683,14 @@ class CALCULTHREAD(QtCore.QThread):
             
             sol = solve_ivp(self.odefun, [0, abs(3000*np.pi/self.wc)], 
                             np.array([ux0[i], uy0[i], x0[i], y0[i]]),
-                            method='LSODA', events=event,rtol=1e-15, atol=1e-15) #RK45
+                            method='LSODA', events=event,rtol=3e-14) #'LSODA' RK45 atol=3e-14, 
             
             # Représentation graphique des trajectoires
             # define random color
             col = (255*np.random.random(), 255*np.random.random(), 255*np.random.random())
             prog = [i, E[i], col] # send to mainGui i, E,color for the progress bar and show Energy 
             self.remain.emit(prog) 
-            if i < 5 :  # too slow with a lot of trejectory :plot only the 5th and then only one
+            if i % 5 ==0 :  # too slow with a lot of trejectory :plot only the 5th and then only one
                 self.winplot = self.parent.p1.plot(sol.y[2] * 1e3, sol.y[3] * 1e3, pen=col, clear=False)
             else:
                 self.winplot.setData(sol.y[2] * 1e3, sol.y[3] * 1e3, pen=col)

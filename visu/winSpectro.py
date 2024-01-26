@@ -289,54 +289,53 @@ class WINSPECTRO(QMainWindow):
 
         #  Create and fill a new array for the 2D spectrum
         spectrum_2D = np.empty((self.dimy, 0))
-        try :
-            for i in range(self.npoints-1):
-                #self.s0 position pixel 0 lanex
-                # position in px of E in the filtered image = mm/0 lanex * ppm +px_zerolanex -pixel fenetre
-                px_float = round(self.ppmm * np.interp(self.E[i], self.elist, self.slist)) - self.wmin + self.s0
-                print('pixel dans data win',px_float,self.E[i],round(self.ppmm * np.interp(self.E[i], self.elist, self.slist)))
-                #print('pixel dans data org',self.ppmm*np.interp(self.E[i], self.elist, self.slist),self.E[i])
-                
-                px0 = int(np.floor( px_float))
-                print(px0)
-                px1 = px0 +1
-                row = np.array([(px1-px_float) * self.data[px0,:] + (px_float-px0) * self.data[px1,:]]).T
-                spectrum_2D = np.hstack([ spectrum_2D , row * ds_dE[i] ]) 
-                
         
-        
-            spectrum_2D = np.hstack([ spectrum_2D , np.array([self.data[-1,:]]).T* ds_dE[i] ])
-            self.theta=np.linspace(self.theta_min,self.theta_max,self.data.shape[1])
-            
+        for i in range(self.npoints-1):
+            # self.s0 position pixel 0 lanex
+            # position in px of E in the filtered image = mm/0 lanex * ppm +px_zerolanex -pixel fenetre
+            px_float = round(self.ppmm * np.interp(self.E[i], self.elist, self.slist)) - self.wmin + self.s0
+            #p rint('pixel dans data win',px_float,self.E[i],round(self.ppmm * np.interp(self.E[i], self.elist, self.slist)))
+            # print('pixel dans data org',self.ppmm*np.interp(self.E[i], self.elist, self.slist),self.E[i])
+            px0 = int(np.trunc( px_float)) #floor
+            # print(i,px0,self.data.shape)
+            px1 = px0 +1
+            if px1 > self.data.shape[0]-1 :
+                px1 = px1 - 1 
+            row = np.array([(px1-px_float) * self.data[px0,:] + (px_float-px0) * self.data[px1,:]]).T
+            spectrum_2D = np.hstack([ spectrum_2D , row * ds_dE[i] ]) 
+                
+        spectrum_2D = np.hstack([ spectrum_2D , np.array([self.data[-1,:]]).T* ds_dE[i] ])
+        self.theta=np.linspace(self.theta_min,self.theta_max,self.data.shape[1])
+    
             #  Translation and scaling the image
-            tr = QtGui.QTransform()  # prepare ImageItem transformation:
-            tr.scale(self.scaleX, self.scaleY)       # scale horizontal and vertical axes
-            self.transX=self.energy_min/self.scaleX
-            self.transY=-p_y0
-            tr.translate(self.energy_min/self.scaleX, self.transY) #  to locate maximum at axis origin
-            self.imh.setTransform(tr) # assign transform
+        tr = QtGui.QTransform()  # prepare ImageItem transformation:
+        tr.scale(self.scaleX, self.scaleY)       # scale horizontal and vertical axes
+        self.transX=self.energy_min/self.scaleX
+        self.transY=-p_y0
+        tr.translate(self.energy_min/self.scaleX, self.transY) #  to locate maximum at axis origin
+        self.imh.setTransform(tr) # assign transform
 
-            if self.checkBoxScale.isChecked():
-                self.imh.setImage(spectrum_2D.T, autoLevels=True, autoDownsample=True) 
+        if self.checkBoxScale.isChecked():
+            self.imh.setImage(spectrum_2D.T, autoLevels=True, autoDownsample=True) 
+        else:
+            self.imh.setImage(spectrum_2D.T, autoLevels=False, autoDownsample=True) 
+
+        self.p1.setXRange(self.energy_min,self.energy_max)
+        self.pCut.setData(self.E,spectrum_2D.sum(axis=0))
+        self.winPLOT.setXRange(self.energy_min,self.energy_max)
+        self.data = spectrum_2D.T
+        self.dimx = self.data.shape[0]
+        self.dimy = self.data.shape[1]
+
+        if self.winM.isWinOpen is True:  # measurement update
+            if self.ite == 'rect': # rest selection is selected
+                self.RectChanged()
+                self.Measurement()
             else:
-                self.imh.setImage(spectrum_2D.T, autoLevels=False, autoDownsample=True) 
-
-            self.p1.setXRange(self.energy_min,self.energy_max)
-            self.pCut.setData(self.E,spectrum_2D.sum(axis=0))
-            self.winPLOT.setXRange(self.energy_min,self.energy_max)
-            self.data = spectrum_2D.T
-            self.dimx = self.data.shape[0]
-            self.dimy = self.data.shape[1]
-
-            if self.winM.isWinOpen is True:  # measurement update
-                if self.ite == 'rect': # rest selection is selected
-                    self.RectChanged()
-                    self.Measurement()
-                else:
-                    self.Measurement()
-        except:
-            self.errorDisplay = True
-            print('error Display: Calibrate')
+                self.Measurement()
+        # except:
+        #     self.errorDisplay = True
+        #     print('error Display: Calibrate')
 
 
     def shortcut(self):
@@ -437,7 +436,8 @@ class WINSPECTRO(QMainWindow):
                     self.yc = 0
                 
                 self.label_Cross.setText('x=' + str(round(self.xc,1)) + ' Mev  '+ ' y=' + str(round(self.yc,1)) + ' mrad  ' )
-                dataCross = round(dataCross, 1)  # take data  value  on the cross
+                
+                dataCross = round(dataCross, 3)  # take data  value  on the cross
                 self.label_CrossValue.setText(' v.=' + str(dataCross)+ ' C/Mev')
 
     def Rectangle(self):
@@ -546,13 +546,13 @@ class WINSPECTRO(QMainWindow):
             self.RectChanged()
             self.winM.setFile(self.nomFichier)
             self.open_widget(self.winM)
-            MeasData=[self.cut,self.xini,self.yini,self.scaleX,self.scaleY]
+            MeasData=[self.cut*self.countPerPixel,self.xini+self.transX,self.yini+self.transY,self.scaleX,self.scaleY]
             self.signalMeas.emit(MeasData)
+      
         if self.ite is None:
-            
             self.winM.setFile(self.nomFichier)
             self.open_widget(self.winM)
-            MeasData=[self.data,0,0,self.scaleX,self.scaleY]
+            MeasData=[self.data* self.countPerPixel,self.transX,self.transY, self.scaleX, self.scaleY]
             self.signalMeas.emit(MeasData)
 
     def open_widget(self, fene):

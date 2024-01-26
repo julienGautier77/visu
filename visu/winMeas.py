@@ -411,23 +411,30 @@ class MEAS(QMainWindow):
         self.signalPlot.emit(self.signalTrans)
 
     def Display(self, data):
+        self.data = data[0]
+        self.transx=data[1]
+        self.transy=data[2]
+        self.scalex=data[3]
+        self.scaley=data[4]
         
-        self.data = data
-        self.maxx = round(data.max(), 3)
-        self.minn = round(data.min(), 3)
-        self.summ = round(data.sum(), 3)
-        self.moy = round(data.mean(), 3)
+        print(self.transx,self.scaley)
+        self.maxx = round(self.data.max(), 3)
+        self.minn = round(self.data.min(), 3)
+        self.summ = round(self.data.sum(), 3)
+        self.moy = round(self.data.mean(), 3)
         self.user1 = round(self.FctUser1(), 3)
         self.date = time.strftime("%Y_%m_%d_%H_%M_%S")
         
-        (self.xmax, self.ymax) = np.unravel_index(data.argmax(), data.shape)
+        (self.xmax, self.ymax) = np.unravel_index(self.data.argmax(), self.data.shape)
+        self.xmax = (self.xmax + self.transx) * self.scalex 
+        self.ymax = (self.ymax  + self.transy) * self.scaley 
         # print(self.maxx,data[int(self.xmax),int(self.ymax)])
-        (self.xcmass, self.ycmass) = ndimage.center_of_mass(data)
-        self.xcmass = round(self.xcmass, 3)
-        self.ycmass = round(self.ycmass, 3)
+        (self.xcmass, self.ycmass) = ndimage.center_of_mass(self.data)
+        self.xcmass = (round(self.xcmass, 3) + self.transx) *self.scalex
+        self.ycmass = (round(self.ycmass, 3) + self.transy) *self.scaley
         
-        self.xs = data.shape[0]
-        self.ys = data.shape[1]
+        self.xs = self.data.shape[0]
+        self.ys = self.data.shape[1]
         self.table.setRowCount(self.shoot+1)
         self.table.setItem(self.shoot, 0, QTableWidgetItem(str(self.nomFichier)))
         self.table.setItem(self.shoot, 1, QTableWidgetItem(str(self.maxx)))
@@ -458,7 +465,7 @@ class MEAS(QMainWindow):
         self.labelsVert.append('%s' % self.shoot)
         
         if self.ThresholdState is True:
-            dataCor = np.where(data < self.threshold, 0, data)
+            dataCor = np.where(self.data < self.threshold, 0, data)
             self.summThre = round(dataCor.sum(), 3)
             self.SummThre.append(self.summThre)
             self.TableSauv.append('%s,%.1f,%.1f,%i,%i,%.1f,%.3f,%.2f,%.2f,%.2f, %.2f,%.2f,%.2f,%.2f,%s' % (self.nomFichier, self.maxx, self.minn, self.xmax, self.ymax, self.summ, self.moy, self.xs, self.ys, self.xcmass, self.ycmass, Posi, self.summThre, self.user1, self.date))
