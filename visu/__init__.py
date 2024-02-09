@@ -14,7 +14,6 @@ from visu import visual
 from visu import visualLight
 from visu.visualLight import SEELIGHT
 from visu.visual import SEE
-from visu.visualElectrons import SEEELECTRONS
 from visu.visual import runVisu
 from visu import andor
 from visu import WinCut

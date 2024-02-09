@@ -67,7 +67,7 @@ __author__ = visu.__author__
 __all__ = ['SEE', 'runVisu']
 
 
-class SEEELECTRONS(QMainWindow):
+class SEE(QMainWindow):
     '''open and plot file :
         SEE(file='nameFile,path=pathFileName,confpath,confMot,name,aff)
         Make plot profile ands differents measurements(max,min mean...)
@@ -177,7 +177,7 @@ class SEEELECTRONS(QMainWindow):
         else:
             self.winFilter = True
 
-        if "confMotPath" in kwds:
+        if "confMotPath" in kwds: # obsolete 
             print('motor accepted')
             if self.meas is True:
                 self.confMotPath = kwds["confMotPath"]  
@@ -194,7 +194,8 @@ class SEEELECTRONS(QMainWindow):
             self.winM = MEAS(parent=self, confMot=self.confMot, conf=self.conf, name=self.name)
         if "motRSAI" in kwds:
             self.motRSAI=kwds["motRSAI"]
-            self.winM = MEAS(parent=self, conf=self.conf, name=self.name,motRSAI=self.motRSAI)
+            if self.motRSAI is True: 
+                self.winM = MEAS(parent=self, conf=self.conf, name=self.name,motRSAI=self.motRSAI)
         else:
             if self.meas is True :
                 self.winM = MEAS(parent=self, conf=self.conf, name=self.name)
@@ -2082,6 +2083,6 @@ def runVisu(file=None, path=None):
 if __name__ == "__main__":
     appli = QApplication(sys.argv)
     appli.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
-    e = SEEELECTRONS(spectro=True, motRSAI=True)  # ,color="red")#,conf=conf,name=name)
+    e = SEE(motRSAI=True)#,conf=conf,name=name)
     e.show()
     appli.exec_()

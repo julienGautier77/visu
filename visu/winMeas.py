@@ -25,7 +25,7 @@ import time
 import os
 from scipy import ndimage
 
-import visu.moteurRSAIFDB as RSAI
+
 
 class MEAS(QMainWindow):
     
@@ -51,10 +51,12 @@ class MEAS(QMainWindow):
         if 'motRSAI' in kwds :
             self.motRSAI = kwds["motRSAI"]
             if self.motRSAI is True:
-                self.listRack = RSAI.rEquipmentList()
+                import visu.moteurRSAIFDB as RSAI
+                self.RSAI = RSAI
+                self.listRack = self.RSAI.rEquipmentList()
                 self.IPadress = self.listRack[0]
                 self.rackName = []
-                self.listMotor = RSAI.listMotorName(self.IPadress)
+                self.listMotor = self.RSAI.listMotorName(self.IPadress)
                 print('RSAI motor connected to database')
                 
                 
@@ -202,7 +204,7 @@ class MEAS(QMainWindow):
             self.unitBouton.currentIndexChanged.connect(self.unit) 
             self.rackChoise = QComboBox()
             for rack in self.listRack: #
-                self.rackChoise.addItem( str(RSAI.nameEquipment(rack))+ '  (' + rack +')')
+                self.rackChoise.addItem( str(self.RSAI.nameEquipment(rack))+ '  (' + rack +')')
             hLayout1.addWidget(self.rackChoise)
             self.motorNameBox.addItems(self.listMotor)
             hLayout1.addWidget(self.motorNameBox)
@@ -620,7 +622,7 @@ class MEAS(QMainWindow):
         if self.motorNameBox.currentIndex() != 0 :
             self.numMotor = self.motorNameBox.currentIndex()
             self.IPadress = self.listRack [self.rackChoise.currentIndex()]
-            self.MOT = RSAI.MOTORRSAI(self.IPadress, self.numMotor)
+            self.MOT = self.RSAI.MOTORRSAI(self.IPadress, self.numMotor)
             self.stepmotor =1/self.MOT.step
             self.unit()
         
@@ -629,8 +631,8 @@ class MEAS(QMainWindow):
         self.motorNameBox.clear()
         self.IPadress =str( self.listRack[self.rackChoise.currentIndex()])
         #print('ip',self.IPadress)
-        self.listMotor =RSAI.listMotorName(self.IPadress)
-        self.rackName = RSAI.nameEquipment(self.IPadress)
+        self.listMotor =self.RSAI.listMotorName(self.IPadress)
+        self.rackName = self.RSAI.nameEquipment(self.IPadress)
         self.motorNameBox.addItem('Choose a motor')
         self.motorNameBox.addItems(self.listMotor)
 
