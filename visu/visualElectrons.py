@@ -192,6 +192,9 @@ class SEEELECTRONS(QMainWindow):
         elif "confMot" in kwds:
             self.confMot = kwds["confMot"]  # le Qsetting des moteurs
             self.winM = MEAS(parent=self, confMot=self.confMot, conf=self.conf, name=self.name)
+        if "motRSAI" in kwds:
+            self.motRSAI=kwds["motRSAI"]
+            self.winM = MEAS(parent=self, conf=self.conf, name=self.name,motRSAI=self.motRSAI)
         else:
             if self.meas is True :
                 self.winM = MEAS(parent=self, conf=self.conf, name=self.name)
@@ -2079,6 +2082,6 @@ def runVisu(file=None, path=None):
 if __name__ == "__main__":
     appli = QApplication(sys.argv)
     appli.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
-    e = SEEELECTRONS(path='/home/gautier/Documents/python/electrons/', file='spectroEtoile.TIFF',aff='left', roiCross=True, spectro=True)  # ,color="red")#,conf=conf,name=name)
+    e = SEEELECTRONS(spectro=True, motRSAI=True)  # ,color="red")#,conf=conf,name=name)
     e.show()
     appli.exec_()

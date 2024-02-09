@@ -51,7 +51,6 @@ from visu.winHist import HISTORY
 from visu import aboutWindows
 from visu.winZoom import ZOOM
 from visu.winCrop import WINCROP
-from visu.winSpectro import WINSPECTRO
 # try :
 #     from visu.Win3D import GRAPH3D #conda install pyopengl
 # except :
@@ -67,7 +66,7 @@ __author__ = visu.__author__
 __all__ = ['SEE', 'runVisu']
 
 
-class SEEELECTRONS(QMainWindow):
+class SEE(QMainWindow):
     '''open and plot file :
         SEE(file='nameFile,path=pathFileName,confpath,confMot,name,aff)
         Make plot profile ands differents measurements(max,min mean...)
@@ -91,7 +90,6 @@ class SEEELECTRONS(QMainWindow):
     signalPointing = QtCore.pyqtSignal(object)
     signalPlot = QtCore.pyqtSignal(object)
     signalCrop = QtCore.pyqtSignal(object)
-    signalSpectro = QtCore.pyqtSignal(object)
     signalDisplayed = QtCore.pyqtSignal(object)  # Emit when display a image
 
     def __init__(self, file=None, path=None, parent=None, **kwds):
@@ -144,9 +142,11 @@ class SEEELECTRONS(QMainWindow):
         print('name :', self.name)
 
         if "roiCross" in kwds:
+            # print('ROICROSS on')
             self.roiCross = kwds["roiCross"]
         else:
             self.roiCross = False
+            # print('no roicross')
         if "aff" in kwds:
             self.aff = kwds["aff"]
         else:
@@ -155,19 +155,19 @@ class SEEELECTRONS(QMainWindow):
         if "fft" in kwds:
             self.fft = kwds["fft"]
         else:
-            self.fft = False
+            self.fft = "off"
 
         if "meas" in kwds:
             self.meas = kwds["meas"]
         else:
-            self.meas = True
+            self.meas = "on"
 
         if "encercled" in kwds:
             self.encercled = kwds["encercled"]
         else:
-            self.encercled = True
+            self.encercled = "on"
 
-        if self.fft == True:
+        if self.fft == 'on':
             self.winFFT = WINFFT(conf=self.conf, name=self.name)
             self.winFFT1D = GRAPHCUT(symbol=False, title='FFT 1D', 
                                      conf=self.conf, name=self.name)
@@ -175,11 +175,10 @@ class SEEELECTRONS(QMainWindow):
         if "filter" in kwds:
             self.winFilter = kwds['filter']
         else:
-            self.winFilter = True
-
+            self.winFilter = 'on'
         if "confMotPath" in kwds:
             print('motor accepted')
-            if self.meas is True:
+            if self.meas == "on":
                 self.confMotPath = kwds["confMotPath"]  
                 # le path du Qsetting pour les moteurs
                 print("Motors config path", self.confMotPath)
@@ -188,47 +187,36 @@ class SEEELECTRONS(QMainWindow):
                                      QtCore.QSettings.Format.IniFormat))
                 self.winM = MEAS(parent=self, confMot=self.confMot,
                                  conf=self.conf, name=self.name)
-        
         elif "confMot" in kwds:
             self.confMot = kwds["confMot"]  # le Qsetting des moteurs
             self.winM = MEAS(parent=self, confMot=self.confMot, conf=self.conf, name=self.name)
-        if "motRSAI" in kwds:
-            self.motRSAI=kwds["motRSAI"]
-            self.winM = MEAS(parent=self, conf=self.conf, name=self.name,motRSAI=self.motRSAI)
         else:
-            if self.meas is True :
+            if self.meas == "on":
                 self.winM = MEAS(parent=self, conf=self.conf, name=self.name)
 
         self.winOpt = OPTION(conf=self.conf, name=self.name)
         self.winPref = PREFERENCES(conf=self.conf, name=self.name)
         self.winHistory = HISTORY(self, conf=self.conf, name=self.name)
-        if "spectro" in kwds :
-            self.spectro = kwds["spectro"]
-        else :
-            self.spectro =True
-        
-        if self.spectro is True:
-            self.winSpectro = WINSPECTRO(parent=self,conf=self.conf)
 
-        if self.encercled is True:
+        if self.encercled == "on":
             self.winEncercled = WINENCERCLED(parent=self, conf=self.conf,
                                              name=self.name)
 
         if "plot3d" in kwds:
             self.plot3D = kwds["plot3d"]
         else:
-            self.plot3D = True
+            self.plot3D = "off"
 
-        # if self.plot3D is True:
+        # if self.plot3D=="on":
 
         #     self.Widget3D=GRAPH3D(self.conf,name=self.name)
 
         if "math" in kwds:
             self.math = kwds["math"]
         else:
-            self.math = True
+            self.math = "on"
 
-        if self.math is True:
+        if self.math == "on":
             self.winMath = WINMATH()
 
         self.winPointing = WINPOINTING(parent=self)
@@ -236,7 +224,6 @@ class SEEELECTRONS(QMainWindow):
                                  name=self.name)
 
         self.winCrop = WINCROP(parent=self, conf=self.conf)
-        
         self.path = path
         self.setWindowTitle('Visualization'+'       v.' + self.version)
         self.bloqKeyboard = 1  # block cross by keyboard
@@ -312,6 +299,8 @@ class SEEELECTRONS(QMainWindow):
         TogOn = pathlib.PurePosixPath(TogOn)
         self.hboxBar = QHBoxLayout()
 
+        # self.setStyleSheet("QCheckBox::indicator{width: 30px;height: 30px;}""QCheckBox::indicator:unchecked { image : url(%s);}""QCheckBox::indicator:checked { image:  url(%s);}""QCheckBox{font :10pt;QCheckBox{background-color :red}" % (TogOff,TogOn) )
+
         self.toolBar = self.addToolBar('tools')
         self.toolBar.setMovable(False)
         menubar = self.menuBar()
@@ -352,7 +341,9 @@ class SEEELECTRONS(QMainWindow):
         self.openActNewWin = QAction(QtGui.QIcon(self.icon+"Open.png"),
                                      'Open in new window', self)
         
+        # self.openActNewWin.setShortcut('Ctrl+o')
         self.openActNewWin.triggered.connect(self.OpenFNewWin)
+        # self.toolBar.addAction(self.openActNewWin)
         self.fileMenu.addAction(self.openActNewWin)
 
         self.saveAct = QAction(QtGui.QIcon(self.icon+"disketteSave.png"),
@@ -386,8 +377,9 @@ class SEEELECTRONS(QMainWindow):
         
         self.preferenceAct.triggered.connect(
             lambda: self.open_widget(self.winPref))
+
         self.fileMenu.addAction(self.preferenceAct)
-        
+
         self.historyAct = QAction(QtGui.QIcon(self.icon+"time.png"),
                                   '&History', self)
         
@@ -477,6 +469,7 @@ class SEEELECTRONS(QMainWindow):
         self.checkBoxHist.triggered.connect(self.HIST)
         self.ImageMenu.addAction(self.checkBoxHist)
 
+        # self.ColorBox = QMenu('&LookUp Table',self) #
         self.menuColor = QMenu('&LookUp Table')
         # print(pg.colormap.listMaps('matplotlib'))
         self.menuColor.addAction('jet', self.Setcolor)
@@ -499,7 +492,7 @@ class SEEELECTRONS(QMainWindow):
         self.checkBoxBg.setChecked(False)
         self.ImageMenu.addAction(self.checkBoxBg)
 
-        if self.encercled is True:
+        if self.encercled == "on":
             self.energyBox = QAction(QtGui.QIcon(self.icon+"coin.png"),
                                      'Energy Encercled', self)
             
@@ -513,23 +506,7 @@ class SEEELECTRONS(QMainWindow):
         self.AnalyseMenu.addAction(self.cropBox)
         self.cropBox.triggered.connect(self.Crop)
 
-        if self.spectro is True:
-
-            # self.InputEAct=QAction(QtGui.QIcon(self.icon+"pref.png"),
-            #                          'Input Electrons', self)
-        
-            # self.InputEAct.triggered.connect(
-            #     lambda: self.open_widget(self.winInputE))
-
-            # self.fileMenu.addAction(self.InputEAct)
-
-            self.spectroBox = QAction(QtGui.QIcon(self.icon+"yin-yang.png"),
-                                   'Spectro Windows', self)
-        
-            self.AnalyseMenu.addAction(self.spectroBox)
-            self.spectroBox.triggered.connect(self.spectroFunct)
-
-        if self.math is True:
+        if self.math == "on":
             self.mathButton = QAction(QtGui.QIcon(self.icon + "math.png"),
                                       'Math', self)
             
@@ -542,12 +519,14 @@ class SEEELECTRONS(QMainWindow):
         self.paletteupButton = QAction(QtGui.QIcon(self.icon+"user.png"),
                                        'Brightness +', self)
         
+        # self.paletteupButton.setShortcut('+')
         self.ProcessMenu.addAction(self.paletteupButton)
         self.paletteupButton.triggered.connect(self.paletteup)
 
         self.palettedownButton = QAction(QtGui.QIcon(self.icon+"userM.png"),
                                          'Brightness -', self)
         
+        # self.palettedownButton.setShortcut('-')
         self.ProcessMenu.addAction(self.palettedownButton)
         self.palettedownButton.triggered.connect(self.palettedown)
 
@@ -563,12 +542,14 @@ class SEEELECTRONS(QMainWindow):
         self.ProcessMenu.addAction(self.contrastButton)
         self.contrastButton.triggered.connect(self.contrast)
 
-        if self.winFilter is True:
+        if self.winFilter == 'on':
+            # self.filtreBox = QAction('&Filters',self)
             self.menuFilter = QMenu('&Filters')
             self.menuFilter.addAction('&Gaussian', self.Gauss)
             self.menuFilter.addAction('&Median', self.Median)
             self.menuFilter.addAction('&Threshold', self.Threshold)
             self.menuFilter.addAction('&Origin', self.Orig)
+            # self.filtreBox.setMenu(menu)
             self.ProcessMenu.addMenu(self.menuFilter)
 
         self.removeHP = QAction('Hot Pixel Removed On', self)
@@ -576,11 +557,11 @@ class SEEELECTRONS(QMainWindow):
         self.removeHP.setChecked(False)
         self.ProcessMenu.addAction(self.removeHP)
 
-        if self.plot3D is True:
+        if self.plot3D == "on":
             self.box3d = QPushButton('3D', self)
             self.toolBar.addWidget(self.box3d)
 
-        if self.meas is True :
+        if self.meas == 'on':
             self.MeasButton = QAction(QtGui.QIcon(self.icon+"laptop.png"),
                                       'Measure', self)
             
@@ -588,7 +569,7 @@ class SEEELECTRONS(QMainWindow):
             self.MeasButton.triggered.connect(self.Measurement)
             self.AnalyseMenu.addAction(self.MeasButton)
 
-        if self.fft is True:
+        if self.fft == 'on':
             self.fftButton = QAction('FFT', self)
             self.AnalyseMenu.addAction(self.fftButton)
             self.fftButton.triggered.connect(self.fftTransform)
@@ -672,7 +653,7 @@ class SEEELECTRONS(QMainWindow):
         self.p1.showAxis('left', show=False)
         self.p1.showAxis('bottom', show=False)
 
-        if self.bloqKeyboard is True:  # cross : fixed (red) or not (yellow) 
+        if self.bloqKeyboard is True:  # fixed or not cross
             self.vLine = pg.InfiniteLine(angle=90, movable=False, pen='r')  
             self.hLine = pg.InfiniteLine(angle=0, movable=False, pen='r')
         else:
@@ -686,7 +667,7 @@ class SEEELECTRONS(QMainWindow):
         self.vLine.setPos(self.xc)
         self.hLine.setPos(self.yc)
 
-        # cross for the max
+        # cross the max
         self.vLineCrossMax = pg.InfiniteLine(angle=90, movable=False, pen='g') 
         self.hLineCrossMax = pg.InfiniteLine(angle=0, movable=False, pen='g')
         self.labelCmax = pg.TextItem(angle=0)
@@ -709,18 +690,23 @@ class SEEELECTRONS(QMainWindow):
         self.hist.autoHistogramRange()
         self.hist.gradient.loadPreset('flame')
         
-        #  XY  plot graph
+        #  XY  graph
         self.curve2 = pg.PlotCurveItem()
         self.curve3 = pg.PlotCurveItem()
-
         # slider to open multi file
         self.sliderImage = QSlider(Qt.Horizontal)
         self.sliderImage.setEnabled(False)
         self.vbox2.addWidget(self.sliderImage)
 
+        # main layout
+
+        # vMainLayout = QVBoxLayout()
+
         hMainLayout = QHBoxLayout()
-        
-        if self.aff == 'right': 
+        # vMainLayout.addLayout(self.hboxBar)
+        # vMainLayout.addLayout(hMainLayout)
+
+        if self.aff == 'right':
             hMainLayout.addLayout(self.vbox2)
             hMainLayout.addLayout(self.vbox1)
         if self.aff == 'left':
@@ -728,17 +714,19 @@ class SEEELECTRONS(QMainWindow):
             hMainLayout.addLayout(self.vbox2)
 
         hMainLayout.setContentsMargins(1, 1, 1, 1)
+        # hMainLayout.setSpacing(1)
+        # hMainLayout.setStretch(10,1)
         MainWidget = QFrame()
 
         if self.color is not None:
-            # to set a differents color of the windows 
-            print("")
-            #self.winImage.setStyleSheet("border : 3px solid  %s"  self.color)
+
+            self.winImage.setStyleSheet("border : 3px solid  %s" % self.color)
 
         MainWidget.setLayout(hMainLayout)
+
         self.setCentralWidget(MainWidget)
-        
-        # ROI definition 
+        # self.setContentsMargins(1,1,1,1)
+
         self.plotLine = pg.LineSegmentROI(positions=((0, 200), (200, 200)),
                                           movable=True, angle=0, pen='w')
 
@@ -752,13 +740,6 @@ class SEEELECTRONS(QMainWindow):
         
         self.plotRectZoom.addScaleHandle((0, 0), center=(1, 1))
 
-        # if self.spectro is True:
-        #     self.rectSelectSpectro = pg.RectROI([self.xc, self.yc], [4*self.rx, self.ry],
-        #                            pen='g')
-        #     self.rectSelectSpectro.setPos([self.winInputE.wmin.value(),self.winInputE.hmin.value()])
-        #     self.rectSelectSpectro.setSize([self.winInputE.wmax.value() - self.winInputE.wmin.value(),
-        #                                 self.winInputE.hmax.value() - self.winInputE.hmin.value()])
-            
         self.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
 
     def actionButton(self):
@@ -774,7 +755,7 @@ class SEEELECTRONS(QMainWindow):
         self.plotCercle.sigRegionChangeFinished.connect(self.CercChanged)
         self.plotPentagon.sigRegionChangeFinished.connect(self.PentaChanged)
 
-        # if self.plot3D is True:
+        # if self.plot3D == "on":
         #     self.box3d.clicked.connect(self.Graph3D)
 
         self.winPref.closeEventVar.connect(self.ScaleImg)
@@ -782,22 +763,6 @@ class SEEELECTRONS(QMainWindow):
         self.sliderImage.valueChanged.connect(self.SliderImgFct)
         # self.dockImage.topLevelChanged.connect(self.fullScreen)
         self.roiFluence.sigRegionChangeFinished.connect(self.fluenceFct)
-
-        #Spectro option windows 
-        # if self.spectro is True:
-        #     self.rectSelectSpectro.sigRegionChangeFinished.connect(self.changeDimSpectro)
-        #     self.winInputE.wmin.editingFinished.connect(self.SpectroChanged)
-        #     self.winInputE.wmax.editingFinished.connect(self.SpectroChanged)
-        #     self.winInputE.hmin.editingFinished.connect(self.SpectroChanged)
-        #     self.winInputE.hmax.editingFinished.connect(self.SpectroChanged)    
-        #     self.winInputE.medfilt.editingFinished.connect(self.SpectroChanged)
-        #     self.winInputE.npoints.editingFinished.connect(self.SpectroChanged)
-        #     self.winInputE.ppmm.editingFinished.connect(self.SpectroChanged)
-        #     self.winInputE.pps0.editingFinished.connect(self.SpectroChanged)
-        #     self.winInputE.ssd.editingFinished.connect(self.SpectroChanged)
-        #     self.winInputE.selected_dsde_label.textChanged.connect(self.SpectroChanged)
-        #     self.winInputE.selectButton.clicked.connect(self.selectDimSpectro)
-        
 
         if self.parent is not None:
             #  to display a image when receive parent signal
@@ -865,7 +830,7 @@ class SEEELECTRONS(QMainWindow):
             self.LigneChanged()
 
     def LigneChanged(self):
-        '''Take line ROI
+        '''Take ROI
         '''
 
         if self.plotLine.pos()[0] < 0:
@@ -911,8 +876,7 @@ class SEEELECTRONS(QMainWindow):
         '''Take ROI
         '''
         self.cut = (self.plotRect.getArrayRegion(self.data, self.imh))
-        self.xini=self.plotRect.pos()[0]
-        self.yini=self.plotRect.pos()[1]
+
         if self.winPref.plotRectOpt.currentIndex() == 0:
             self.cut1 = self.cut.mean(axis=1)
         else:
@@ -960,10 +924,9 @@ class SEEELECTRONS(QMainWindow):
             pass
 
     def CercChanged(self):
-        '''take ROIc
+        '''take ROI
         '''
-        self.xini=self.plotRect.pos()[0]
-        self.yini=self.plotRect.pos()[1]
+        self.cut = (self.plotCercle.getArrayRegion(self.data, self.imh))
         self.cut1 = self.cut.mean(axis=1)
         self.CropChanged()
 
@@ -1017,36 +980,32 @@ class SEEELECTRONS(QMainWindow):
         '''
         if self.ite == 'rect':
             self.RectChanged()
-            if self.meas is True:
+            if self.meas == "on":
                 self.winM.setFile(self.nomFichier)
                 self.open_widget(self.winM)
-                MeasData=[self.cut,self.xini,self.yini,0,0]
-                self.signalMeas.emit(MeasData)
+                self.signalMeas.emit(self.cut)
                 # self.winM.Display(self.cut)
 
         if self.ite == 'cercle':
             self.CercChanged()
-            if self.meas is True:
+            if self.meas == "on":
                 self.winM.setFile(self.nomFichier)
                 self.open_widget(self.winM)
-                MeasData=[self.cut,self.xini,self.yini,0,0]
-                self.signalMeas.emit(MeasData)
+                self.signalMeas.emit(self.cut)
                 # self.winM.Display(self.cut)
 
         if self.ite == 'pentagon':
             self.PentaChanged()
-            if self.meas is True:
+            if self.meas == "on":
                 self.winM.setFile(self.nomFichier)
                 self.open_widget(self.winM)
-                MeasData=[self.cut,0,0,0,0]
-                self.signalMeas.emit(MeasData)
+                self.signalMeas.emit(self.cut)
 
         if self.ite is None:
-            if self.meas is True:
+            if self.meas == "on":
                 self.winM.setFile(self.nomFichier)
                 self.open_widget(self.winM)
-                MeasData=[self.data,0,0,0,0]
-                self.signalMeas.emit(MeasData)
+                self.signalMeas.emit(self.data)
 
     def Pointing(self):
         self.open_widget(self.winPointing)
@@ -1100,7 +1059,7 @@ class SEEELECTRONS(QMainWindow):
     def Display(self, data):
         #  display the data and refresh all the calculated things and plots
         self.data = data
-        
+
         if (self.checkBoxBg.isChecked() is True and
                 self.winOpt.dataBgExist is True):
 
@@ -1181,7 +1140,7 @@ class SEEELECTRONS(QMainWindow):
         self.Coupe()  # self.PlotXY() # graph update
         self.zoomRectupdate()  # update zoom rect
 
-        if self.encercled is True:
+        if self.encercled == "on":
             if self.winEncercled.isWinOpen is True:
                 self.signalEng.emit(self.data)
                 # self.winEncercled.Display(self.data) ## energy update
@@ -1196,7 +1155,7 @@ class SEEELECTRONS(QMainWindow):
             if self.ite == 'cercle':
                 self.CercChanged()
 
-        if self.meas is True:
+        if self.meas == "on":
             if self.winM.isWinOpen is True:  # measurement update
                 if self.ite == 'rect':
                     self.RectChanged()
@@ -1210,11 +1169,11 @@ class SEEELECTRONS(QMainWindow):
                 else:
                     self.Measurement()
 
-        if self.fft is True:
+        if self.fft == 'on':
             if self.winFFT.isWinOpen is True:  # fft update
                 self.winFFT.Display(self.data)
 
-        # if self.plot3D is True:
+        # if self.plot3D=="on":
         #     if self.Widget3D.isWinOpen==True:
         #         self.Graph3D()
         if self.winPointing.isWinOpen is True:
@@ -1224,12 +1183,9 @@ class SEEELECTRONS(QMainWindow):
         if self.winCrop.isWinOpen is True:
             # print('emit new crop image')
             self.signalCrop.emit(self.cropImg)
-        if self.spectro is True: 
-            if self.winSpectro.isWinOpen is True:
-                self.signalSpectro.emit(self.data)
 
         self.signalDisplayed.emit(True)
-        
+
         #  autosave
         if self.checkBoxAutoSave.isChecked():  # autosave data
             self.pathAutoSave = str(self.conf.value(self.name+'/pathAutoSave'))
@@ -1738,7 +1694,6 @@ class SEEELECTRONS(QMainWindow):
         self.winHistory.Display(fichier)
 
         self.newDataReceived(data)
-        return self.data
 
     def OpenFNewWin(self):
 
@@ -1820,7 +1775,7 @@ class SEEELECTRONS(QMainWindow):
     @pyqtSlot(object)
     def newDataReceived(self, data):
         '''
-            Do display and save origin data when new Displadata signal is  sent to  visu
+        Do display and save origin data when new Displadata signal is  sent to  visu
         '''
         self.data = data
         self.ImgFrame.animateClick()  # change icon data when receive image
@@ -1919,7 +1874,7 @@ class SEEELECTRONS(QMainWindow):
     def open_widget(self, fene):
         """ open new widget
         """
-        
+
         if fene.isWinOpen is False:
             fene.setup
             fene.isWinOpen = True
@@ -1996,45 +1951,6 @@ class SEEELECTRONS(QMainWindow):
                 self.cropImg = self.data
             self.winCrop.Display(self.cropImg)
 
-    def spectroFunct(self):
-        self.open_widget(self.winSpectro)
-        self.signalSpectro.emit(self.data)
-    #     self.SpectroChanged()
-
-    # def SpectroChanged(self):
-        
-    #     if self.winSpectro.isWinOpen is True:
-    #         wmin = self.winInputE.wmin.value()
-    #         wmax = self.winInputE.wmax.value()
-    #         hmin = self.winInputE.hmin.value()
-    #         hmax = self.winInputE.hmax.value()
-    #         self.slist = self.winInputE.slist
-    #         self.elist = self.winInputE.elist
-    #         self.dsdelist = self.winInputE.dsdelist
-    #         self.signalSpectro.emit(self.data)
-    #         #self.winSpectro.Display(self.data)
-    
-    # def selectDimSpectro(self):
-    #     if self.winInputE.buttonSelected is False :
-    #         self.rectSelectSpectro.setPos([self.winInputE.wmin.value(),self.winInputE.hmin.value()])
-
-    #         self.rectSelectSpectro.setSize([self.winInputE.wmax.value() - self.winInputE.wmin.value(),
-    #                                     self.winInputE.hmax.value() - self.winInputE.hmin.value()])
-        
-    #         self.p1.addItem(self.rectSelectSpectro)
-    #         self.winInputE.buttonSelected = True
-    #     else:
-    #         self.winInputE.buttonSelected = False
-    #         self.p1.removeItem(self.rectSelectSpectro)
-    
-    # def changeDimSpectro(self):
-    #     self.winInputE.wmin.setValue(int(self.rectSelectSpectro.pos()[0]))
-    #     self.winInputE.wmax.setValue(int(self.rectSelectSpectro.pos()[0] + self.rectSelectSpectro.size()[0] ))
-    #     self.winInputE.hmin.setValue(int(self.rectSelectSpectro.pos()[1]))
-    #     self.winInputE.hmax.setValue(int(self.rectSelectSpectro.pos()[1] + self.rectSelectSpectro.size()[1] ))
-
-
-
     def closeEvent(self, event):
         self.close()
         time.sleep(0.1)
@@ -2043,28 +1959,25 @@ class SEEELECTRONS(QMainWindow):
     def close(self):
 
         # when the window is closed
-        if self.encercled is True:
+        if self.encercled == "on":
             if self.winEncercled.isWinOpen is True:
                 self.winEncercled.close()
         if self.winCoupe.isWinOpen is True:
             self.winCoupe.close()
-        if self.meas is True:
+        if self.meas == "on":
             if self.winM.isWinOpen is True:
                 self.winM.close()
         if self.winOpt.isWinOpen is True:
             self.winOpt.close()
         if self.winPref.isWinOpen is True:
             self.winPref.close()
-        if self.fft is True:
+        if self.fft == 'on':
             if self.winFFT.isWinOpen is True:
                 self.winFFT.close()
             if self.winFFT1D.isWinOpen is True:
                 self.winFFT1D.close()
         if self.winCrop.isWinOpen is True:
             self.winCrop.close()
-        if self.spectro is True:
-            if self.winSpectro.isWinOpen is True:
-                self.winSpectro.close()
 
 
 def runVisu(file=None, path=None):
@@ -2079,9 +1992,10 @@ def runVisu(file=None, path=None):
     e.show()
     appli.exec_()
 
+
 if __name__ == "__main__":
     appli = QApplication(sys.argv)
     appli.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
-    e = SEEELECTRONS(spectro=True, motRSAI=True)  # ,color="red")#,conf=conf,name=name)
+    e = SEE(aff='left', roiCross=True)  # ,color="red")#,conf=conf,name=name)
     e.show()
     appli.exec_()
