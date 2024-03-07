@@ -19,7 +19,7 @@ import os
 import qdarkstyle
 from scipy.integrate import solve_ivp
 from scipy.interpolate import interp1d, RectBivariateSpline
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import pyqtgraph as pg
 from scipy.constants import c, m_e, e
 from visu import WinCut
@@ -89,7 +89,6 @@ class WINTRAJECTOIRE(QMainWindow):
         self.actionButton()
         self.CheckChangeB()
         
-
     def setup(self):
         # define button
         self.setWindowTitle('Electron Trajectory ')
@@ -633,14 +632,22 @@ class CALCULTHREAD(QtCore.QThread):
         if self.parent.checkB.isChecked() is False:
             data_B = np.loadtxt(str(self.parent.BFileName))
             self.xmap = data_B[0, 1:]
+            print('bMax',max(self.xmap))
+            self.xmap = data_B[0, 1:] 
             self.xmax = max(self.xmap)
             self.xmin = min(self.xmap)
             self.ymap = data_B[1:, 0]
             self.ymax = max(self.ymap)
             self.ymin = min(self.ymap)
             self.Bmap = data_B[1:, 1:]
+            print('B Max',self.Bmap.max())
+            if self.xmap[0]>self.xmap[1] :
+                self.xmap = np.flip(self.xmap)
+            if self.ymap[0]>self.ymap[1] :
+                self.ymap = np.flip(self.ymap)    
             self.wcmap = self.parent.sens_B*e*self.Bmap/m_e
-
+            print('calul avec B file',self.xmax,self.xmin,self.ymax,self.ymin)
+            print(self.xmap)
             #  Translation and scaling the image
             tr = QtGui.QTransform()  # prepare ImageItem transformation:
             self.scaleX = self.xmap[1] - self.xmap[2]       
@@ -651,7 +658,8 @@ class CALCULTHREAD(QtCore.QThread):
             tr.translate(self.transX/self.scaleX, self.transY/self.scaleY)  # to locate maximum at axis origin      
             self.parent.imh.setImage(self.Bmap.T)
             self.parent.imh.setTransform(tr)  # assign transform
-
+            # plt.imshow(self.Bmap)
+            # plt.show()
         else:
             #  plot rectangle to show  the magnet
             self.parent.p1.plot([-self.parent.La/2, self.parent.La/2], [-self.parent.L/2, -self.parent.L/2], pen='b')
@@ -672,7 +680,7 @@ class CALCULTHREAD(QtCore.QThread):
         x_P = np.zeros(self.parent.Nt)
         y_P = np.zeros(self.parent.Nt)
         theta = np.zeros(self.parent.Nt)
-        # calcul trajectoire
+        #calcul trajectoire
         for i in range(0, self.parent.Nt):
             if self.stop is True:
                 break
