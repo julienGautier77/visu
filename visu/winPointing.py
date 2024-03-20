@@ -283,8 +283,8 @@ class WINPOINTING(QMainWindow):
         if ext == '.txt':  # text file
             # self.cutData =np.loadtxt(str(fichier))
             aa = np.loadtxt(fichier, delimiter=" ", comments='#')
-            self.Xec = aa[:, 0]
-            self.Yec = aa[:, 1]
+            self.Xec = aa[0]
+            self.Yec = aa[1]
             
             self.p1.setData(y=self.Yec, x=self.Xec)
             self.p3.setData(self.Xec)
@@ -324,8 +324,10 @@ class WINPOINTING(QMainWindow):
         print(fichier, ' is saved')
         self.conf.setValue(self.name+"/path", self.path)
         time.sleep(0.1)
-        
-        np.savetxt(str(fichier)+'.txt', np.array(self.Xec, self.Yec).T)  # ,header="StepX:"+str(self.stepX)+"StepY:"+str(self.stepY))
+        a=np.reshape(np.array(self.Xec),(len(self.Xec),1))
+        b=np.reshape(np.array(self.Yec),(len(self.Yec),1))
+        mat=np.concatenate((a,b),axis=1)
+        np.savetxt(str(fichier)+'.txt',mat.T)#,header="StepX:"+str(self.stepX)+"StepY:"+str(self.stepY))
         
     def Reset(self):
         print('reset)')
