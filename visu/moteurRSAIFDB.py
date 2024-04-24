@@ -26,7 +26,8 @@ mut=QMutex()
 # if not local  dsn=10.0.5.X/ ??
 
 ## connection to data base 
-con = connect('C:\PilMotDB\PILMOTCONFIG.FDB', user='sysdba', password='masterkey')
+con = connect('10.0.48.1/3050:C:/PilMotDB/PILMOTCONFIG.FDB', user='sysdba', password='masterkey')
+# con = connect('C:\PilMotDB\PILMOTCONFIG.FDB', user='sysdba', password='masterkey')
 cur = con.cursor()
 curCWD=con.cursor()
 

@@ -134,7 +134,7 @@ class InputE(QtWidgets.QWidget):
          self.slist, self.elist, self.dsdelist,self.thetalist,self.dlist = self.readfile(self.dsde_name)
         except:
             self.slist, self.elist, self.dsdelist,self.thetalist,self.dlist=0,0,0,0,0
-            print('error file calibration' )
+            print('error :  electrons file calibration not defined' )
 
         # Create label to display the warning message if no file has been selected
         self.warning_label = QtWidgets.QLabel('', self)

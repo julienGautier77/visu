@@ -193,9 +193,12 @@ class SEE(QMainWindow):
             self.confMot = kwds["confMot"]  # le Qsetting des moteurs
             self.winM = MEAS(parent=self, confMot=self.confMot, conf=self.conf, name=self.name)
         if "motRSAI" in kwds:
-            self.motRSAI=kwds["motRSAI"]
+            self.motRSAI = kwds["motRSAI"]
             if self.motRSAI is True: 
                 self.winM = MEAS(parent=self, conf=self.conf, name=self.name,motRSAI=self.motRSAI)
+            else :
+                if self.meas is True :
+                    self.winM = MEAS(parent=self, conf=self.conf, name=self.name)
         else:
             if self.meas is True :
                 self.winM = MEAS(parent=self, conf=self.conf, name=self.name)
@@ -2083,6 +2086,6 @@ def runVisu(file=None, path=None):
 if __name__ == "__main__":
     appli = QApplication(sys.argv)
     appli.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
-    e = SEE(motRSAI=True)#,conf=conf,name=name)
+    e = SEE(motRSAI=False)#,conf=conf,name=name)
     e.show()
     appli.exec_()

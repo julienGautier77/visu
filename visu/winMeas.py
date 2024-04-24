@@ -57,13 +57,11 @@ class MEAS(QMainWindow):
                 self.IPadress = self.listRack[0]
                 self.rackName = []
                 self.listMotor = self.RSAI.listMotorName(self.IPadress)
-                print('RSAI motor connected to database')
-                
-                
-        else : self.motRSAI = False
-
+                print('RSAI motor connected to database')  
+        else : 
+            self.motRSAI = False
+            
         self.indexUnit = 1 # micron
-        
         self.icon = str(p.parent) + sepa+'icons' + sepa
         self.isWinOpen = False
         self.setup()
