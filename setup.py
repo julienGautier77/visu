@@ -3,6 +3,7 @@
 """
 Created on Mon Mar 18 14:06:58 2019
 open('README.md').read()
+'PyQt6-sip== 13.5.2','PyQt6-qt6==6.5.1','PyQt6==6.5.1',
 @author: juliengautier
 """
 from pathlib import Path 
@@ -26,4 +27,4 @@ setup(name='visu',version=2024.02,
         "Topic :: Scientific/Engineering :: Visualization"
       ],
       url='https://github.com/julienGautier77/visu',
-      install_requires=['matplotlib','PyQt6-sip== 13.5.2','PyQt6-qt6==6.5.1','PyQt6==6.5.1','qdarkstyle','pyqtgraph','scipy','six',])
+      install_requires=['matplotlib','qdarkstyle','pyqtgraph','scipy','six',])
