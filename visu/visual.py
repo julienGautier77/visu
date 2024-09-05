@@ -192,6 +192,7 @@ class SEE(QMainWindow):
         elif "confMot" in kwds:
             self.confMot = kwds["confMot"]  # le Qsetting des moteurs
             self.winM = MEAS(parent=self, confMot=self.confMot, conf=self.conf, name=self.name)
+            
         if "motRSAI" in kwds:
             self.motRSAI = kwds["motRSAI"]
             if self.motRSAI is True: 
@@ -199,9 +200,18 @@ class SEE(QMainWindow):
             else :
                 if self.meas is True :
                     self.winM = MEAS(parent=self, conf=self.conf, name=self.name)
+        
+        elif 'motA2V' in kwds :
+            self.motA2V = kwds["motA2V"]
+            if self.motA2V is True :
+                self.winM = MEAS(parent=self, conf=self.conf, name=self.name,motA2V=self.motA2V)
+            else :
+                if self.meas is True :
+                    self.winM = MEAS(parent=self, conf=self.conf, name=self.name)
         else:
             if self.meas is True :
                 self.winM = MEAS(parent=self, conf=self.conf, name=self.name)
+
 
         self.winOpt = OPTION(conf=self.conf, name=self.name)
         self.winPref = PREFERENCES(conf=self.conf, name=self.name)

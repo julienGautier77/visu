@@ -56,11 +56,29 @@ class MEAS(QMainWindow):
                 self.listRack = self.RSAI.rEquipmentList()
                 self.IPadress = self.listRack[0]
                 self.rackName = []
-                self.listMotor = self.RSAI.listMotorName(self.IPadress)
+                self.listMotorName = self.RSAI.listMotorName(self.IPadress)
                 print('RSAI motor connected to database')  
         else : 
             self.motRSAI = False
-            
+        
+        if 'motA2V' in kwds :
+            self.motA2V = kwds["motA2V"]
+            if self.motA2V is True:
+                # import importlib.utils
+                # module_name = 'moteurA2V'
+                sys.path.append('C:/Users/UPX/Desktop/python/camera')
+                import moteurA2V as A2V
+                self.A2V = A2V
+                self.listRack = list()
+                
+                self.rackName = []
+                self.listMotorName = self.A2V.listMotorName
+                self.listMotor = self.A2V.listMotor
+                print('TMCL motor connected to database')  
+        else : 
+            self.motA2V = False
+
+
         self.indexUnit = 1 # micron
         self.icon = str(p.parent) + sepa+'icons' + sepa
         self.isWinOpen = False
@@ -112,8 +130,8 @@ class MEAS(QMainWindow):
         self.label = 'Shoot'
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
         self.setGeometry(100, 300, 1000, 300)
-        if self.motRSAI is True:
-            self.stepmotor=1
+        if self.motRSAI is True or self.motA2V is True:
+            self.stepmotor = 1
             self.unit()
 
     def setFile(self, file):
@@ -185,10 +203,9 @@ class MEAS(QMainWindow):
         header.setDefaultAlignment(Qt.AlignmentFlag.AlignVCenter)
         header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
 
-        if self.motRSAI is True:
+        if self.motRSAI is True or self.motA2V is True:
             self.motorNameBox = QComboBox()
-            self.motorNameBox.addItem('choose a Motor')
-            
+            self.motorNameBox.addItem('Choose a Motor')
             self.unitBouton = QComboBox()
             self.unitBouton.addItem('Step')
             self.unitBouton.addItem('um')
@@ -204,7 +221,7 @@ class MEAS(QMainWindow):
             for rack in self.listRack: #
                 self.rackChoise.addItem( str(self.RSAI.nameEquipment(rack))+ '  (' + rack +')')
             hLayout1.addWidget(self.rackChoise)
-            self.motorNameBox.addItems(self.listMotor)
+            self.motorNameBox.addItems(self.listMotorName)
             hLayout1.addWidget(self.motorNameBox)
             self.table.setColumnCount(13)   
             self.table.setHorizontalHeaderLabels(('File', 'Max', 'Min', 'x max', 'y max', 'Sum', 'Mean', 'Size', 'x c.mass', 'y c.mass', 'user1', 'Motor', 'date'))
@@ -463,7 +480,7 @@ class MEAS(QMainWindow):
         self.table.setItem(self.shoot, 9, QTableWidgetItem(str(self.ycmass)))
         self.table.setItem(self.shoot, 10, QTableWidgetItem(str(self.user1)))
 
-        if self.motRSAI is True :
+        if self.motRSAI is True or self.motA2V is True :
             if self.motorNameBox.currentIndex() ==0 :
                 Posi = self.shoot
                 self.label = 'Shoot'
@@ -471,7 +488,7 @@ class MEAS(QMainWindow):
                 Posi = round((self.MOT.position())/self.unitChange,2)
                 
                 self.label = self.MOT.name + '  ( '+self.unitName+' )'
-                
+        
         else:
             Posi = self.shoot
             self.label = 'Shoot'
@@ -486,7 +503,7 @@ class MEAS(QMainWindow):
             self.SummThre.append(self.summThre)
             self.TableSauv.append('%s,%.1f,%.1f,%i,%i,%.1f,%.3f,%.2f,%.2f,%.2f, %.2f,%.2f,%.2f,%.2f,%s' % (self.nomFichier, self.maxx, self.minn, self.xmax, self.ymax, self.summ, self.moy, self.xs, self.ys, self.xcmass, self.ycmass, Posi, self.summThre, self.user1, self.date))
             
-            if self.motRSAI is True:
+            if self.motRSAI is True or self.motA2V is True:
                 self.table.setColumnCount(14)
                 self.table.setHorizontalHeaderLabels(('File', 'Max', 'Min', 'x max', 'y max', 'Sum Mean', 'Size', 'x c.mass', 'y c.mass', 'Sum Thr', ' Motor', 'date'))
                 self.table.setItem(self.shoot, 12, QTableWidgetItem(str(Posi)))
@@ -501,7 +518,7 @@ class MEAS(QMainWindow):
         else:
             self.TableSauv.append('%s,%.1f,%.1f,%i,%i,%.1f,%.3f,%.2f,%.2f,%.2f, %.2f,%.2f,%.2f,%s' % (self.nomFichier, self.maxx, self.minn, self.xmax, self.ymax, self.summ, self.moy, self.xs, self.ys, self.xcmass, self.ycmass, self.user1, Posi, self.date))
             
-            if self.motRSAI is True:
+            if self.motRSAI is True or self.motA2V is True:
                 self.table.setHorizontalHeaderLabels(('File', 'Max', 'Min', 'x max', 'y max', 'Sum', 'Mean', 'Size', 'x c.mass', 'y c.mass', 'user1', 'Motor', 'date'))
                 self.table.setColumnCount(13)
                 self.table.setItem(self.shoot, 11, QTableWidgetItem(str(Posi)))
@@ -619,9 +636,17 @@ class MEAS(QMainWindow):
     def motorChange(self):
         if self.motorNameBox.currentIndex() != 0 :
             self.numMotor = self.motorNameBox.currentIndex()
-            self.IPadress = self.listRack [self.rackChoise.currentIndex()]
-            self.MOT = self.RSAI.MOTORRSAI(self.IPadress, self.numMotor)
-            self.stepmotor =1/self.MOT.step
+            
+            if self.motA2V is True:
+                self.numMotor = self.numMotor -1
+                self.MOT = self.A2V.MOTORA2V(self.listMotor[self.numMotor])
+                self.stepmotor =self.MOT.step
+            if self.motRSAI is True :
+                self.IPadress = self.listRack [self.rackChoise.currentIndex()]
+                self.MOT = self.RSAI.MOTORRSAI(self.IPadress, self.numMotor)
+                self.stepmotor =1/self.MOT.step
+               
+            
             self.unit()
         
 
@@ -629,17 +654,17 @@ class MEAS(QMainWindow):
         self.motorNameBox.clear()
         self.IPadress =str( self.listRack[self.rackChoise.currentIndex()])
         #print('ip',self.IPadress)
-        self.listMotor =self.RSAI.listMotorName(self.IPadress)
+        self.listMotorName =self.RSAI.listMotorName(self.IPadress)
         self.rackName = self.RSAI.nameEquipment(self.IPadress)
         self.motorNameBox.addItem('Choose a motor')
-        self.motorNameBox.addItems(self.listMotor)
+        self.motorNameBox.addItems(self.listMotorName)
 
     def unit(self):
         '''
         unit change mot foc
         '''
         self.indexUnit = self.unitBouton.currentIndex()
-        
+        print('winMeas',self.stepmotor)
         if self.indexUnit == 0:  # step
             self.unitChange = 1
             self.unitName = 'step'
@@ -664,6 +689,6 @@ class MEAS(QMainWindow):
 if __name__ == "__main__":
     appli = QApplication(sys.argv)
     appli.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
-    e = MEAS(motRSAI=True)
+    e = MEAS(motA2V=True)
     e.show()
     appli.exec_()
