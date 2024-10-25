@@ -5,7 +5,7 @@ import numpy as np
 import pathlib
 import sys
 from PyQt6.QtWidgets import QApplication, QWidget, QLineEdit
-from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout
+from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout,QMessageBox
 from PyQt6.QtWidgets import QLabel, QSizePolicy, QCheckBox, QPushButton
 from PyQt6.QtWidgets import QFileDialog, QProgressBar, QDoubleSpinBox
 from PyQt6.QtWidgets import QMainWindow, QStatusBar, QSpacerItem
@@ -28,6 +28,7 @@ from visu import WinCut
 # (0,0) correspond au centre de l'aimant.
 # y>0: vers le lanex.
 # Oxyz repere oriente dans le sens trigonometrique. Le champ magnetique B est suivant z.
+# La position du zero du Lanex  corresponde a la position du pixel dans l'input Electrons du spectro 
 
 
 class WINRESULT(QWidget):
@@ -97,8 +98,14 @@ class WINTRAJECTOIRE(QMainWindow):
         menubar.setNativeMenuBar(False)
         self.fileMenu = menubar.addMenu('&File')
         self.ResultMenu = menubar.addMenu('&Results')
+        self.AboutMenu = menubar.addMenu('&About')
         self.statusBar = QStatusBar()
         self.setContentsMargins(0, 0, 0, 0)
+        self.aboutAction = QAction(QtGui.QIcon(self.icon+"LOA.png'"),
+                                   'Geometry', self)
+        
+        self.AboutMenu.addAction(self.aboutAction)
+        self.aboutAction.triggered.connect(self.aboutFunc)
 
         self.setStatusBar(self.statusBar)
         self.openAct = QAction(QtGui.QIcon(self.icon+"Open.png"),
@@ -328,6 +335,7 @@ class WINTRAJECTOIRE(QMainWindow):
         MainWidget = QWidget()
         MainWidget.setLayout(vbox1)
         self.setCentralWidget(MainWidget)
+        self.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
 
     def actionButton(self):
 
@@ -535,7 +543,13 @@ class WINTRAJECTOIRE(QMainWindow):
             # fene.activateWindow()
             # fene.raise_()
             fene.showNormal()
-    
+
+    def aboutFunc(self):
+        dlg = QMessageBox(self)
+        dlg.setWindowTitle("Geometry definition")
+        dlg.setText(" (0,0) is the magnet center \n Vertical y>0 : to the lanex screen\n X is horizontal axe \n B = B ez\n zero lanex is pixel chosen in electron input ")
+        dlg.exec()
+        print('ok')
     def closeEvent(self, event):
         """ when closing the window
         """
@@ -757,7 +771,7 @@ class CALCULTHREAD(QtCore.QThread):
 if __name__ == "__main__":
 
     appli = QApplication(sys.argv)
-    appli.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
+    #appli.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
     w = WINTRAJECTOIRE()
     w.show()
     appli.exec()
