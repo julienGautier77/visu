@@ -51,13 +51,16 @@ class MEAS(QMainWindow):
         if 'motRSAI' in kwds :
             self.motRSAI = kwds["motRSAI"]
             if self.motRSAI is True:
-                import visu.moteurRSAIFDB as RSAI
+                import visu.moteurRSAISERVER as RSAI
                 self.RSAI = RSAI
-                self.listRack = self.RSAI.rEquipmentList()
+                print('1')
+                self.listRack = self.RSAI.listRack()
+                print('12')
                 self.IPadress = self.listRack[0]
+                print('3')
                 self.rackName = []
                 self.listMotorName = self.RSAI.listMotorName(self.IPadress)
-                print('RSAI motor connected to database')  
+                print('RSAI motor connected to python server')  
         else : 
             self.motRSAI = False
         
@@ -218,6 +221,7 @@ class MEAS(QMainWindow):
             hLayout1.addWidget(self.unitBouton)
             self.unitBouton.currentIndexChanged.connect(self.unit) 
             self.rackChoise = QComboBox()
+
             for rack in self.listRack: #
                 self.rackChoise.addItem( str(self.RSAI.nameEquipment(rack))+ '  (' + rack +')')
             hLayout1.addWidget(self.rackChoise)
@@ -652,9 +656,10 @@ class MEAS(QMainWindow):
 
     def ChangeIPRack(self):
         self.motorNameBox.clear()
-        self.IPadress =str( self.listRack[self.rackChoise.currentIndex()])
+        self.IPadress = str( self.listRack[self.rackChoise.currentIndex()])
         #print('ip',self.IPadress)
-        self.listMotorName =self.RSAI.listMotorName(self.IPadress)
+        self.listMotorName = self.RSAI.listMotorName(self.IPadress)
+        #print('listmotorname',self.listMotorName)
         self.rackName = self.RSAI.nameEquipment(self.IPadress)
         self.motorNameBox.addItem('Choose a motor')
         self.motorNameBox.addItems(self.listMotorName)
@@ -689,6 +694,6 @@ class MEAS(QMainWindow):
 if __name__ == "__main__":
     appli = QApplication(sys.argv)
     appli.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
-    e = MEAS(motA2V=True)
+    e = MEAS(motRSAI=True)
     e.show()
     appli.exec_()

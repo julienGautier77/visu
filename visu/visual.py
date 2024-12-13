@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+
 """open
 Created on Wed Jan 30 15:07:27 2019
 
@@ -213,7 +214,7 @@ class SEE(QMainWindow):
                 self.winM = MEAS(parent=self, conf=self.conf, name=self.name)
 
 
-        self.winOpt = OPTION(conf=self.conf, name=self.name)
+        self.winOpt = OPTION(conf=self.conf, name=self.name,parent=self)
         self.winPref = PREFERENCES(conf=self.conf, name=self.name)
         self.winHistory = HISTORY(self, conf=self.conf, name=self.name)
         if "spectro" in kwds :
@@ -2096,6 +2097,6 @@ def runVisu(file=None, path=None):
 if __name__ == "__main__":
     appli = QApplication(sys.argv)
     appli.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
-    e = SEE(motRSAI=False)#,conf=conf,name=name)
+    e = SEE(motRSAI=True)#,conf=conf,name=name)
     e.show()
     appli.exec_()

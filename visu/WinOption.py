@@ -26,16 +26,18 @@ class OPTION(QWidget):
     emitChangeScale = QtCore.pyqtSignal(bool)
     emitChangeRot = QtCore.pyqtSignal(bool)
 
-    def __init__(self, conf=None, name='VISU'):
+    def __init__(self, conf=None, name='VISU',parent=None):
         
         super().__init__()
         
         p = pathlib.Path(__file__)
-        
+
+        self.parent = parent
         if conf is None:
             self.conf = QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.Format.IniFormat)
         else:
             self.conf = conf
+
         self.name = name
         sepa = os.sep
         self.icon = str(p.parent) + sepa+'icons' + sepa
@@ -201,14 +203,26 @@ class OPTION(QWidget):
             self.threadClient = THREADCLIENT(self)
             self.threadClient.start()
             self.threadClient.newShotnumber.connect(self.receiveNewNumber)
+            self.threadClient.pathSignal.connect(self.receiveNewPath)
+            self.threadClient.autoSignal.connect(self.receiveAuto)
         else:
             # print('close client')
             self.threadClient.stopClientThread()
     
     def receiveNewNumber(self, nbShot):
         self.tirNumberBox.setValue(nbShot)
-        # print(nbShot)
-    
+        
+    def receiveNewPath(self,path):
+        self.pathBox.setText(path)
+
+    def receiveAuto(self,auto):
+        if auto == 'True':
+            auto = True
+        else : 
+            auto = False 
+        
+        self.parent.checkBoxAutoSave.setChecked(auto)
+
     def closeEvent(self, event):
         """ when closing the window
         """
@@ -221,7 +235,9 @@ class THREADCLIENT(QtCore.QThread):
     '''Second thread for controling one acquisition independtly
     '''
     newShotnumber = Signal(int)  # QtCore.Signal(int) # signal to send 
-    
+    pathSignal = Signal(str)
+    autoSignal = Signal(str)
+
     def __init__(self, parent):
         
         super(THREADCLIENT, self).__init__(parent)
@@ -235,29 +251,55 @@ class THREADCLIENT(QtCore.QThread):
            
     def run(self):
         try:
-            self.serverHost = str(self.conf.value(self.name+"/server"))
-            self.serverPort = str(self.conf.value(self.name+"/serverPort"))
-            print(self.serverHost, self.serverPort)
+    
             self.clientSocket.connect((self.serverHost, int(self.serverPort)))
-            
             self.ClientIsConnected = True
             print('client connected to server', self.serverHost)
+            cmd = " %s, %s" %('nameVisu',self.parent.name)
+            self.clientSocket.send(cmd.encode())
+            self.parent.nameBox.setText(self.parent.name)
+            receiv = self.clientSocket.recv(1024)
+            time.sleep(1)
         except:
             self.isConnected = False
             print('Do you start the server?')
             self.ClientIsConnected = False
             self.parent.checkBoxServer.setChecked(False)
-            
+           
         while self.ClientIsConnected is True:
-            cmd = 'numberShoot?'
-            self.clientSocket.send(cmd.encode())
+            # cmd = 'numberShoot?'
+            # self.clientSocket.send(cmd.encode())
+            
+            # try:
+            #     receiv = self.clientSocket.recv(1024)
+            #     nbshot = int(receiv.decode())
+            # except:
+            #     self.parent.checkBoxServer.setChecked(False)
             try:
+                cmd = " %s" %('path')
+                self.clientSocket.send(cmd.encode())
+            
                 receiv = self.clientSocket.recv(64500)
-                nbshot = int(receiv.decode())
+                msgReceived = receiv .decode().strip()
+                msgsplit = msgReceived.split(',')
+                msgsplit = [msg.strip() for msg in msgsplit]
+
+                nbshot = int(msgsplit[0])
+                path = msgsplit[1]
+                autosave = msgsplit[2]
+                # print(nbshot,path,autosave)
+                
+            
             except:
                 self.parent.checkBoxServer.setChecked(False)
+            
+
             if int(self.parent.tirNumberBox.value()) is not nbshot:  # sent signal only when different
                 self.newShotnumber.emit(nbshot)
+            if str(self.parent.pathBox.text()) != path:
+                self.pathSignal.emit(path)
+            
+            self.autoSignal.emit(autosave)    # visual autosave on 
             time.sleep(0.1)
      
     def stopClientThread(self):
