@@ -100,6 +100,7 @@ class SEE(QMainWindow):
         super().__init__()
         self.version = __version__
         self.parent = parent
+        self.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
         print("data visualisation version :  ", self.version)
         p = pathlib.Path(__file__)
         self.fullscreen = False
@@ -214,7 +215,7 @@ class SEE(QMainWindow):
                 self.winM = MEAS(parent=self, conf=self.conf, name=self.name)
 
 
-        self.winOpt = OPTION(conf=self.conf, name=self.name,parent=self)
+        self.winOpt = OPTION(conf=self.conf, name=self.name, parent=self)
         self.winPref = PREFERENCES(conf=self.conf, name=self.name)
         self.winHistory = HISTORY(self, conf=self.conf, name=self.name)
         if "spectro" in kwds :
@@ -364,6 +365,13 @@ class SEE(QMainWindow):
         self.toolBar.addAction(self.openAct)
         self.fileMenu.addAction(self.openAct)
 
+        self.stackAct = QAction(QtGui.QIcon(self.icon+"Open.png"),
+                               'Create sum Image', self)
+        
+        self.stackAct.triggered.connect(self.StactF)
+        
+        self.fileMenu.addAction(self.stackAct)
+
         self.openActNewWin = QAction(QtGui.QIcon(self.icon+"Open.png"),
                                      'Open in new window', self)
         
@@ -450,7 +458,7 @@ class SEE(QMainWindow):
         self.statusBar.addWidget(self.fileName)
 
         self.labelFrameName = QLabel("Frame :")
-        self.labelFrameName.setStyleSheet("font:8pt;")
+        self.labelFrameName.setStyleSheet("font:6pt;")
         self.labelFrameName.setMinimumHeight(30)
         self.labelFrameName.setMaximumWidth(70)
         self.labelFrameName.setAlignment(Qt.AlignmentFlag.AlignVCenter)
@@ -462,8 +470,15 @@ class SEE(QMainWindow):
         self.statusBar.addPermanentWidget(self.labelFrameName)
         self.statusBar.addPermanentWidget(self.frameName)
 
-        self.ImgFrame = QToolButton()
-        self.ImgFrame.setStyleSheet("QToolButton:!pressed{border-image: url(./icons/data1.png);background-color: transparent;border-color: green;}""QToolButton:pressed{image: url(./icons/data2.png) ;background-color: transparent;border-color: blue}")
+        self.ImgFrame = QToolButton(self)
+        self.icondata1 = self.icon+"data1.png"
+        self.icondata1 = pathlib.Path (self.icondata1)
+        self.icondata1 = pathlib.PurePosixPath(self.icondata1)
+        self.icondata2 = self.icon+"data2.png"
+        self.icondata2 = pathlib.Path (self.icondata2)
+        self.icondata2 = pathlib.PurePosixPath(self.icondata2)
+
+        self.ImgFrame.setStyleSheet("QToolButton:!pressed{border-image: url(%s);background-color: transparent ;border-color: green;}""QToolButton:pressed{border-image: url(%s);background-color: gray ;border-color: gray}"%(self.icondata1,self.icondata2))
         self.statusBar.addPermanentWidget(self.ImgFrame)
 
         self.checkBoxScale = QAction(QtGui.QIcon(self.icon+"expand.png"),
@@ -484,8 +499,8 @@ class SEE(QMainWindow):
         self.toolBar.addAction(self.checkBoxColor)
         self.ImageMenu.addAction(self.checkBoxColor)
 
-        self.checkBoxHist = QAction(QtGui.QIcon(self.icon+"colourBar.png"),
-                                    'Show colour Bar', self)
+        self.checkBoxHist = QAction(QtGui.QIcon(self.icon+"colorBar.png"),
+                                    'Show color Bar', self)
         
         self.checkBoxHist.setCheckable(True)
         self.checkBoxHist.setChecked(False)
@@ -509,10 +524,12 @@ class SEE(QMainWindow):
         # self.ColorBox.setMenu(menuColor)
         self.ImageMenu.addMenu(self.menuColor)
 
-        self.checkBoxBg = QAction('Background Substraction On', self)
+        self.checkBoxBg = QAction(QtGui.QIcon(self.icon+"user.png"),'Background Substraction On', self)
         self.checkBoxBg.setCheckable(True)
         self.checkBoxBg.setChecked(False)
         self.ImageMenu.addAction(self.checkBoxBg)
+        self.toolBar.addAction(self.checkBoxBg)
+        self.checkBoxBg.triggered.connect(self.BackgroundF)
 
         if self.encercled is True:
             self.energyBox = QAction(QtGui.QIcon(self.icon+"coin.png"),
@@ -774,7 +791,7 @@ class SEE(QMainWindow):
         #     self.rectSelectSpectro.setSize([self.winInputE.wmax.value() - self.winInputE.wmin.value(),
         #                                 self.winInputE.hmax.value() - self.winInputE.hmin.value()])
             
-        self.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
+        
 
     def actionButton(self):
         # action of button
@@ -1118,7 +1135,7 @@ class SEE(QMainWindow):
         
         if (self.checkBoxBg.isChecked() is True and
                 self.winOpt.dataBgExist is True):
-
+            self.labelFrameName.setText('bg sub  on frame :')
             try:
                 self.data = self.data-self.winOpt.dataBg
             except:
@@ -1129,17 +1146,18 @@ class SEE(QMainWindow):
                 msg.setWindowTitle("Warning ...")
                 msg.setWindowFlags(QtCore.Qt.WindowType.WindowStaysOnTopHint)
                 msg.exec_()
-
+        else : 
+            self.labelFrameName.setText('bgsub  off frame :')
         if (self.checkBoxBg.isChecked() is True and
                 self.winOpt.dataBgExist is False):
             
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Icon.Critical)
             msg.setText("Background not soustracted !")
-            msg.setInformativeText("Background file not selected in options menu ")
+            msg.setInformativeText("Background file not selected in options menu or bad dim ")
             msg.setWindowTitle("Warning ...")
             msg.setWindowFlags(QtCore.Qt.WindowType.WindowStaysOnTopHint)
-            msg.exec_()
+            msg.exec()
 
         # filtre
         if self.filter == 'gauss':
@@ -1247,6 +1265,7 @@ class SEE(QMainWindow):
         
         #  autosave
         if self.checkBoxAutoSave.isChecked():  # autosave data
+            
             self.pathAutoSave = str(self.conf.value(self.name+'/pathAutoSave'))
             self.fileNameSave = str(self.conf.value(self.name+'/nameFile'))
             date = time.strftime("%Y_%m_%d_%H_%M_%S")
@@ -1256,14 +1275,15 @@ class SEE(QMainWindow):
             # elif 9<self.numTir<100:
             #     num = "0" + str(self.numTir)
             # else:
-            num = str(self.numTir)
+            # num = str(self.numTir)
+            num = "%04i" % self.numTir
             if self.winOpt.checkBoxDate.isChecked():  # add the date
                 # nomFichier = str(str(self.pathAutoSave) + '/' + self.fileNameSave + '_' + num+'_' + date)
                 nomFichier = f"{self.pathAutoSave}/{self.fileNameSave}_{num}_{date}"
             else:
                 # nomFichier = str(str(self.pathAutoSave) + '/' + self.fileNameSave + '_'+num)
                 nomFichier = f"{self.pathAutoSave}/{self.fileNameSave}_{num}"
-                print(nomFichier)
+                #print(nomFichier)
 
             print(nomFichier, 'saved')
             if self.winOpt.checkBoxTiff.isChecked():  # save as tiff
@@ -1620,7 +1640,14 @@ class SEE(QMainWindow):
             self.hist.gradient.loadPreset('grey')
             self.checkBoxColor.setIcon(QtGui.QIcon(self.icon+"circleGray.png"))
             self.checkBoxColor.setText('Grey')
-
+            
+    def BackgroundF(self):
+        if self.checkBoxBg.isChecked():
+            self.checkBoxBg.setIcon(QtGui.QIcon(self.icon+"userM.png"))
+            self.checkBoxBg.setText('Background soustraction On')
+        else :
+            self.checkBoxBg.setIcon(QtGui.QIcon(self.icon+"user.png"))
+            self.checkBoxBg.setText('Background soustraction Off')
     def roiChanged(self):
 
         self.rx = self.ro1.size()[0]
@@ -1735,7 +1762,7 @@ class SEE(QMainWindow):
 #            self.data = self.data[250:495,:]
         else:
             msg = QMessageBox()
-            msg.setIcon(QMessageBox.Critical)
+            msg.setIcon(QMessageBox.Icon.Critical)
             msg.setText("Wrong file format !")
             msg.setInformativeText("The format of the file must be : .SPE  .TIFF .sif  png jpeg or .txt ")
             msg.setWindowTitle("Warning ...")
@@ -1754,6 +1781,52 @@ class SEE(QMainWindow):
 
         self.newDataReceived(data)
         return self.data
+    
+    def StactF(self) :
+
+        chemin = self.conf.value(self.name+"/path")
+        fname = QFileDialog.getOpenFileNames(self, "Open Multi files", chemin, "Images (*.txt *.spe *.TIFF *.sif *.tif);;Text File(*.txt);;Ropper File (*.SPE);;Andor File(*.sif);; TIFF file(*.TIFF)")
+        self.openedFiles = fname[0]
+        self.nbOpenedImage = len(self.openedFiles)
+        
+        datS = []
+        
+        for i in range (0,self.nbOpenedImage):
+            fichier = self.openedFiles[i]
+            ext = os.path.splitext(fichier)[1]
+            if ext == '.txt':  # text file
+                data = np.loadtxt(str(fichier))
+            elif ext == '.spe' or ext == '.SPE':  # SPE file
+                dataSPE = SpeFile(fichier)
+                data1 = dataSPE.data[0]  # .transpose() # first frame
+                data = data1  # np.flipud(data1)
+            elif ext == '.TIFF' or ext == '.tif' or ext == '.Tiff' or ext == '.jpg' or ext == '.JPEG' or ext == '.png':  # tiff File
+                dat = Image.open(fichier)
+                data = np.array(dat)
+                data = np.rot90(data, 3)
+            elif ext == '.sif':
+                sifop = SifFile()
+                im = sifop.openA(fichier)
+                data = np.rot90(im, 3)
+    #            self.data = self.data[250:495,:]
+            else:
+                msg = QMessageBox()
+                msg.setIcon(QMessageBox.Icon.Critical)
+                msg.setText("Wrong file format !")
+                msg.setInformativeText("The format of the file must be : .SPE  .TIFF .sif  png jpeg or .txt ")
+                msg.setWindowTitle("Warning ...")
+                msg.setWindowFlags(QtCore.Qt.WindowType.WindowStaysOnTopHint)
+                msg.exec_()
+        
+            datS.append(data)
+        
+        datS = np.array(datS) 
+        chemin = os.path.dirname(fichier)
+        self.conf.setValue(self.name+"/path", chemin)
+        self.conf.setValue(self.name+"/lastFichier", os.path.split(fichier)[1])
+        self.data = datS.sum(axis=0)
+        self.newDataReceived(self.data)
+
 
     def OpenFNewWin(self):
 
@@ -1780,7 +1853,7 @@ class SEE(QMainWindow):
 #            self.data = self.data[250:495,:]
         else:
             msg = QMessageBox()
-            msg.setIcon(QMessageBox.Critical)
+            msg.setIcon(QMessageBox.Icon.Critical)
             msg.setText("Wrong file format !")
             msg.setInformativeText("The format of the file must be : .SPE  .TIFF .sif  png jpeg or .txt ")
             msg.setWindowTitle("Warning ...")

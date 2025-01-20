@@ -53,11 +53,8 @@ class MEAS(QMainWindow):
             if self.motRSAI is True:
                 import visu.moteurRSAISERVER as RSAI
                 self.RSAI = RSAI
-                print('1')
                 self.listRack = self.RSAI.listRack()
-                print('12')
                 self.IPadress = self.listRack[0]
-                print('3')
                 self.rackName = []
                 self.listMotorName = self.RSAI.listMotorName(self.IPadress)
                 print('RSAI motor connected to python server')  
@@ -644,11 +641,11 @@ class MEAS(QMainWindow):
             if self.motA2V is True:
                 self.numMotor = self.numMotor -1
                 self.MOT = self.A2V.MOTORA2V(self.listMotor[self.numMotor])
-                self.stepmotor =self.MOT.step
+                self.stepmotor = self.MOT.step
             if self.motRSAI is True :
                 self.IPadress = self.listRack [self.rackChoise.currentIndex()]
                 self.MOT = self.RSAI.MOTORRSAI(self.IPadress, self.numMotor)
-                self.stepmotor =1/self.MOT.step
+                self.stepmotor = self.MOT.step
                
             
             self.unit()
@@ -669,7 +666,7 @@ class MEAS(QMainWindow):
         unit change mot foc
         '''
         self.indexUnit = self.unitBouton.currentIndex()
-        print('winMeas',self.stepmotor)
+        #print('winMeas',self.stepmotor)
         if self.indexUnit == 0:  # step
             self.unitChange = 1
             self.unitName = 'step'

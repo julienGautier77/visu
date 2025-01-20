@@ -33,6 +33,7 @@ class OPTION(QWidget):
         p = pathlib.Path(__file__)
 
         self.parent = parent
+        self.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
         if conf is None:
             self.conf = QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.Format.IniFormat)
         else:
@@ -42,7 +43,7 @@ class OPTION(QWidget):
         sepa = os.sep
         self.icon = str(p.parent) + sepa+'icons' + sepa
         self.isWinOpen = False
-        self.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
+        
         self.setWindowTitle('Options Auto Save & visualisation')
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
         
@@ -123,6 +124,7 @@ class OPTION(QWidget):
         hMainLayout = QHBoxLayout()
         hMainLayout.addLayout(vbox1)
         self.setLayout(hMainLayout)
+        self.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
         
     def actionButton(self):
         self.buttonPath.clicked.connect(self.PathChanged)
@@ -166,7 +168,9 @@ class OPTION(QWidget):
         self.conf.setValue(self.name+"/pathBg", os.path.dirname(fichier))
         
         self.dataBgExist = True
-        
+        self.parent.checkBoxBg.setChecked(True)
+        self.parent.BackgroundF()
+
         if ext == '.txt':  # text file
             self.dataBg = np.loadtxt(str(fichier))
             self.dataBg = np.rot90(self.dataBg, 3)
@@ -216,12 +220,14 @@ class OPTION(QWidget):
         self.pathBox.setText(path)
 
     def receiveAuto(self,auto):
+
         if auto == 'True':
             auto = True
         else : 
             auto = False 
         
         self.parent.checkBoxAutoSave.setChecked(auto)
+        self.parent.autoSaveColor()
 
     def closeEvent(self, event):
         """ when closing the window
@@ -250,6 +256,8 @@ class THREADCLIENT(QtCore.QThread):
         self.clientSocket = _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM)
            
     def run(self):
+        print(self.serverHost, int(self.serverPort))
+        
         try:
     
             self.clientSocket.connect((self.serverHost, int(self.serverPort)))
@@ -283,17 +291,18 @@ class THREADCLIENT(QtCore.QThread):
                 msgReceived = receiv .decode().strip()
                 msgsplit = msgReceived.split(',')
                 msgsplit = [msg.strip() for msg in msgsplit]
-
+                #print(msgsplit)
                 nbshot = int(msgsplit[0])
                 path = msgsplit[1]
                 autosave = msgsplit[2]
-                # print(nbshot,path,autosave)
-                
-            
+                if len(msgsplit) == 4:
+                    name  = msgsplit[3]
+                    if self.parent.nameBox.text() != name:
+                        self.parent.nameBox.setText(name)
+
             except:
                 self.parent.checkBoxServer.setChecked(False)
             
-
             if int(self.parent.tirNumberBox.value()) is not nbshot:  # sent signal only when different
                 self.newShotnumber.emit(nbshot)
             if str(self.parent.pathBox.text()) != path:

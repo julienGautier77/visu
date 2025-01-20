@@ -65,7 +65,7 @@ def closeConnection():
 
 def listMotorName(IP):
     listMotor = []
-    print(IP)
+    #print(IP)
     for i in range(0,14):
             cmd = 'name'
             cmdsend = " %s, %s, %s " %(IP,i+1,cmd)
