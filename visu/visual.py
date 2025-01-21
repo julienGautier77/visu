@@ -21,8 +21,8 @@ import pyqtgraph as pg
 
 from PyQt6.QtWidgets import QApplication, QVBoxLayout, QHBoxLayout, QPushButton
 from PyQt6.QtWidgets import QInputDialog, QSlider, QLabel, QSizePolicy, QMenu
-from PyQt6.QtWidgets import QFileDialog, QMessageBox
-from PyQt6.QtWidgets import QMainWindow, QToolButton, QStatusBar, QFrame
+from PyQt6.QtWidgets import QFileDialog, QMessageBox, QLineEdit, QDialog ,QDialogButtonBox
+from PyQt6.QtWidgets import QMainWindow, QToolButton, QStatusBar, QFrame, QFormLayout
 from PyQt6.QtGui import QShortcut, QAction
 from PyQt6 import QtCore, QtGui
 from PyQt6.QtCore import pyqtSlot, Qt
@@ -106,6 +106,7 @@ class SEE(QMainWindow):
         self.fullscreen = False
         self.setAcceptDrops(True)
         sepa = os.sep
+
         self.icon = str(p.parent) + sepa+'icons' + sepa
         self.colorBar = 'flame'
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
@@ -221,7 +222,7 @@ class SEE(QMainWindow):
         if "spectro" in kwds :
             self.spectro = kwds["spectro"]
         else :
-            self.spectro =True
+            self.spectro = False
         
         if self.spectro is True:
             self.winSpectro = WINSPECTRO(parent=self,conf=self.conf)
@@ -506,6 +507,12 @@ class SEE(QMainWindow):
         self.checkBoxHist.setChecked(False)
         self.checkBoxHist.triggered.connect(self.HIST)
         self.ImageMenu.addAction(self.checkBoxHist)
+
+        self.checkBoxSetColorBarValue = QAction(
+                                     'set color Bar value', self)
+        self.colorBarWidgetValue = DialogColorBar(parent=self)
+        self.checkBoxSetColorBarValue.triggered.connect(self.ColorBarSet)
+        self.ImageMenu.addAction(self.checkBoxSetColorBarValue)
 
         self.menuColor = QMenu('&LookUp Table')
         # print(pg.colormap.listMaps('matplotlib'))
@@ -1584,8 +1591,8 @@ class SEE(QMainWindow):
             xmin = levels[0]
 
         self.imh.setLevels([xmin, xmax-(xmax - xmin) / 10])
-
-        self.hist.setHistogramRange(xmin, xmax)
+        self.hist.setLevels(xmin, xmax-(xmax - xmin) / 10)
+        self.hist.setHistogramRange(xmin, xmax-(xmax - xmin) / 10)
 
     def palettedown(self):
 
@@ -1598,7 +1605,8 @@ class SEE(QMainWindow):
             xmin = levels[0]
 
         self.imh.setLevels([xmin, xmax + (xmax - xmin) / 10])
-        self.hist.setHistogramRange(xmin, xmax)
+        self.hist.setLevels(xmin, xmax+(xmax - xmin) / 10)
+        self.hist.setHistogramRange(xmin, xmax + (xmax - xmin) / 10)
 
     def paletteauto(self):
 
@@ -1628,7 +1636,24 @@ class SEE(QMainWindow):
         action = self.sender()
         self.colorBar = str(action.text())
         self.hist.gradient.loadPreset(self.colorBar)
+    
+    def ColorBarSet(self):
+        
+        levels = self.imh.getLevels()
+        if levels[0] is None:
+            xmax = self.data.max()
+            xmin = self.data.min()
+        else:
+            xmax = round(levels[1],2)
+            xmin = round(levels[0],2)
+        self.colorBarWidgetValue.set_values(xmin,xmax)
+        
+        self.open_widget(self.colorBarWidgetValue)
+        self.checkBoxScale.setChecked(False)
+        
+        
 
+        
     def Color(self):
         '''image in colour/n&b
         '''
@@ -2087,41 +2112,6 @@ class SEE(QMainWindow):
     def spectroFunct(self):
         self.open_widget(self.winSpectro)
         self.signalSpectro.emit(self.data)
-    #     self.SpectroChanged()
-
-    # def SpectroChanged(self):
-        
-    #     if self.winSpectro.isWinOpen is True:
-    #         wmin = self.winInputE.wmin.value()
-    #         wmax = self.winInputE.wmax.value()
-    #         hmin = self.winInputE.hmin.value()
-    #         hmax = self.winInputE.hmax.value()
-    #         self.slist = self.winInputE.slist
-    #         self.elist = self.winInputE.elist
-    #         self.dsdelist = self.winInputE.dsdelist
-    #         self.signalSpectro.emit(self.data)
-    #         #self.winSpectro.Display(self.data)
-    
-    # def selectDimSpectro(self):
-    #     if self.winInputE.buttonSelected is False :
-    #         self.rectSelectSpectro.setPos([self.winInputE.wmin.value(),self.winInputE.hmin.value()])
-
-    #         self.rectSelectSpectro.setSize([self.winInputE.wmax.value() - self.winInputE.wmin.value(),
-    #                                     self.winInputE.hmax.value() - self.winInputE.hmin.value()])
-        
-    #         self.p1.addItem(self.rectSelectSpectro)
-    #         self.winInputE.buttonSelected = True
-    #     else:
-    #         self.winInputE.buttonSelected = False
-    #         self.p1.removeItem(self.rectSelectSpectro)
-    
-    # def changeDimSpectro(self):
-    #     self.winInputE.wmin.setValue(int(self.rectSelectSpectro.pos()[0]))
-    #     self.winInputE.wmax.setValue(int(self.rectSelectSpectro.pos()[0] + self.rectSelectSpectro.size()[0] ))
-    #     self.winInputE.hmin.setValue(int(self.rectSelectSpectro.pos()[1]))
-    #     self.winInputE.hmax.setValue(int(self.rectSelectSpectro.pos()[1] + self.rectSelectSpectro.size()[1] ))
-
-
 
     def closeEvent(self, event):
         self.close()
@@ -2153,6 +2143,63 @@ class SEE(QMainWindow):
         if self.spectro is True:
             if self.winSpectro.isWinOpen is True:
                 self.winSpectro.close()
+
+
+class DialogColorBar(QDialog):
+    def __init__(self,xmin=0,xmax=0,parent=None):
+        super().__init__()
+        
+        self.setWindowTitle("Color Bar values")
+        self.xmin = xmin
+        self.xmax = xmax
+        self.isWinOpen = False
+        self.parent = parent 
+        self.setWindowIcon(QIcon(self.parent.icon+'LOA.png'))
+        self.setup()
+
+    def setup(self):
+        self.entry1 = QLineEdit(self)
+        self.entry2 = QLineEdit(self)
+
+        self.entry1.setText(str(self.xmin))
+        self.entry2.setText(str(self.xmax))
+
+        form_layout = QFormLayout()
+        form_layout.addRow("Min value:", self.entry1)
+        form_layout.addRow("Max value:", self.entry2)
+
+        # Boutons OK et Annuler
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+
+        # Mise en page principale
+        main_layout = QVBoxLayout()
+        main_layout.addLayout(form_layout)
+        main_layout.addWidget(button_box)
+        self.setLayout(main_layout)
+
+    def set_values(self,xmin,xmax):
+        self.entry1.setText(str(xmin))
+        self.entry2.setText(str(xmax))   
+    
+    def accept(self):
+        xmin = float(self.entry1.text())
+        xmax = float(self.entry2.text())
+        self.parent.imh.setLevels([xmin, xmax])
+        self.parent.hist.setLevels(xmin, xmax)
+        self.parent.hist.setHistogramRange(xmin, xmax)
+        self.close()
+    
+    def get_values(self):
+        """Retourne les valeurs saisies."""
+        return float(self.entry1.text()), float(self.entry2.text())
+    def closeEvent(self, event):
+        """ when closing the window
+        """
+        self.isWinOpen = False
+        time.sleep(0.1)
+        event.accept()
 
 
 def runVisu(file=None, path=None):
