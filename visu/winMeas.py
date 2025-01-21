@@ -90,16 +90,16 @@ class MEAS(QMainWindow):
         self.TableSauv = ['file,Max,Min,x Max,y max,Sum,Mean,Size,x c.mass,y c.mass, user1']
         
         self.path = self.conf.value(self.name+"/path")
-        self.winCoupeMax = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None)
-        self.winCoupeMin = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None)
-        self.winCoupeXmax = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None)
-        self.winCoupeYmax = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None)
-        self.winCoupeSum = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None)
-        self.winCoupeMean = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None)
-        self.winCoupeXcmass = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None)
-        self.winCoupeYcmass = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None)
-        self.winCoupeSumThreshold = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None)
-        self.winCoupeUser1 = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None)
+        self.winCoupeMax = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None,lastColored=True)
+        self.winCoupeMin = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None,lastColored=True)
+        self.winCoupeXmax = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None,lastColored=True)
+        self.winCoupeYmax = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None,lastColored=True)
+        self.winCoupeSum = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None,lastColored=True)
+        self.winCoupeMean = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None,lastColored=True)
+        self.winCoupeXcmass = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None,lastColored=True)
+        self.winCoupeYcmass = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None,lastColored=True)
+        self.winCoupeSumThreshold = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None,lastColored=True)
+        self.winCoupeUser1 = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None,lastColored=True)
         self.signalTrans = dict()
         
         self.Maxx = []

@@ -212,7 +212,7 @@ class WINDOWMEAS(QWidget):
 
 class GRAPHCUT(QMainWindow):
     
-    def __init__(self, parent=None, symbol=None, title='Plot', conf=None, name='VISU', meas=False, pen='w', symbolPen='w', label=None, labelY=None, clearPlot=True):
+    def __init__(self, parent=None, symbol=None, title='Plot', conf=None, name='VISU', meas=False, pen='w', symbolPen='w', label=None, labelY=None, clearPlot=True,lastColored=False):
         
         super().__init__()
         p = pathlib.Path(__file__)
@@ -229,6 +229,7 @@ class GRAPHCUT(QMainWindow):
         self.cutData = np.zeros(self.dimx)
         self.path = None
         self.axisOn = False
+        self.lastColored = lastColored
         if conf is None:
             self.conf = QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.Format.IniFormat)
         else:
@@ -238,7 +239,7 @@ class GRAPHCUT(QMainWindow):
         self.setWindowTitle(self.title)
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
         # self.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
-        
+        self.scatter= False
         self.symbol = symbol
         self.axis = None
         self.label = label
@@ -260,15 +261,6 @@ class GRAPHCUT(QMainWindow):
         self.actionButton()
         
     def setup(self):
-        
-        # TogOff=self.icon+'Toggle_Off.png'
-        # TogOn=self.icon+'Toggle_On.png'
-        # TogOff=pathlib.Path(TogOff)
-        # TogOff=pathlib.PurePosixPath(TogOff)
-        # TogOn=pathlib.Path(TogOn)
-        # TogOn=pathlib.PurePosixPath(TogOn)
-        
-        # self.setStyleSheet("QCheckBox::indicator{width: 30px;height: 30px;}""QCheckBox::indicator:unchecked { image : url(%s);}""QCheckBox::indicator:checked { image:  url(%s);}""QCheckBox{font :10pt;}" % (TogOff,TogOn) )
         
         self.toolBar = self.addToolBar('tools')
         menubar = self.menuBar()
@@ -351,7 +343,6 @@ class GRAPHCUT(QMainWindow):
         self.statusBar.addPermanentWidget(self.label_CrossValue)
         
         if self.meas is True:  # display mean variance pv
-        
             self.label_Mean = QLabel('Mean :')
             hLayout1.addWidget(self.label_Mean)
             self.label_MeanValue = QLabel('...')
@@ -607,8 +598,9 @@ class GRAPHCUT(QMainWindow):
             self.dimx = np.shape(self.cutData)[0]
             self.minX = 0
             self.data = self.cutData
+            
             if self.clearPlot is False:
-                self.pCut = self.winPLOT.plot(self.cutData, clear=self.clearPlot, symbol=self.symbol, symbolPen=self.symbolPen, symbolBrush=self.symbolBrush, pen=self.pen)
+                self.pCut = self.winPLOT.plot(self.cutData, clear=self.clearPlot, symbol=self.symbol, symbolPen=self.symbolPen, symbolBrush=self.symbolBrush, pen=self.pen)          
             else:
                 self.pCut.setData(self.data)
             self.axisOn = False
@@ -619,7 +611,21 @@ class GRAPHCUT(QMainWindow):
             if self.clearPlot is False:
                 self.pCut = self.winPLOT.plot(y=self.cutData, x=self.axis, clear=self.clearPlot, symbol=self.symbol, symbolPen=self.symbolPen, symbolBrush=self.symbolBrush, pen=self.pen)
             else:
-                self.pCut.setData(y=self.cutData, x=self.axis)
+                if self.lastColored is True:
+                    if self.scatter is True: 
+                        self.winPLOT.removeItem(self.scatter_point)
+                    self.scatter_point = pg.ScatterPlotItem(
+                        x = self.axis[-1].flatten(), 
+                        y = self.cutData[-1].flatten(), 
+                        pen = None,           # Pas de ligne
+                        symbol = 'd',         # Symbole (cercle)
+                        brush=pg.mkBrush(255, 0, 0),      # Couleur du contour
+                        size = 15,      # Taille du symbole
+                        symbolBrush = 'r') # Remplissage 
+                    self.winPLOT.addItem(self.scatter_point)
+                    self.scatter = True
+                self.pCut.setData(y=self.cutData[:-1], x=self.axis[:-1],clear=self.clearPlot, symbol=self.symbol, symbolPen=self.symbolPen, symbolBrush=self.symbolBrush, pen=self.pen)
+    
             self.axisOn = True
             
         self.zoomRectupdate()
