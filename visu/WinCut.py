@@ -423,6 +423,7 @@ class GRAPHCUT(QMainWindow):
         
         self.winImage = pg.GraphicsLayoutWidget()
         self.winPLOT = self.winImage.addPlot()
+        
         if self.label is not None:
             self.winPLOT.setLabel('bottom', self.label)
         if self.labelY is not None:
@@ -437,8 +438,12 @@ class GRAPHCUT(QMainWindow):
         self.setCentralWidget(MainWidget)
         
         self.pCut = self.winPLOT.plot(symbol=self.symbol, symbolPen=self.symbolPen, symbolBrush=self.symbolBrush, pen=self.pen, clear=self.clearPlot)
+        self.pCut2 = self.winPLOT.plot(symbol='o', symbolPen= 'g')
+        
         pen = pg.mkPen(color='r', width=3)
+
         self.pFit = self.winPLOT.plot(pen=pen)
+
 #    def Display(self,cutData) :
 #        pass
 
@@ -612,8 +617,11 @@ class GRAPHCUT(QMainWindow):
                 self.pCut = self.winPLOT.plot(y=self.cutData, x=self.axis, clear=self.clearPlot, symbol=self.symbol, symbolPen=self.symbolPen, symbolBrush=self.symbolBrush, pen=self.pen)
             else:
                 if self.lastColored is True:
+                    #self.winPLOT.addLegend(offset =(300,300))
+                    
                     if self.scatter is True: 
                         self.winPLOT.removeItem(self.scatter_point)
+                        
                     self.scatter_point = pg.ScatterPlotItem(
                         x = self.axis[-1].flatten(), 
                         y = self.cutData[-1].flatten(), 
@@ -621,9 +629,16 @@ class GRAPHCUT(QMainWindow):
                         symbol = 'd',         # Symbole (cercle)
                         brush=pg.mkBrush(255, 0, 0),      # Couleur du contour
                         size = 15,      # Taille du symbole
-                        symbolBrush = 'r') # Remplissage 
+                        symbolBrush = 'r',
+                        name = 'Last Shoot') # Remplissage 
                     self.winPLOT.addItem(self.scatter_point)
                     self.scatter = True
+                    self.uniqueAxis = np.unique(self.axis)
+                    self.cutData = np.array(self.cutData)
+                    self.axis= np.array(self.axis)
+                    self.moy = np.array([np.mean(self.cutData[self.axis == val]) for val in self.uniqueAxis])
+                    
+                    self.pCut2.setData(y=self.moy,x=self.uniqueAxis, clear=False, symbol='o', symbolPen=self.symbolPen, symbolBrush='g', pen=self.pen,name='Mean')
                 self.pCut.setData(y=self.cutData[:-1], x=self.axis[:-1],clear=self.clearPlot, symbol=self.symbol, symbolPen=self.symbolPen, symbolBrush=self.symbolBrush, pen=self.pen)
     
             self.axisOn = True
