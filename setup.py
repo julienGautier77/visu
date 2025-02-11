@@ -11,7 +11,7 @@ from setuptools import setup, find_packages
 #import visu
 This_directory = Path(__file__).parent
 long_description = (This_directory / "README.md").read_text()
-setup(name='visu',version=2025.01,
+setup(name='visu',version=2025.02,
       packages=find_packages(),
       author='Julien Gautier',
       author_email='julien.gautier@ensta.fr',
