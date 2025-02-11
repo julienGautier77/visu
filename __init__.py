@@ -6,7 +6,7 @@ Data vizualisation
 @author: juliengautier
 modified  : 2023/11/30
 """
-__version__='2025.1'
+__version__='2025.2'
 __author__='julien Gautier'
 
 
