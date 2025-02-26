@@ -1001,6 +1001,7 @@ class SEE(QMainWindow):
     def CercChanged(self):
         '''take ROIc
         '''
+        self.cut = (self.plotCercle.getArrayRegion(self.data, self.imh))
         self.xini=self.plotRect.pos()[0]
         self.yini=self.plotRect.pos()[1]
         self.cut1 = self.cut.mean(axis=1)
