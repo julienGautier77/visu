@@ -17,7 +17,7 @@ created 2021/11/02 : new design
 
 import pyqtgraph as pg  # pip install pyqtgraph (https://github.com/pyqtgraph/pyqtgraph.git)
 from PyQt6 import QtCore, QtGui
-from PyQt6.QtWidgets import QApplication, QVBoxLayout, QHBoxLayout, QWidget
+from PyQt6.QtWidgets import QApplication, QVBoxLayout, QHBoxLayout, QWidget,QToolButton
 from PyQt6.QtWidgets import QCheckBox, QLabel, QSizePolicy, QMenu, QMessageBox, QFileDialog
 from PyQt6.QtWidgets import QMainWindow, QStatusBar
 from PyQt6.QtGui import QShortcut, QAction
@@ -72,8 +72,8 @@ class SEELIGHT(QMainWindow):
     def __init__(self, parent=None, file=None, path=None, **kwds):
         
         super().__init__()
-        version = __version__
-        print("data visualisation :  ", version)
+        self.version = __version__
+        print("data visualisation :  ", self.version)
         p = pathlib.Path(__file__)
         self.parent = parent
         self.fullscreen = False
@@ -150,7 +150,7 @@ class SEELIGHT(QMainWindow):
         self.winPointing = WINPOINTING(parent=self)
 
         self.path = path
-        self.setWindowTitle('Visualization'+'       v.' + version)
+        self.setWindowTitle('Visualization'+'       v.' + self.version)
         self.bloqKeyboard = 1  # =bool((self.conf.value(self.name+"/bloqKeyboard"))  )  # block cross by keyboard
         self.bloqq = 1  # block the cross by click on mouse
 
@@ -355,6 +355,16 @@ class SEELIGHT(QMainWindow):
         self.ZoomRectButton.triggered.connect(self.zoomRectAct)
 
         self.ZoomMenu.addAction(self.ZoomRectButton)
+        self.ImgFrame = QToolButton(self)
+        self.icondata1 = self.icon+"data1.png"
+        self.icondata1 = pathlib.Path (self.icondata1)
+        self.icondata1 = pathlib.PurePosixPath(self.icondata1)
+        self.icondata2 = self.icon+"data2.png"
+        self.icondata2 = pathlib.Path (self.icondata2)
+        self.icondata2 = pathlib.PurePosixPath(self.icondata2)
+
+        self.ImgFrame.setStyleSheet("QToolButton:!pressed{border-image: url(%s);background-color: transparent ;border-color: green;}""QToolButton:pressed{border-image: url(%s);background-color: gray ;border-color: gray}"%(self.icondata1,self.icondata2))
+        self.statusBar.addPermanentWidget(self.ImgFrame)
 
         if self.toolBarOn is True:
             self.toolBar = self.addToolBar('tools')
@@ -827,6 +837,7 @@ class SEELIGHT(QMainWindow):
     def newDataReceived(self, data):
         # Do display and save origin data when new data is  sent to  visu
         self.data = data
+        self.ImgFrame.animateClick()
         self.data = np.rot90(self.data, self.winPref.rotateValue)
         self.dimy = np.shape(self.data)[1]
         self.dimx = np.shape(self.data)[0]
