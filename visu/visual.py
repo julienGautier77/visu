@@ -179,6 +179,10 @@ class SEE(QMainWindow):
             self.winFilter = kwds['filter']
         else:
             self.winFilter = True
+        if "crossSection" in kwds :
+            self.crossSection = kwds["crossSection"]
+        else:
+            self.crossSection = True        
 
         if "confMotPath" in kwds: # obsolete 
             print('motor accepted')
@@ -1001,7 +1005,6 @@ class SEE(QMainWindow):
     def CercChanged(self):
         '''take ROIc
         '''
-        self.cut = (self.plotCercle.getArrayRegion(self.data, self.imh))
         self.xini=self.plotRect.pos()[0]
         self.yini=self.plotRect.pos()[1]
         self.cut1 = self.cut.mean(axis=1)
@@ -1560,8 +1563,9 @@ class SEE(QMainWindow):
         if self.checkBoxPlot.isChecked() == 1:
             self.p1.addItem(self.vLine, ignoreBounds=False)
             self.p1.addItem(self.hLine, ignoreBounds=False)
-            self.p1.addItem(self.curve2)
-            self.p1.addItem(self.curve3)
+            if self.crossSection ==True:
+                self.p1.addItem(self.curve2)
+                self.p1.addItem(self.curve3)
             self.p1.showAxis('left', show=True)
             self.p1.showAxis('bottom', show=True)
             self.p1.addItem(self.textX)
@@ -1572,8 +1576,9 @@ class SEE(QMainWindow):
         else:
             self.p1.removeItem(self.vLine)
             self.p1.removeItem(self.hLine)
-            self.p1.removeItem(self.curve2)
-            self.p1.removeItem(self.curve3)
+            if self.crossSection == True:
+                self.p1.removeItem(self.curve2)
+                self.p1.removeItem(self.curve3)
             self.p1.removeItem(self.textX)
             self.p1.removeItem(self.textY)
             self.p1.showAxis('left', show=False)
