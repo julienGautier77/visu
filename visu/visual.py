@@ -1005,8 +1005,9 @@ class SEE(QMainWindow):
     def CercChanged(self):
         '''take ROIc
         '''
-        self.xini=self.plotRect.pos()[0]
-        self.yini=self.plotRect.pos()[1]
+        self.cut = (self.plotCercle.getArrayRegion(self.data, self.imh))
+        self.xini=self.plotCercle.pos()[0]
+        self.yini=self.plotCercle.pos()[1]
         self.cut1 = self.cut.mean(axis=1)
         self.CropChanged()
 
@@ -1028,6 +1029,8 @@ class SEE(QMainWindow):
     def PentaChanged(self):
         self.cut = (self.plotPentagon.getArrayRegion(self.data, self.imh))
         self.cut1 = self.cut.mean(axis=1)
+        self.xini=self.plotPentagon.pos()[0]
+        self.yini=self.plotPentagon.pos()[1]
         self.CropChanged()
 
     def CUT(self):
@@ -1104,16 +1107,18 @@ class SEE(QMainWindow):
             pData = self.cut
         elif self.ite is None:
             pData = self.data
+            self.xini = 0
+            self.yini = 0
         else:
             pData = self.data
 
         if self.winPref.checkBoxAxeScale.isChecked() == 1:
-            self.signalPointing.emit(pData, self.winPref.stepX,
-                                     self.winPref.stepX)
+            self.signalPointing.emit([pData, self.winPref.stepX,
+                                     self.winPref.stepX,self.xini,self.yini])
             
             # self.winPointing.Display(pData,self.winPref.stepX,self.winPref.stepX)
         else:
-            self.signalPointing.emit(pData)
+            self.signalPointing.emit([pData,1,1,self.xini,self.yini])
             # self.winPointing.Display(pData)
 
     def fftTransform(self):
@@ -1539,7 +1544,7 @@ class SEE(QMainWindow):
 
                     self.textY.setPos(xCYmax-60, yCYmax+70)
 
-        if not self.checkBoxPlot.isChecked():  # write mouse value and not cross  value
+        else: #  if not self.checkBoxPlot.isChecked():  # write mouse value and not cross  value
 
             try:
                 dataCross = self.data[int(self.xc), int(self.yc)]

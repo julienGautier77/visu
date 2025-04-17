@@ -210,13 +210,15 @@ class WINPOINTING(QMainWindow):
         if self.parent is not None:
             self.parent.signalPointing.connect(self.Display)
         
-    def Display(self, data, stepX=1, stepY=1):
+    def Display(self, obje):
 
-        self.data = data
+        self.data = obje[0]
         self.dimx = self.data.shape[0]
         self.dimy = self.data.shape[1]
-        self.stepX = stepX
-        self.stepY = stepY
+        self.stepX = obje[1]
+        self.stepY = obje[2]
+        self.xini = obje[3]
+        self.yini = obje[4]
         dataF = gaussian_filter(self.data, 5)
         
         if self.centerOfMass.isChecked():
@@ -226,8 +228,10 @@ class WINPOINTING(QMainWindow):
         else:
             (self.xec, self.yec) = pylab.unravel_index(dataF.argmax(), self.data.shape)
             self.label = 'max'
-        self.xec = self.xec*stepX
-        self.yec = self.yec*stepX
+
+        
+        self.xec = (self.xec+self.xini)*self.stepX
+        self.yec = (self.yec+self.yini)*self.stepX
         
         self.Xec.append(self.xec)
         self.Yec.append(self.yec)
