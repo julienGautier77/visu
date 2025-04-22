@@ -9,11 +9,11 @@ https://github.com/julienGautier77/visu.git
 @author: juliengautier(LOA)
 for dark style :
 pip install qdarkstyle (https://github.com/ColinDuquesnoy/QDarkStyleSheet.git)
-
+for pyqtgraph
 pip install pyqtgraph (https://github.com/pyqtgraph/pyqtgraph.git)
 conda install pyopengl 3D plot
 
-modified  : 2023/07/04
+modified  : 2025/04/22
 """
 
 import pyqtgraph as pg
@@ -260,7 +260,7 @@ class SEE(QMainWindow):
         
         self.path = path
         self.setWindowTitle('Visualization'+'       v.' + self.version)
-        self.bloqKeyboard = 1  # block cross by keyboard
+        self.bloqKeyboard = True  # block cross by keyboard
         self.bloqq = 1  # block the cross by click on mouse
 
         # initialize variable :
@@ -271,7 +271,8 @@ class SEE(QMainWindow):
         self.scaleAxis = "off"
         self.plotRectZoomEtat = 'Zoom'
         self.angleImage = 0
-
+        self.xcMouse = 0
+        self.ycMouse = 0
         self.setup()
 
         def twoD_Gaussian(x, y, amplitude, xo, yo, sigma_x, sigma_y, theta,
@@ -317,7 +318,10 @@ class SEE(QMainWindow):
 
         self.shortcut()
         self.actionButton()
-        self.Display(self.data)
+        imageOuverture = Image.open(self.icon+'LOA.png')
+        imageOuverture = np.rot90(np.array (imageOuverture),3)
+        self.imh.setImage(imageOuverture, autoLevels=True, autoDownsample=True)
+        #self.Display(self.data)
         self.activateWindow()
         self.raise_()
         self.showNormal()
@@ -1334,9 +1338,9 @@ class SEE(QMainWindow):
             mousse value is read and printed
         '''
 
-        if self.checkBoxPlot.isChecked() is False or self.bloqKeyboard is True:  # if not cross used or crossblocked by keyboard:
+        if self.checkBoxPlot.isChecked() is False: #  or self.bloqKeyboard is True:  # if not cross used or crossblocked by keyboard:
             
-            if self.bloqq == 0:  # a left mouse click have been done 
+            if self.bloqq == 0:  # a left mouse click have been done mousse not  blocked
     
                 pos = evt[0]  
                 # using signal proxy turns original arguments into a tuple
@@ -1370,31 +1374,31 @@ class SEE(QMainWindow):
                         # print(dataCross) # take data  value  on the cross
                         self.label_CrossValue.setText(' v.=' + str(dataCross) + self.labelValue)
 
-        # the cross mouve with the mousse mvt
-        if self.bloqKeyboard is False:  # mouse not  blocked by  keyboard
-            if self.bloqq == 0:  # mouse not  blocked by mouse  click
+        # the cross move with the mousse mvt
+        else  :
+            if self.bloqKeyboard is False:  # cross not  blocked by  keyboard
+                if self.bloqq == 0:  # cross  not  blocked by mouse  click
 
-                pos = evt[0]  # using signal proxy turns original arguments into a tuple
-                if self.p1.sceneBoundingRect().contains(pos):
+                    pos = evt[0]  
+                    if self.p1.sceneBoundingRect().contains(pos):
 
-                    mousePoint = self.vb.mapSceneToView(pos)
-                    self.xMouse = (mousePoint.x())
-                    self.yMouse = (mousePoint.y())
+                        mousePoint = self.vb.mapSceneToView(pos)
+                        self.xMouse = (mousePoint.x())
+                        self.yMouse = (mousePoint.y())
 
-                    if ((self.xMouse > 0 and self.xMouse < self.dimx-1) and
-                       (self.yMouse > 0 and self.yMouse < self.dimy-1)):
-                        
-                        # the cross move only in the graph
-
-                        self.xc = self.xMouse
-                        self.yc = self.yMouse
-                        self.vLine.setPos(self.xc)
-                        self.hLine.setPos(self.yc)  
-                        if self.roiCross is True:
-                            self.ro1.setPos([self.xc-(self.rx/2),
-                                             self.yc-(self.ry/2)])
+                        if ((self.xMouse > 0 and self.xMouse < self.dimx-1) and
+                        (self.yMouse > 0 and self.yMouse < self.dimy-1)):
                             
-                        self.Coupe()  # self.PlotXY()
+                            # the cross move only in the graph
+                            self.xc = self.xMouse
+                            self.yc = self.yMouse
+                            self.vLine.setPos(self.xc)
+                            self.hLine.setPos(self.yc)  
+                            if self.roiCross is True:
+                                self.ro1.setPos([self.xc-(self.rx/2),
+                                                self.yc-(self.ry/2)])
+                                
+                            self.Coupe()  # on refait la coupe 
 
     def fwhm(self, x, y, order=3):
         """
@@ -1434,7 +1438,7 @@ class SEE(QMainWindow):
                 pass
 
     def Coupe(self):
-        '''make  plot profile on cross
+        '''make  plot profile on cross update when display new image or cross moved
         '''
 
         if self.maxGraphBox.isChecked():
@@ -1462,6 +1466,7 @@ class SEE(QMainWindow):
             self.labelCmax.setText("(%s,%s)=%s" % (str(self.xcMax), str(self.ycMax), str(round(self.data[int(self.xcMax), int(self.ycMax)], 1))))
             self.labelCmax.setPos(int(self.xcMax), int(self.ycMax))
 
+        
         if self.checkBoxPlot.isChecked() is True:
 
             try:
@@ -1544,10 +1549,10 @@ class SEE(QMainWindow):
 
                     self.textY.setPos(xCYmax-60, yCYmax+70)
 
-        else: #  if not self.checkBoxPlot.isChecked():  # write mouse value and not cross  value
-
+        else:  # write mouse value and not cross value
+            
             try:
-                dataCross = self.data[int(self.xc), int(self.yc)]
+                dataCross = self.data[int(self.xcMouse), int(self.ycMouse)]
 
             except:
                 dataCross = 0  # evoid to have an error if mousse is out of the image
@@ -1555,9 +1560,9 @@ class SEE(QMainWindow):
                 self.yc = 0
 
             if self.winPref.checkBoxAxeScale.isChecked() == 1:  # scale axe on
-                self.label_Cross.setText('x=' + str(round(int(self.xc)*self.winPref.stepX, 2)) + '  um' + ' y=' + str(round(int(self.yc)*self.winPref.stepY, 2)) + ' um')
+                self.label_Cross.setText('x=' + str(round(int(self.xcMouse)*self.winPref.stepX, 2)) + '  um' + ' y=' + str(round(int(self.ycMouse)*self.winPref.stepY, 2)) + ' um')
             else:
-                self.label_Cross.setText('x=' + str(int(self.xc)) + ' y=' + str(int(self.yc)))
+                self.label_Cross.setText('x=' + str(int(self.xcMouse)) + ' y=' + str(int(self.ycMouse)))
 
             dataCross = round(dataCross, 3)  # take data  value  on the mousse
             self.label_CrossValue.setText(' v.=' + str(dataCross)+self.labelValue)
@@ -1568,7 +1573,7 @@ class SEE(QMainWindow):
         if self.checkBoxPlot.isChecked() == 1:
             self.p1.addItem(self.vLine, ignoreBounds=False)
             self.p1.addItem(self.hLine, ignoreBounds=False)
-            if self.crossSection ==True:
+            if self.winPref.labelCrossOpt.isChecked() == True:
                 self.p1.addItem(self.curve2)
                 self.p1.addItem(self.curve3)
             self.p1.showAxis('left', show=True)
@@ -1581,9 +1586,9 @@ class SEE(QMainWindow):
         else:
             self.p1.removeItem(self.vLine)
             self.p1.removeItem(self.hLine)
-            if self.crossSection == True:
-                self.p1.removeItem(self.curve2)
-                self.p1.removeItem(self.curve3)
+            #if self.winPref.labelCrossOpt.isChecked() == True:
+            self.p1.removeItem(self.curve2)
+            self.p1.removeItem(self.curve3)
             self.p1.removeItem(self.textX)
             self.p1.removeItem(self.textY)
             self.p1.showAxis('left', show=False)
@@ -2020,7 +2025,7 @@ class SEE(QMainWindow):
             self.plotRectZoomEtat = "Zoom"
             self.p1.setAspectLocked(True)
             # print(self.p1.viewRange(),self.p1.viewRect())
-
+            self.p1.autoRange()
         self.Coupe()  # update profile line
 
     def zoomRectupdate(self):
