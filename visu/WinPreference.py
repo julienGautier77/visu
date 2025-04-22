@@ -121,14 +121,16 @@ class PREFERENCES(QWidget):
         self.plotRectOpt.setMaximumWidth(80)
         self.plotRectOpt.addItem('Mean')
         self.plotRectOpt.addItem('Sum')
-        # self.plotRectOpt.setStyleSheet('font :bold  10pt;color: white')
-        # self.labelTrigger = QLabel('Trigger')
-        # self.labelTrigger.setMaximumWidth(70)
-        # self.labelTrigger.setStyleSheet('font :bold  10pt')
-        # self.itrig = self.self.plotRectOpt.currentIndex()
-        
+        #
         hbox9.addWidget(self.labelPlot)
         hbox9.addWidget(self.plotRectOpt)
+
+        
+        self.labelCrossOpt = QCheckBox('Cross Section ', self)
+        self.labelCrossOpt.setChecked(False)
+        hbox9.addWidget(self.labelCrossOpt)
+        
+
         vbox1.addLayout(hbox9)
         
         hbox10 = QHBoxLayout()
