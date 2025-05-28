@@ -57,7 +57,8 @@ class OPTION(QWidget):
         self.actionButton()
         self.dataBgExist = False
         self.rotateValue = 0
-        
+        self.modeTrig = False
+
     def setFile(self, file):
         
         self.nomFichier = file
@@ -228,6 +229,22 @@ class OPTION(QWidget):
         
         self.parent.checkBoxAutoSave.setChecked(auto)
         self.parent.autoSaveColor()
+        if self.parent.parent is not None:
+            # quand on passe en mode auto save sur le serveur la camera passe aussi en mode trig et en play
+            try: 
+                if auto == True :
+                    self.parent.parent.trigg.setCurrentIndex(1)
+                    time.sleep(0.1)
+                    self.parent.parent.runButton.click()
+                    self.modeTrig = True
+                else :
+                    if self.modeTrig == True : # quand on decoche le mode autosave camera en mode free run 
+                        #  on stop 1 fois mais apress on peut faire play sur la camera 
+                        self.parent.parent.stopButton.click()
+                        self.modeTrig = False
+                    self.parent.parent.trigg.setCurrentIndex(0)
+            except Exception as e:
+                print('error auto play or stop',e)
 
     def closeEvent(self, event):
         """ when closing the window
