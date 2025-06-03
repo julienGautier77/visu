@@ -242,7 +242,7 @@ class OPTION(QWidget):
                         #  on stop 1 fois mais apress on peut faire play sur la camera 
                         self.parent.parent.stopButton.click()
                         self.modeTrig = False
-                    self.parent.parent.trigg.setCurrentIndex(0)
+                    #self.parent.parent.trigg.setCurrentIndex(0)
             except Exception as e:
                 print('error auto play or stop',e)
 
