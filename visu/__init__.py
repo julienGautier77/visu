@@ -4,9 +4,9 @@
 Created on Mon Mar 18 10:50:06 2019
 Data vizualisation
 @author: juliengautier
-modified  : 2023/11/30
+modified  : 2025/06/12
 """
-__version__='2025.04'
+__version__='2025.06'
 __author__='julien Gautier'
 
 
