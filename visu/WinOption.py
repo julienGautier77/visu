@@ -43,7 +43,7 @@ class OPTION(QWidget):
         sepa = os.sep
         self.icon = str(p.parent) + sepa+'icons' + sepa
         self.isWinOpen = False
-        
+        self.auto = False
         self.setWindowTitle('Options Auto Save & visualisation')
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
         
@@ -221,7 +221,7 @@ class OPTION(QWidget):
         self.pathBox.setText(path)
 
     def receiveAuto(self,auto):
-
+        self.auto = auto
         if auto == 'True':
             auto = True
         else : 
@@ -234,7 +234,7 @@ class OPTION(QWidget):
             try: 
                 if auto == True :
                     self.parent.parent.trigg.setCurrentIndex(1)
-                    time.sleep(0.1)
+                    # time.sleep(0.1)
                     self.parent.parent.runButton.click()
                     self.modeTrig = True
                 else :
@@ -242,7 +242,7 @@ class OPTION(QWidget):
                         #  on stop 1 fois mais apress on peut faire play sur la camera 
                         self.parent.parent.stopButton.click()
                         self.modeTrig = False
-                    #self.parent.parent.trigg.setCurrentIndex(0)
+                    # self.parent.parent.trigg.setCurrentIndex(0)
             except Exception as e:
                 print('error auto play or stop',e)
 
@@ -324,9 +324,10 @@ class THREADCLIENT(QtCore.QThread):
                 self.newShotnumber.emit(nbshot)
             if str(self.parent.pathBox.text()) != path:
                 self.pathSignal.emit(path)
-            
-            self.autoSignal.emit(autosave)    # visual autosave on 
-            time.sleep(0.1)
+            if autosave != self.parent.auto :
+                self.autoSignal.emit(autosave)
+                print('emit save')    # visual autosave on 
+            time.sleep(0.01)
      
     def stopClientThread(self):
         self.ClientIsConnected = False
