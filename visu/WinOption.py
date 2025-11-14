@@ -311,9 +311,16 @@ class THREADCLIENT(QtCore.QThread):
                 #print(msgsplit)
                 nbshot = int(msgsplit[0])
                 path = msgsplit[1]
+                
+                if sys.platform == 'linux': 
+                    #print('linux system')
+                    lpath = "/mnt/SJ_NAS/"
+                    path = path.replace("X:/",lpath)
+                    #print ('path linux',path)
                 autosave = msgsplit[2]
                 if len(msgsplit) == 4:
                     name  = msgsplit[3]
+                    
                     if self.parent.nameBox.text() != name:
                         self.parent.nameBox.setText(name)
 
