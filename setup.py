@@ -27,4 +27,4 @@ setup(name='visu',version=2025.06,
         "Topic :: Scientific/Engineering :: Visualization"
       ],
       url='https://github.com/julienGautier77/visu',
-      install_requires=['matplotlib','PyQt6-sip== 13.5.2','PyQt6-qt6==6.5.1','PyQt6==6.5.1','qdarkstyle','pyqtgraph','scipy','six',])
+      install_requires=['matplotlib','PyQt6-sip== 13.5.2','PyQt6-qt6==6.5.1','PyQt6==6.5.1','qdarkstyle','pyqtgraph','scipy','six','zmq',])
