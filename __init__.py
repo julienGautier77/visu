@@ -6,7 +6,7 @@ Data vizualisation
 @author: juliengautier
 modified  : 2023/11/30
 """
-__version__='2025.6'
+__version__='2025.9'
 __author__='julien Gautier'
 
 
@@ -30,3 +30,4 @@ from visu import winHist
 # except :
 #     print('')
 # #from visu import moteurRSAI as RSAI
+
