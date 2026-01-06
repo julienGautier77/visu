@@ -271,10 +271,14 @@ class THREADCLIENT(QtCore.QThread):
         
         # Lire la configuration
         self.serverHost = str(self.conf.value(self.name + "/server"))
-        self.serverPort = int(self.conf.value(self.name + "/serverPort", "5009"))
+        self.serverPort = int(self.conf.value(self.name + "/serverPort"))#, "5009")) # ? ??
         
         self.ClientIsConnected = False
         self.client_id = str(uuid.uuid4())
+        
+        # envoyer heartbeat au serveur 
+        self.last_heartbeat = time.time()
+        self.heartbeat_interval = 10 # interval de temps pour envoyer les heartbeat au serveur 
         
         # ZMQ context et sockets
         self.context = None
@@ -282,6 +286,7 @@ class THREADCLIENT(QtCore.QThread):
         self.pub_socket = None
         
     def run(self):
+
         print(f"Connecting to ZMQ server: {self.serverHost}:{self.serverPort}")
         
         try:
@@ -327,7 +332,7 @@ class THREADCLIENT(QtCore.QThread):
         
         # Variables pour détecter la déconnexion
         last_heartbeat = time.time()
-        heartbeat_timeout = 10.0  # 10 secondes sans heartbeat = déconnecté
+        self.heartbeat_timeout = 15.0  # 10 secondes sans heartbeat = serveur déconnecté
 
         # Boucle principale - Écouter les événements
         while self.ClientIsConnected:
@@ -358,7 +363,7 @@ class THREADCLIENT(QtCore.QThread):
                     # vérifier si serveur toujours vivant
                     time_since_heartbeat = time.time() - last_heartbeat
                     
-                    if time_since_heartbeat > heartbeat_timeout:
+                    if time_since_heartbeat > self.heartbeat_timeout:
                         print(f"❌ Server timeout ({time_since_heartbeat:.1f}s without response)")
                         self.ClientIsConnected = False
                         # Fermer les sockets
@@ -374,7 +379,9 @@ class THREADCLIENT(QtCore.QThread):
 
                 # Petite pause pour ne pas surcharger le CPU
                 time.sleep(0.01)
-                
+                if time.time() - self.last_heartbeat > self.heartbeat_interval :
+                    self.send_hearbeat()
+
             except zmq.ZMQError as e:
                 if e.errno == zmq.ETERM:
                     break  # Context terminé
@@ -489,6 +496,16 @@ class THREADCLIENT(QtCore.QThread):
         if self.context:
             self.context.term()
     
+    def send_hearbeat(self):
+        """fct pouur envoyer heartbeat au serveur """
+
+        self.pub_socket.send_string("CLIENT_HEARTBEAT",zmq.SNDMORE)
+        self.pub_socket.send_json({
+            'client_id':self.client_id,
+            'timestamp':time.time()
+        })
+        self.last_heartbeat = time.time()
+
     def stopClientThread(self):
         """Arrêter le thread client"""
         self.ClientIsConnected = False
