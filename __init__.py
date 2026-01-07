@@ -4,9 +4,9 @@
 Created on Mon Mar 18 10:50:06 2019
 Data vizualisation
 @author: juliengautier
-modified  : 2023/11/30
+modified  : 2026/01/06
 """
-__version__='2025.9'
+__version__='2026.1'
 __author__='julien Gautier'
 
 
@@ -30,4 +30,5 @@ from visu import winHist
 # except :
 #     print('')
 # #from visu import moteurRSAI as RSAI
+
 
