@@ -107,7 +107,7 @@ class SEE(QMainWindow):
         self.setAcceptDrops(True)
         sepa = os.sep
 
-        self.icon = str(p.parent) + sepa+'icons' + sepa
+        self.icon = str(p.parent) + sepa + 'icons' + sepa
         self.colorBar = 'flame'
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
         self.nomFichier = ''
@@ -116,6 +116,26 @@ class SEE(QMainWindow):
         self.signalTrans = dict()  # dict to emit multivariable
         self.frameNumber = 0
         # kwds definition  :
+
+        # Configuration avec valeurs par défaut
+        defaults = {
+            'name': 'VISU',
+            'color': None,
+            'roiCross': False,
+            'aff': 'right',
+            'fft': False,
+            'meas': True,
+            'encercled': True,
+            'winFilter': True,
+            'crossSection': True,
+            'spectro': False,
+            'plot3d': True,
+            'math': True,
+        }
+        
+        # Appliquer les valeurs par défaut ou celles fournies
+        for key, default_value in defaults.items():
+            setattr(self, key, kwds.get(key, default_value))
 
         if "confpath" in kwds:   # confpath path.file pour le fichier ini.
             self.confpath = kwds["confpath"]
@@ -134,122 +154,44 @@ class SEE(QMainWindow):
         if "conf" in kwds:  # conf : le QSetting
             self.conf = kwds["conf"]
 
-        if "color" in kwds:
-            self.color = kwds["color"]
-        else:
-            self.color = None
-
-        if "name" in kwds:
-            self.name = kwds["name"]
-        else:
-            self.name = "VISU"
-
-        print('name :', self.name)
-
-        if "roiCross" in kwds:
-            self.roiCross = kwds["roiCross"]
-        else:
-            self.roiCross = False
-        if "aff" in kwds:
-            self.aff = kwds["aff"]
-        else:
-            self.aff = "right"
-
-        if "fft" in kwds:
-            self.fft = kwds["fft"]
-        else:
-            self.fft = False
-
-        if "meas" in kwds:
-            self.meas = kwds["meas"]
-        else:
-            self.meas = True
-
-        if "encercled" in kwds:
-            self.encercled = kwds["encercled"]
-        else:
-            self.encercled = True
-
-        if self.fft == True:
+        if self.fft:
             self.winFFT = WINFFT(conf=self.conf, name=self.name)
             self.winFFT1D = GRAPHCUT(symbol=False, title='FFT 1D', 
                                      conf=self.conf, name=self.name)
-
-        if "filter" in kwds:
-            self.winFilter = kwds['filter']
-        else:
-            self.winFilter = True
-        if "crossSection" in kwds :
-            self.crossSection = kwds["crossSection"]
-        else:
-            self.crossSection = True        
-
-        if "confMotPath" in kwds: # obsolete 
-            print('motor accepted')
-            if self.meas is True:
-                self.confMotPath = kwds["confMotPath"]  
-                # le path du Qsetting pour les moteurs
-                print("Motors config path", self.confMotPath)
-                self.confMot = (
-                    QtCore.QSettings(self.confMotPath,
-                                     QtCore.QSettings.Format.IniFormat))
-                self.winM = MEAS(parent=self, confMot=self.confMot,
-                                 conf=self.conf, name=self.name)
-        
-        elif "confMot" in kwds:
-            self.confMot = kwds["confMot"]  # le Qsetting des moteurs
-            self.winM = MEAS(parent=self, confMot=self.confMot, conf=self.conf, name=self.name)
-            
+    
         if "motRSAI" in kwds:
             self.motRSAI = kwds["motRSAI"]
-            if self.motRSAI is True: 
+            if self.motRSAI: 
                 self.winM = MEAS(parent=self, conf=self.conf, name=self.name,motRSAI=self.motRSAI)
             else :
-                if self.meas is True :
+                if self.meas:
                     self.winM = MEAS(parent=self, conf=self.conf, name=self.name)
         
         elif 'motA2V' in kwds :
             self.motA2V = kwds["motA2V"]
-            if self.motA2V is True :
+            if self.motA2V:
                 self.winM = MEAS(parent=self, conf=self.conf, name=self.name,motA2V=self.motA2V)
             else :
-                if self.meas is True :
+                if self.meas:
                     self.winM = MEAS(parent=self, conf=self.conf, name=self.name)
         else:
-            if self.meas is True :
+            if self.meas:
                 self.winM = MEAS(parent=self, conf=self.conf, name=self.name)
 
 
         self.winOpt = OPTION(conf=self.conf, name=self.name, parent=self)
         self.winPref = PREFERENCES(conf=self.conf, name=self.name)
         self.winHistory = HISTORY(self, conf=self.conf, name=self.name)
-        if "spectro" in kwds :
-            self.spectro = kwds["spectro"]
-        else :
-            self.spectro = False
+
         
-        if self.spectro is True:
+        if self.spectro:
             self.winSpectro = WINSPECTRO(parent=self,conf=self.conf)
 
-        if self.encercled is True:
+        if self.encercled:
             self.winEncercled = WINENCERCLED(parent=self, conf=self.conf,
                                              name=self.name)
 
-        if "plot3d" in kwds:
-            self.plot3D = kwds["plot3d"]
-        else:
-            self.plot3D = True
-
-        # if self.plot3D is True:
-
-        #     self.Widget3D=GRAPH3D(self.conf,name=self.name)
-
-        if "math" in kwds:
-            self.math = kwds["math"]
-        else:
-            self.math = True
-
-        if self.math is True:
+        if self.math:
             self.winMath = WINMATH()
 
         self.winPointing = WINPOINTING(parent=self)
@@ -546,7 +488,7 @@ class SEE(QMainWindow):
         self.toolBar.addAction(self.checkBoxBg)
         self.checkBoxBg.triggered.connect(self.BackgroundF)
 
-        if self.encercled is True:
+        if self.encercled:
             self.energyBox = QAction(QtGui.QIcon(self.icon+"coin.png"),
                                      'Energy Encercled', self)
             
@@ -623,7 +565,7 @@ class SEE(QMainWindow):
         self.removeHP.setChecked(False)
         self.ProcessMenu.addAction(self.removeHP)
 
-        if self.plot3D is True:
+        if self.plot3d is True:
             self.box3d = QPushButton('3D', self)
             self.toolBar.addWidget(self.box3d)
 
@@ -799,15 +741,6 @@ class SEE(QMainWindow):
         
         self.plotRectZoom.addScaleHandle((0, 0), center=(1, 1))
 
-        # if self.spectro is True:
-        #     self.rectSelectSpectro = pg.RectROI([self.xc, self.yc], [4*self.rx, self.ry],
-        #                            pen='g')
-        #     self.rectSelectSpectro.setPos([self.winInputE.wmin.value(),self.winInputE.hmin.value()])
-        #     self.rectSelectSpectro.setSize([self.winInputE.wmax.value() - self.winInputE.wmin.value(),
-        #                                 self.winInputE.hmax.value() - self.winInputE.hmin.value()])
-            
-        
-
     def actionButton(self):
         # action of button
         self.ro1.sigRegionChangeFinished.connect(self.roiChanged)
@@ -829,23 +762,7 @@ class SEE(QMainWindow):
         self.sliderImage.valueChanged.connect(self.SliderImgFct)
         # self.dockImage.topLevelChanged.connect(self.fullScreen)
         self.roiFluence.sigRegionChangeFinished.connect(self.fluenceFct)
-
-        #Spectro option windows 
-        # if self.spectro is True:
-        #     self.rectSelectSpectro.sigRegionChangeFinished.connect(self.changeDimSpectro)
-        #     self.winInputE.wmin.editingFinished.connect(self.SpectroChanged)
-        #     self.winInputE.wmax.editingFinished.connect(self.SpectroChanged)
-        #     self.winInputE.hmin.editingFinished.connect(self.SpectroChanged)
-        #     self.winInputE.hmax.editingFinished.connect(self.SpectroChanged)    
-        #     self.winInputE.medfilt.editingFinished.connect(self.SpectroChanged)
-        #     self.winInputE.npoints.editingFinished.connect(self.SpectroChanged)
-        #     self.winInputE.ppmm.editingFinished.connect(self.SpectroChanged)
-        #     self.winInputE.pps0.editingFinished.connect(self.SpectroChanged)
-        #     self.winInputE.ssd.editingFinished.connect(self.SpectroChanged)
-        #     self.winInputE.selected_dsde_label.textChanged.connect(self.SpectroChanged)
-        #     self.winInputE.selectButton.clicked.connect(self.selectDimSpectro)
         
-
         if self.parent is not None:
             #  to display a image when receive parent signal
             self.parent.signalData.connect(self.newDataReceived)
@@ -1010,8 +927,8 @@ class SEE(QMainWindow):
         '''take ROIc
         '''
         self.cut = (self.plotCercle.getArrayRegion(self.data, self.imh))
-        self.xini=self.plotCercle.pos()[0]
-        self.yini=self.plotCercle.pos()[1]
+        self.xini = self.plotCercle.pos()[0]
+        self.yini = self.plotCercle.pos()[1]
         self.cut1 = self.cut.mean(axis=1)
         self.CropChanged()
 
@@ -1305,7 +1222,7 @@ class SEE(QMainWindow):
                 nomFichier = f"{self.pathAutoSave}/{self.fileNameSave}_{num}"
                 #print(nomFichier)
 
-            print(nomFichier, 'saved')
+            #  print(nomFichier, 'saved')
             if self.winOpt.checkBoxTiff.isChecked():  # save as tiff
                 self.dataS = np.rot90(self.data, 1)
                 img_PIL = Image.fromarray(self.dataS)
@@ -1365,14 +1282,14 @@ class SEE(QMainWindow):
                             self.ycMouse = 0
 
                         if self.winPref.checkBoxAxeScale.isChecked():  # scale axe on
-                            self.label_Cross.setText('x=' + str(round(int(self.xcMouse)*self.winPref.stepX, 2)) + '  um'+' y=' + str(round(int(self.ycMouse)*self.winPref.stepY, 2)) + ' um')
+                            self.label_Cross.setText(f'x = {round(int(self.xcMouse)*self.winPref.stepX, 2)}um  y= {round(int(self.ycMouse)*self.winPref.stepY, 2)}um')
                         else:
 
-                            self.label_Cross.setText('x=' + str(int(self.xcMouse)) + ' y=' + str(int(self.ycMouse)))
+                            self.label_Cross.setText(f'x = {int(self.xcMouse)} y = {int(self.ycMouse)}')
 
                         dataCross = round(dataCross, 3) 
                         # print(dataCross) # take data  value  on the cross
-                        self.label_CrossValue.setText(' v.=' + str(dataCross) + self.labelValue)
+                        self.label_CrossValue.setText(f' v.= {dataCross} {self.labelValue}')
 
         # the cross move with the mousse mvt
         else  :
@@ -1463,7 +1380,7 @@ class SEE(QMainWindow):
             self.ycMax = round(self.ycMax + y, 0)
             self.vLineCrossMax.setPos(self.xcMax)
             self.hLineCrossMax.setPos(self.ycMax)
-            self.labelCmax.setText("(%s,%s)=%s" % (str(self.xcMax), str(self.ycMax), str(round(self.data[int(self.xcMax), int(self.ycMax)], 1))))
+            self.labelCmax.setText(f"{self.xcMax}, {self.ycMax}, {round(self.data[int(self.xcMax),int(self.ycMax)], 1)}")
             self.labelCmax.setPos(int(self.xcMax), int(self.ycMax))
 
         
@@ -1491,13 +1408,13 @@ class SEE(QMainWindow):
                 coupeYMax = 1
 
             if self.winPref.checkBoxAxeScale.isChecked():  # scale axe on
-                self.label_Cross.setText('x=' + str(round(int(self.xc)*self.winPref.stepX, 2)) + '  um'+' y=' + str(round(int(self.yc)*self.winPref.stepY, 2)) + ' um')
+                self.label_Cross.setText(f'x = {round(int(self.xc)*self.winPref.stepX, 2)}um y = {round(int(self.yc)*self.winPref.stepY, 2)}um')
             else:
-                self.label_Cross.setText('x=' + str(int(self.xc)) + ' y=' + str(int(self.yc)))
+                self.label_Cross.setText(f'x = {int(self.xc)}  y = {int(self.yc)}')
 
             dataCross = round(dataCross, 3)  # take data  value  on the cross
 
-            self.label_CrossValue.setText(' v.=' + str(dataCross))
+            self.label_CrossValue.setText(f' v.= {dataCross}')
 
             coupeXnorm = (self.data.shape[0]/10)*(coupeX/coupeXMax)
             coupeYnorm = (self.data.shape[1]/10)*(coupeY/coupeYMax)
@@ -1524,9 +1441,9 @@ class SEE(QMainWindow):
                         self.textX.setText('')
                     else:
                         if self.winPref.checkBoxAxeScale.isChecked():
-                            self.textX.setText('fwhm=' + str(round(fwhmX*self.winPref.stepX, 2)) + ' um', color='w')
+                            self.textX.setText(f'fwhm = {round(fwhmX*self.winPref.stepX, 2)}um', color='w')
                         else:
-                            self.textX.setText('fwhm=' + str(round(fwhmX, 2)), color='w')
+                            self.textX.setText(f'fwhm = {round(fwhmX, 2)}', color='w')
                     yCXmax = yyy[coupeXnorm.argmax()]
 
                     self.textX.setPos(xCXmax + 70, yCXmax + 60)
@@ -1543,9 +1460,9 @@ class SEE(QMainWindow):
                         self.textY.setText('', color='w')
                     else:
                         if self.winPref.checkBoxAxeScale.isChecked() == 1:
-                            self.textY.setText('fwhm=' + str(round(fwhmY*self.winPref.stepY, 2))+' um', color='w')
+                            self.textY.setText(f'fwhm = {round(fwhmY*self.winPref.stepY, 2)}um', color='w')
                         else:
-                            self.textY.setText('fwhm=' + str(round(fwhmY, 2)), color='w')
+                            self.textY.setText(f'fwhm = {round(fwhmY, 2)}', color='w')
 
                     self.textY.setPos(xCYmax-60, yCYmax+70)
 
@@ -1560,12 +1477,12 @@ class SEE(QMainWindow):
                 self.yc = 0
 
             if self.winPref.checkBoxAxeScale.isChecked() == 1:  # scale axe on
-                self.label_Cross.setText('x=' + str(round(int(self.xcMouse)*self.winPref.stepX, 2)) + '  um' + ' y=' + str(round(int(self.ycMouse)*self.winPref.stepY, 2)) + ' um')
+                self.label_Cross.setText(f'x = {round(int(self.xcMouse)*self.winPref.stepX, 2)}um   y = {round(int(self.ycMouse)*self.winPref.stepY, 2)}um')
             else:
-                self.label_Cross.setText('x=' + str(int(self.xcMouse)) + ' y=' + str(int(self.ycMouse)))
+                self.label_Cross.setText(f'x = {int(self.xcMouse)} y= {int(self.ycMouse)}')
 
             dataCross = round(dataCross, 3)  # take data  value  on the mousse
-            self.label_CrossValue.setText(' v.=' + str(dataCross)+self.labelValue)
+            self.label_CrossValue.setText(f' v.= {dataCross} {self.labelValue}')
 
     def PlotXY(self):
         '''plot curves on the  graph
@@ -1674,17 +1591,17 @@ class SEE(QMainWindow):
         '''image in colour/n&b
         '''
         if self.checkBoxColor.isChecked():
-            self.checkBoxColor.setIcon(QtGui.QIcon(self.icon+"colors-icon.png"))
+            self.checkBoxColor.setIcon(QtGui.QIcon(self.icon + "colors-icon.png"))
             self.hist.gradient.loadPreset(self.colorBar)
             self.checkBoxColor.setText('Color On')
         else:
             self.hist.gradient.loadPreset('grey')
-            self.checkBoxColor.setIcon(QtGui.QIcon(self.icon+"circleGray.png"))
+            self.checkBoxColor.setIcon(QtGui.QIcon(self.icon + "circleGray.png"))
             self.checkBoxColor.setText('Grey')
             
     def BackgroundF(self):
         if self.checkBoxBg.isChecked():
-            self.checkBoxBg.setIcon(QtGui.QIcon(self.icon+"userM.png"))
+            self.checkBoxBg.setIcon(QtGui.QIcon(self.icon + "userM.png"))
             self.checkBoxBg.setText('Background soustraction On')
         else :
             self.checkBoxBg.setIcon(QtGui.QIcon(self.icon+"user.png"))
@@ -1970,7 +1887,7 @@ class SEE(QMainWindow):
         self.dataOrg = self.data
 
         self.Display(self.data)
-        self.frameName.setText(str(self.frameNumber))
+        self.frameName.setText(f'{self.frameNumber}')
         self.frameNumber = self.frameNumber + 1
 
     def ScaleImg(self):
@@ -2177,8 +2094,8 @@ class DialogColorBar(QDialog):
         self.entry1 = QLineEdit(self)
         self.entry2 = QLineEdit(self)
 
-        self.entry1.setText(str(self.xmin))
-        self.entry2.setText(str(self.xmax))
+        self.entry1.setText(f'{self.xmin}')
+        self.entry2.setText(f'{self.xmax}')
 
         form_layout = QFormLayout()
         form_layout.addRow("Min value:", self.entry1)
@@ -2196,8 +2113,8 @@ class DialogColorBar(QDialog):
         self.setLayout(main_layout)
 
     def set_values(self,xmin,xmax):
-        self.entry1.setText(str(xmin))
-        self.entry2.setText(str(xmax))   
+        self.entry1.setText(f'{xmin}')
+        self.entry2.setText(f'{xmax}')   
     
     def accept(self):
         xmin = float(self.entry1.text())
