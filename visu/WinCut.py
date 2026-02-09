@@ -115,7 +115,7 @@ class PlotHistoryWidget(QWidget):
         self.plotList = QListWidget()
         self.plotList.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
         # Changer le signal - utiliser itemClicked au lieu de itemChanged
-        self.plotList.itemClicked.connect(self.onItemClicked)
+        self.plotList.itemChanged.connect(self.onItemChanged)
         self.plotList.setStyleSheet("""
             QListWidget {
                 background-color: #1e1e1e;
@@ -276,15 +276,9 @@ class PlotHistoryWidget(QWidget):
             
             self.plotList.takeItem(0)
     
-    def onItemClicked(self, item):
-        """Quand un item est cliqué - toggle le check state"""
-        # Toggle l'état de la checkbox
-        if item.checkState() == Qt.CheckState.Checked:
-            item.setCheckState(Qt.CheckState.Unchecked)
-        else:
-            item.setCheckState(Qt.CheckState.Checked)
-        
-        # Mettre à jour la visibilité
+    def onItemChanged(self, item):
+        """Quand l'état de la checkbox change"""
+        # Pas besoin de toggle - Qt gère ça automatiquement
         if self.parent is not None:
             plot_id = item.data(Qt.ItemDataRole.UserRole)
             is_visible = item.checkState() == Qt.CheckState.Checked
@@ -489,7 +483,7 @@ class GRAPHCUT(QMainWindow):
         sepa = os.sep
         self.parent = parent
         self.title = title
-        self.icon = str(p.parent) + sepa+'icons' + sepa
+        self.icon = str(p.parent) + sepa + 'icons' + sepa
         self.isWinOpen = False
         self.dimx = 10
         self.bloqq = 0

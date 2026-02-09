@@ -27,8 +27,7 @@ from collections import deque
 
 
 class PointingWorker(QThread):
-    """Thread worker pour les calculs de pointing"""
-    results_ready = pyqtSignal(dict)  # Signal avec les résultats calculés
+    results_ready = pyqtSignal(dict)
     
     def __init__(self):
         super().__init__()
@@ -38,55 +37,84 @@ class PointingWorker(QThread):
         self.xini = 0
         self.yini = 0
         self.use_center_of_mass = False
-        self.is_running = False
-        
+        self.should_stop = False
+        self._has_new_data = False
+        self._lock = QtCore.QMutex()
+
     def set_data(self, obje):
-        """Définir les nouvelles données à traiter"""
-        if not self.is_running:
-            self.data = obje[0]
-            self.stepX = obje[1]
-            self.stepY = obje[2]
-            self.xini = obje[3]
-            self.yini = obje[4]
-            self.is_running = True
-            self.start()
+        self._lock.lock()
+        self.data = obje[0]
+        self.stepX = obje[1]
+        self.stepY = obje[2]
+        self.xini = obje[3]
+        self.yini = obje[4]
+        self._has_new_data = True
+        self._lock.unlock()
     
     def run(self):
-        """Calculs effectués dans le thread séparé"""
-        if self.data is None:
-            self.is_running = False
-            return
-            
-        try:
-            # Filtrage gaussien
-            dataF = gaussian_filter(self.data, 5)
-            
-            # Calcul du centre
-            if self.use_center_of_mass:
-                (xec, yec) = ndimage.center_of_mass(dataF)
-                label = 'com'
+        """Boucle permanente"""
+        while not self.should_stop:
+            if self._has_new_data:
+                self._lock.lock()
+                data = self.data.copy()
+                stepX = self.stepX
+                stepY = self.stepY
+                xini = self.xini
+                yini = self.yini
+                self._has_new_data = False
+                self._lock.unlock()
+                
+                try:
+                    ds_threshold = 512
+                    if data.shape[0] > ds_threshold or data.shape[1] > ds_threshold:
+                        ds = 4
+                        data_small = data[::ds, ::ds]
+                        dataF = gaussian_filter(data_small, 2)
+                    else:
+                        ds = 1
+                        dataF = gaussian_filter(data, 5)
+
+                    if self.use_center_of_mass:
+                        (xec, yec) = ndimage.center_of_mass(dataF)
+                        label = 'center of mass'
+                    else:
+                        (xec, yec) = pylab.unravel_index(dataF.argmax(), data_small.shape if ds > 1 else data.shape)
+                        label = 'max'
+                    
+                    # Raffinement
+                    margin = ds * 2
+                    xc = int(round(xec * ds))
+                    yc = int(round(yec * ds))
+                    x0 = max(0, xc - margin)
+                    x1 = min(data.shape[0], xc + margin)
+                    y0 = max(0, yc - margin)
+                    y1 = min(data.shape[1], yc + margin)
+                    
+                    if x1 > x0 and y1 > y0:
+                        patch = data[x0:x1, y0:y1]
+                        if self.use_center_of_mass:
+                            (dx, dy) = ndimage.center_of_mass(patch)
+                        else:
+                            (dx, dy) = pylab.unravel_index(patch.argmax(), patch.shape)
+                        xec = (x0 + dx + xini) * stepX
+                        yec = (y0 + dy + yini) * stepY
+                    else:
+                        xec = (xec * ds + xini) * stepX
+                        yec = (yec * ds + yini) * stepY
+                    
+                    if not self.should_stop:
+                        self.results_ready.emit({
+                            'xec': xec, 'yec': yec, 'label': label,
+                            'stepX': stepX, 'stepY': stepY
+                        })
+                except Exception as e:
+                    print(f"Erreur PointingWorker: {e}")
             else:
-                (xec, yec) = pylab.unravel_index(dataF.argmax(), self.data.shape)
-                label = 'max'
-            
-            # Conversion en coordonnées réelles
-            xec = (xec + self.xini) * self.stepX
-            yec = (yec + self.yini) * self.stepY
-            
-            # Émettre les résultats
-            results = {
-                'xec': xec,
-                'yec': yec,
-                'label': label,
-                'stepX': self.stepX,
-                'stepY': self.stepY
-            }
-            self.results_ready.emit(results)
-            
-        except Exception as e:
-            print(f"Erreur dans PointingWorker: {e}")
-        finally:
-            self.is_running = False
+                self.msleep(10)
+
+    def stop(self):
+        self.should_stop = True
+        self.wait(500)
 
 
 class StatsCard(QFrame):
@@ -104,7 +132,7 @@ class StatsCard(QFrame):
         """)
         
         layout = QVBoxLayout()
-        layout.setSpacing(2)
+        layout.setSpacing(3)
         layout.setContentsMargins(5, 5, 5, 5)
         
         # Titre
@@ -143,7 +171,7 @@ class WINPOINTING(QMainWindow):
             self.conf = conf
         
         sepa = os.sep
-        self.icon = str(p.parent) + sepa+'icons' + sepa
+        self.icon = str(p.parent) + sepa + 'icons' + sepa
         self.path = self.conf.value(self.name+"/path")
         self.isWinOpen = False
         self.setWindowTitle('Pointing Stability Monitor')
@@ -165,13 +193,9 @@ class WINPOINTING(QMainWindow):
         self.r2 = int(self.conf.value(self.name+"/r2y")) if self.conf.value(self.name+"/r2y") else 0
         
         self.kE = 0
+        #  self.time_old = time.time()
         
-        # Charger ou initialiser max_points depuis la config
-        max_points_conf = self.conf.value(self.name+"/max_points")
-        if max_points_conf is None:
-            self._max_points = 1000  # Valeur par défaut
-        else:
-            self._max_points = int(max_points_conf)
+        self._max_points = 1000  # Valeur par défaut
         
         # Utiliser deque au lieu de listes - BEAUCOUP PLUS EFFICACE !
         self.Xec = deque(maxlen=self._max_points)
@@ -190,12 +214,19 @@ class WINPOINTING(QMainWindow):
         # Créer le worker thread
         self.worker = PointingWorker()
         self.worker.results_ready.connect(self.update_display)
-        
-        # Timer pour la mise à jour des graphiques (20 fps par défaut = 50ms)
+        self.worker.start() 
+        # Timer pour la mise à jour des graphiques
         self.plot_update_timer = QTimer()
         self.plot_update_timer.timeout.connect(self.updatePlotsFromTimer)
-        self.plot_update_interval = 50  # ms
-        self.plot_update_timer.start(self.plot_update_interval)
+        self.plot_update_interval = 200  # ms (5 fps par défaut)
+        
+        
+        # Compteur pour ne mettre à jour QUE via le timer
+        self.update_counter = 0
+        self.update_every_n_points = 5  # Tous les 5 points
+        
+        # Flag pour indiquer si de nouvelles données sont arrivées
+        self.new_data_available = False
         
         # Create x and y indices
         x = np.arange(0, self.dimx)
@@ -291,15 +322,17 @@ class WINPOINTING(QMainWindow):
         xLayout = QHBoxLayout()
         xLayout.setSpacing(8)
         
-        # Graphique X (beaucoup plus grand)
+        # Graphique X 
         self.win3 = pg.PlotWidget()
-        self.win3.setDownsampling(auto=True)
-        self.win3.setClipToView(True)
+        #self.win3.setDownsampling(mode='auto')
+        #self.win3.setClipToView(True)
         self.win3.setBackground('#1e1e1e')
         self.win3.setMinimumHeight(300)
-        self.p3 = self.win3.plot(pen=pg.mkPen('#ff6b6b', width=2), symbol='o', 
-                                 symbolSize=4, symbolPen='#ff6b6b', symbolBrush='#ff6b6b', 
-                                 name="x", antialias=True)
+        
+        self.p3 = self.win3.plot(pen=pg.mkPen('#ff6b6b', width=2),
+                                 name="x",
+                                 antialias=False,
+                                 )
         self.win3.setLabel('left', 'X Position', color='#ff6b6b', **{'font-size': '11pt'})
         self.win3.setLabel('bottom', "Shot Number", color='white', **{'font-size': '11pt'})
         self.win3.showGrid(x=True, y=True, alpha=0.3)
@@ -353,17 +386,19 @@ class WINPOINTING(QMainWindow):
         
         # Graphique Y (beaucoup plus grand)
         self.win4 = pg.PlotWidget()
-        self.win4.setDownsampling(auto=True)
-        self.win4.setClipToView(True)
+        # self.win4.setDownsampling(mode='auto')
+        #self.win4.setClipToView(True)
         self.win4.setBackground('#1e1e1e')
         self.win4.setMinimumHeight(300)
-        self.p4 = self.win4.plot(pen=pg.mkPen('#51cf66', width=2), symbol='o', 
-                                 symbolSize=4, symbolPen='#51cf66', symbolBrush='#51cf66', 
-                                 name="y", antialias=True)
+        
+        self.p4 = self.win4.plot(pen=pg.mkPen('#51cf66', width=2),
+                                 name="y",
+                                 antialias=False,
+                                 )
         self.win4.setLabel('left', 'Y Position', color='#51cf66', **{'font-size': '11pt'})
         self.win4.setLabel('bottom', "Shot Number", color='white', **{'font-size': '11pt'})
         self.win4.showGrid(x=True, y=True, alpha=0.3)
-        
+
         self.hLineMeanY = pg.InfiniteLine(angle=0, movable=False, 
                                           pen=pg.mkPen('#51cf66', width=2, style=QtCore.Qt.PenStyle.DashLine))
         self.win4.addItem(self.hLineMeanY, ignoreBounds=True)
@@ -419,6 +454,16 @@ class WINPOINTING(QMainWindow):
         # Axes references
         self.axeY3 = self.win3.getAxis('left')
         self.axeY4 = self.win4.getAxis('left')
+        # === MISE À JOUR DES LABELS D'AXES ===
+        if self.current_stepX != 1:
+            self.axeY3.setLabel('X(um) ' + self.current_label)
+        else:
+            self.axeY3.setLabel('X ' + self.current_label)
+                
+        if self.current_stepY != 1:
+            self.axeY4.setLabel('Y(um) ' + self.current_label)
+        else:
+            self.axeY4.setLabel('Y ' + self.current_label)
         
         if self.parent is not None:
             self.parent.signalPointing.connect(self.Display)
@@ -442,7 +487,8 @@ class WINPOINTING(QMainWindow):
             self.conf.sync()
             
             # Mettre à jour l'affichage
-            self.updatePlots()
+            if len(self.Xec) > 0:
+                self.updatePlots()  # ← Forcer la mise à jour
             
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Icon.Information)
@@ -453,16 +499,16 @@ class WINPOINTING(QMainWindow):
             msg.exec()
     
     def setUpdateRateDialog(self):
-        """Dialogue pour définir la fréquence de mise à jour des graphiques"""
+        """Dialogue pour définir la fréquence de mise à jour"""
         current_fps = 1000 / self.plot_update_interval
         
         value, ok = QInputDialog.getInt(
             self, 
             'Set Plot Update Rate', 
-            f'Enter plot update rate (fps):\n(Current: {current_fps:.0f} fps = {self.plot_update_interval} ms)',
+            f'Enter plot update rate (fps):\n(Current: {current_fps:.0f} fps = {self.plot_update_interval} ms)\n\nRecommendations:\n- 1-2 fps for high-speed acquisition (>100 Hz)\n- 5 fps for normal use\n- 10-20 fps for smooth display',
             value=int(current_fps),
             min=1,
-            max=60,
+            max=30,
             step=1
         )
         
@@ -472,9 +518,18 @@ class WINPOINTING(QMainWindow):
             self.plot_update_timer.start(self.plot_update_interval)
             self.updateRateCard.setValue(f'{value}fps')
             
+            # Ajuster automatiquement update_every_n_points
+            if value <= 2:
+                self.update_every_n_points = 20  # Acquisition rapide
+            elif value <= 5:
+                self.update_every_n_points = 10
+            else:
+                self.update_every_n_points = 5
+            
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Icon.Information)
-            msg.setText(f"Plot update rate set to {value} fps ({self.plot_update_interval} ms)")
+            msg.setText(f"Plot update rate: {value} fps ({self.plot_update_interval} ms)")
+            msg.setInformativeText(f"Updating every {self.update_every_n_points} points")
             msg.setWindowTitle("Setting saved")
             msg.setWindowFlags(QtCore.Qt.WindowType.WindowStaysOnTopHint)
             msg.exec()
@@ -497,71 +552,94 @@ class WINPOINTING(QMainWindow):
         self.worker.set_data(obje)
     
     def update_display(self, results):
-        """Mettre à jour l'affichage avec les résultats calculés (dans le thread GUI)"""
+        # print(f"update_display n={len(self.Xec)} t={time.time():.3f}")
+        """Recevoir les résultats du worker - SANS mise à jour des widgets"""
         xec = results['xec']
         yec = results['yec']
         self.current_label = results['label']
         self.current_stepX = results['stepX']
         self.current_stepY = results['stepY']
         
-        # Ajouter les nouvelles valeurs - la deque gère automatiquement la limite !
+        # Juste ajouter les données - PAS de mise à jour graphique ici !
         self.Xec.append(xec)
         self.Yec.append(yec)
+        # Démarrer le timer au premier point
+        if not self.plot_update_timer.isActive():
+            self.plot_update_timer.start(self.plot_update_interval)
+        # Incrémenter le compteur
+        self.update_counter += 1
         
-        # Mettre à jour le nombre de points affiché
-        self.nbPointsCard.setValue(f"{len(self.Xec)}/{self.max_points}")
+        # Marquer qu'il y a de nouvelles données
+        if self.update_counter >= self.update_every_n_points:
+            self.new_data_available = True
+            self.update_counter = 0
+    
+    def updatePlotsFromTimer(self):
+        # self.time_old = time.time()
+        """Mise à jour COMPLÈTE appelée par le timer uniquement"""
+        # Ne rien faire s'il n'y a pas de nouvelles données
+        if not self.new_data_available or len(self.Xec) == 0:
+            return
         
-        # Calculs statistiques
+        try:
+            # Conversion UNE SEULE FOIS
+            Xarray = np.array(self.Xec)
+            Yarray = np.array(self.Yec)
+            
+            # === MISE À JOUR DES GRAPHIQUES ===
+            
+            n_points = len(Xarray)
+            x_axis = np.arange(n_points)
+            # Downsampling agressif si beaucoup de points
+            
+            self.p3.setData(x=x_axis, y=Xarray)
+            self.p4.setData(x=x_axis, y=Yarray)
+        
+            # === CALCULS STATISTIQUES ===
+            Xmean = Xarray.mean()
+            Ymean = Yarray.mean()
+            stdX = Xarray.std()
+            stdY = Yarray.std()
+            XPV = np.ptp(Xarray)
+            YPV = np.ptp(Yarray)
+            
+            # === MISE À JOUR DES CARTES ===
+            self.meanXCard.setValue(f'{Xmean:.2f}')
+            self.stdXCard.setValue(f'{stdX:.2f}')
+            self.pvXCard.setValue(f'{XPV:.2f}')
+            
+            self.meanYCard.setValue(f'{Ymean:.2f}')
+            self.stdYCard.setValue(f'{stdY:.2f}')
+            self.pvYCard.setValue(f'{YPV:.2f}')
+            
+            # === MISE À JOUR DES LIGNES MOYENNES ===
+            self.hLineMeanX.setPos(Xmean)
+            self.hLineMeanY.setPos(Ymean)
+            
+            # === MISE À JOUR DU BUFFER ===
+            self.nbPointsCard.setValue(f"{n_points}/{self.max_points}")
+            
+        except Exception as e:
+            print(f"Erreur dans updatePlotsFromTimer: {e}")
+        finally:
+            # Toujours réinitialiser le flag
+            self.new_data_available = False
+    
+    def updatePlots(self):
+        """Mettre à jour tous les plots - appelé manuellement (OpenF, Reset, etc.)"""
+        if len(self.Xec) == 0:
+            return
+        
+        # Forcer la mise à jour immédiate
         Xarray = np.array(self.Xec)
         Yarray = np.array(self.Yec)
         
-        Xmean = np.mean(Xarray)
-        Ymean = np.mean(Yarray)
-        stdX = np.std(Xarray)
-        stdY = np.std(Yarray)
-        XPV = Xarray.max() - Xarray.min() if len(Xarray) > 0 else 0
-        YPV = Yarray.max() - Yarray.min() if len(Yarray) > 0 else 0
+        n_points = len(Xarray)
+        x_axis = np.arange(n_points)
+        self.p3.setData(x=x_axis, y=Xarray)
+        self.p4.setData(x=x_axis, y=Yarray)
         
-        # Mise à jour des cartes statistiques
-        self.meanXCard.setValue(f'{Xmean:.2f}')
-        self.stdXCard.setValue(f'{stdX:.2f}')
-        self.pvXCard.setValue(f'{XPV:.2f}')
-        
-        self.meanYCard.setValue(f'{Ymean:.2f}')
-        self.stdYCard.setValue(f'{stdY:.2f}')
-        self.pvYCard.setValue(f'{YPV:.2f}')
-        
-        # Mise à jour des lignes moyennes
-        self.hLineMeanX.setPos(Xmean)
-        self.hLineMeanY.setPos(Ymean)
-        
-        # Marquer qu'il y a de nouvelles données
-        self.data_updated = True
-        
-        # Mise à jour des labels d'axes
-        if self.current_stepX != 1:
-            self.axeY3.setLabel('X(um) ' + self.current_label)
-        else:
-            self.axeY3.setLabel('X ' + self.current_label)
-            
-        if self.current_stepY != 1:
-            self.axeY4.setLabel('Y(um) ' + self.current_label)
-        else:
-            self.axeY4.setLabel('Y ' + self.current_label)
-    
-    def updatePlotsFromTimer(self):
-        """Mise à jour des plots appelée par le timer"""
-        if self.data_updated and len(self.Xec) > 0:
-            self.updatePlots()
-            self.data_updated = False
-    
-    def updatePlots(self):
-        """Mettre à jour tous les plots"""
-        self.p3.setData(list(self.Xec))
-        self.p4.setData(list(self.Yec))
-    
     def OpenF(self, fileOpen=False):
-
         if fileOpen is False:
             chemin = self.conf.value(self.name+"/path")
             fname = QFileDialog.getOpenFileName(self, "Open File", chemin, " 1D data (*.txt )")
@@ -579,21 +657,22 @@ class WINPOINTING(QMainWindow):
             self.Xec = deque(aa[0], maxlen=self.max_points)
             self.Yec = deque(aa[1], maxlen=self.max_points)
             
-            self.updatePlots()
+            # Forcer la mise à jour graphique
+            self.updatePlots()  # ← Maintenant ça marche !
             
             # Mettre à jour les statistiques
             Xarray = np.array(self.Xec)
             Yarray = np.array(self.Yec)
             
-            Xmean = np.mean(Xarray)
-            stdX = np.std(Xarray)
+            Xmean = Xarray.mean()
+            Ymean = Yarray.mean()
+            stdX = Xarray.std()
+            stdY = Yarray.std()
+            XPV = np.ptp(Xarray)
+            YPV = np.ptp(Yarray)
+            
             self.hLineMeanX.setPos(Xmean)
-            Ymean = np.mean(Yarray)
-            stdY = np.std(Yarray)
             self.hLineMeanY.setPos(Ymean)
-        
-            XPV = Xarray.max() - Xarray.min()
-            YPV = Yarray.max() - Yarray.min()
             
             self.meanXCard.setValue(f'{Xmean:.2f}')
             self.stdXCard.setValue(f'{stdX:.2f}')
@@ -637,10 +716,27 @@ class WINPOINTING(QMainWindow):
         
     def Reset(self):
         print('reset')
+        
+        # ARRÊTER le worker AVANT de vider les données
+        self.worker.should_stop = True
+        if self.worker.isRunning():
+            self.worker.wait(200)  # Attendre max 200ms
+        
+        # Relancer le worker
+        self.worker.should_stop = False
+        self.worker.start() 
+        
+        # Arrêter le timer pendant le reset
+        self.plot_update_timer.stop()
+        
+        # Vider les données
         self.Xec.clear()
         self.Yec.clear()
+        
+        # Effacer les graphiques
         self.p3.clear()
         self.p4.clear()
+        
         
         # Réinitialiser les cartes
         self.nbPointsCard.setValue(f"0/{self.max_points}")
@@ -651,21 +747,43 @@ class WINPOINTING(QMainWindow):
         self.stdYCard.setValue('--')
         self.pvYCard.setValue('--')
         
-        self.data_updated = False
+        # Réinitialiser les lignes moyennes
+        self.hLineMeanX.setPos(0)
+        self.hLineMeanY.setPos(0)
         
-    def closeEvent(self, event):
-        """Arrêter le worker et le timer proprement"""
+        # Réinitialiser les flags
+        self.new_data_available = False
+        self.update_counter = 0
+        
+        # Redémarrer le timer
         self.plot_update_timer.stop()
         
+        print('Reset complete')
+
+    def closeEvent(self, event):
+        """Arrêter le worker et le timer proprement"""
+        print('Closing WINPOINTING...')
+        
+        # Arrêter le timer
+        self.plot_update_timer.stop()
+        
+        # Arrêter le worker proprement
+        self.worker.should_stop = True
         if self.worker.isRunning():
-            self.worker.terminate()
-            self.worker.wait()
+            print('Waiting for worker to finish...')
+            self.worker.quit()
+            self.worker.wait(500)  # Attendre max 500ms
+            if self.worker.isRunning():
+                print('Worker still running, terminating...')
+                self.worker.terminate()
+                self.worker.wait(200)
         
         self.isWinOpen = False
         self.E = []
         self.Xec.clear()
         self.Yec.clear()
-        time.sleep(0.1)
+        
+        print('WINPOINTING closed')
         event.accept()
      
 
