@@ -21,7 +21,7 @@ import pyqtgraph as pg
 
 from PyQt6.QtWidgets import QApplication, QVBoxLayout, QHBoxLayout, QPushButton
 from PyQt6.QtWidgets import QInputDialog, QSlider, QLabel, QSizePolicy, QMenu
-from PyQt6.QtWidgets import QFileDialog, QMessageBox, QLineEdit, QDialog ,QDialogButtonBox
+from PyQt6.QtWidgets import QFileDialog, QMessageBox, QLineEdit, QDialog, QDialogButtonBox
 from PyQt6.QtWidgets import QMainWindow, QToolButton, QStatusBar, QFrame, QFormLayout
 from PyQt6.QtGui import QShortcut, QAction
 from PyQt6 import QtCore, QtGui
@@ -825,7 +825,23 @@ class SEE(QMainWindow):
             self.ite = None
         else:
             self.ite = 'line'
+            # Positionner la ligne dans la zone visible
+            if self.plotRectZoomEtat == "ZoomOut":
+                centerX = (self.xZoomMin + self.xZoomMax) / 2
+                centerY = (self.yZoomMin + self.yZoomMax) / 2
+                size = (self.xZoomMax - self.xZoomMin) / 4
+                pos1 = (centerX - size, centerY)
+                pos2 = (centerX + size, centerY)
+            else:
+                pos1 = (self.dimx/4, self.dimy/2)
+                pos2 = (3*self.dimx/4, self.dimy/2)
+            
+            # Recréer la ligne avec les bonnes positions
+            self.plotLine = pg.LineSegmentROI(positions=(pos1, pos2),
+                                            movable=True, pen='w')
+            self.plotLine.sigRegionChangeFinished.connect(self.LigneChanged)
             self.p1.addItem(self.plotLine)
+        
             self.LigneChanged()
 
     def LigneChanged(self):
@@ -869,14 +885,22 @@ class SEE(QMainWindow):
         else:
             self.ite = 'rect'
             self.p1.addItem(self.plotRect)
-            self.plotRect.setPos([self.dimx/2, self.dimy/2])
-
+            if self.plotRectZoomEtat == "ZoomOut":
+                centerX = (self.xZoomMin + self.xZoomMax) / 2
+                centerY = (self.yZoomMin + self.yZoomMax) / 2
+                sizeX = (self.xZoomMax - self.xZoomMin) / 3
+                sizeY = (self.yZoomMax - self.yZoomMin) / 3
+                self.plotRect.setSize([sizeX, sizeY])
+                self.plotRect.setPos([centerX - sizeX/2, centerY - sizeY/2])
+            else:
+                self.plotRect.setPos([self.dimx/2, self.dimy/2])
+            
     def RectChanged(self):
         '''Take ROI
         '''
         self.cut = (self.plotRect.getArrayRegion(self.data, self.imh))
-        self.xini=self.plotRect.pos()[0]
-        self.yini=self.plotRect.pos()[1]
+        self.xini = self.plotRect.pos()[0]
+        self.yini = self.plotRect.pos()[1]
         if self.winPref.plotRectOpt.currentIndex() == 0:
             self.cut1 = self.cut.mean(axis=1)
         else:
@@ -914,8 +938,15 @@ class SEE(QMainWindow):
         else:
             self.ite = 'cercle'
             self.p1.addItem(self.plotCercle)
-            self.plotCercle.setPos([self.dimx/2, self.dimy/2])
-
+            if self.plotRectZoomEtat == "ZoomOut":
+                centerX = (self.xZoomMin + self.xZoomMax) / 2
+                centerY = (self.yZoomMin + self.yZoomMax) / 2
+                size = min(self.xZoomMax - self.xZoomMin, self.yZoomMax - self.yZoomMin) / 3
+                self.plotCercle.setSize([size, size])
+                self.plotCercle.setPos([centerX - size/2, centerY - size/2])
+            else:
+                self.plotCercle.setPos([self.dimx/2, self.dimy/2])
+            
         try:
             self.p1.removeItem(self.plotRect)
             self.p1.removeItem(self.plotLine)
@@ -946,12 +977,20 @@ class SEE(QMainWindow):
         else:
             self.ite = 'pentagon'
             self.p1.addItem(self.plotPentagon)
-
+        # Positionner le pentagone dans la zone visible
+            if self.plotRectZoomEtat == "ZoomOut":
+                centerX = (self.xZoomMin + self.xZoomMax) / 2
+                centerY = (self.yZoomMin + self.yZoomMax) / 2
+                size = min(self.xZoomMax - self.xZoomMin, self.yZoomMax - self.yZoomMin) / 4
+                self.plotPentagon.setPos([centerX - size, centerY - size])
+            else:
+                self.plotPentagon.setPos([self.dimx/2, self.dimy/2])
+            
     def PentaChanged(self):
         self.cut = (self.plotPentagon.getArrayRegion(self.data, self.imh))
         self.cut1 = self.cut.mean(axis=1)
-        self.xini=self.plotPentagon.pos()[0]
-        self.yini=self.plotPentagon.pos()[1]
+        self.xini = self.plotPentagon.pos()[0]
+        self.yini = self.plotPentagon.pos()[1]
         self.CropChanged()
 
     def CUT(self):
@@ -1292,7 +1331,7 @@ class SEE(QMainWindow):
                         self.label_CrossValue.setText(f' v.= {dataCross} {self.labelValue}')
 
         # the cross move with the mousse mvt
-        else  :
+        else:
             if self.bloqKeyboard is False:  # cross not  blocked by  keyboard
                 if self.bloqq == 0:  # cross  not  blocked by mouse  click
 
@@ -1603,9 +1642,10 @@ class SEE(QMainWindow):
         if self.checkBoxBg.isChecked():
             self.checkBoxBg.setIcon(QtGui.QIcon(self.icon + "userM.png"))
             self.checkBoxBg.setText('Background soustraction On')
-        else :
+        else:
             self.checkBoxBg.setIcon(QtGui.QIcon(self.icon+"user.png"))
             self.checkBoxBg.setText('Background soustraction Off')
+
     def roiChanged(self):
 
         self.rx = self.ro1.size()[0]
@@ -1740,7 +1780,7 @@ class SEE(QMainWindow):
         self.newDataReceived(data)
         return self.data
     
-    def StactF(self) :
+    def StactF(self):
 
         chemin = self.conf.value(self.name+"/path")
         fname = QFileDialog.getOpenFileNames(self, "Open Multi files", chemin, "Images (*.txt *.spe *.TIFF *.sif *.tif);;Text File(*.txt);;Ropper File (*.SPE);;Andor File(*.sif);; TIFF file(*.TIFF)")

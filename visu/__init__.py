@@ -4,10 +4,10 @@
 Created on Mon Mar 18 10:50:06 2019
 Data vizualisation
 @author: juliengautier
-modified  : 2025/06/12
+modified  : 2026/02/13
 """
-__version__='2025.09'
-__author__='julien Gautier'
+__version__ = '2026.02'
+__author__ = 'julien Gautier'
 
 
 from visu import visual

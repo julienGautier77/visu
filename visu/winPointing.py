@@ -6,8 +6,11 @@ Created on Wed Dec 19 11:43:05 2018
 
 """
 
-from PyQt6.QtWidgets import QApplication, QVBoxLayout, QHBoxLayout, QWidget, QGridLayout
-from PyQt6.QtWidgets import QLabel, QMainWindow, QMessageBox, QFileDialog, QInputDialog, QFrame, QGroupBox
+from PyQt6.QtWidgets import (QApplication, QVBoxLayout, QHBoxLayout, QWidget, 
+                             QLabel, QMainWindow, QMessageBox, 
+                             QFileDialog, QInputDialog, QFrame, QGroupBox,
+                             QPushButton, QLineEdit)
+
 from PyQt6 import QtCore, QtGui 
 
 from PyQt6.QtGui import QAction
@@ -20,7 +23,7 @@ import numpy as np
 import qdarkstyle
 import pylab
 import os
-from scipy.ndimage.filters import gaussian_filter
+from scipy.ndimage import gaussian_filter
 import pathlib
 from scipy import ndimage
 from collections import deque
@@ -59,7 +62,7 @@ class PointingWorker(QThread):
                 data = self.data.copy()
                 stepX = self.stepX
                 stepY = self.stepY
-                xini = self.xini
+                xini = self.xini    # prmet de se placer dans la coordonnées de l image entiere
                 yini = self.yini
                 self._has_new_data = False
                 self._lock.unlock()
@@ -68,7 +71,7 @@ class PointingWorker(QThread):
                     ds_threshold = 512
                     if data.shape[0] > ds_threshold or data.shape[1] > ds_threshold:
                         ds = 4
-                        data_small = data[::ds, ::ds]
+                        data_small = data[::ds, ::ds]   # Sous-échantillonnage pour accélérer le calcul du gausian 
                         dataF = gaussian_filter(data_small, 2)
                     else:
                         ds = 1
@@ -200,7 +203,8 @@ class WINPOINTING(QMainWindow):
         # Utiliser deque au lieu de listes - BEAUCOUP PLUS EFFICACE !
         self.Xec = deque(maxlen=self._max_points)
         self.Yec = deque(maxlen=self._max_points)
-        
+        self.timestamps = deque(maxlen=self._max_points)
+
         self.fwhmX = 100
         self.fwhmY = 100
         self.E = []
@@ -234,7 +238,7 @@ class WINPOINTING(QMainWindow):
         y, x = np.meshgrid(y, x)
     
         self.data = (40*np.random.rand(self.dimx, self.dimy)).round()
-        
+        self.winFFT = WinPointingFFT(parent=self)
         self.setup()
     
     @property
@@ -278,7 +282,10 @@ class WINPOINTING(QMainWindow):
         self.centerOfMass.setCheckable(True)
         self.centerOfMass.setChecked(False)
         self.optionMenu.addAction(self.centerOfMass)
-        
+        self.fftAct = QAction('Show FFT', self)
+        self.fftAct.triggered.connect(self.showFFT)
+        self.optionMenu.addAction(self.fftAct)
+
         # Ajouter l'action pour définir le nombre max de points
         self.setMaxPointsAct = QAction('Set Max Points...', self)
         self.setMaxPointsAct.triggered.connect(self.setMaxPointsDialog)
@@ -295,6 +302,10 @@ class WINPOINTING(QMainWindow):
         self.setUpdateRateAct = QAction('Set Update Rate...', self)
         self.setUpdateRateAct.triggered.connect(self.setUpdateRateDialog)
         self.optionMenu.addAction(self.setUpdateRateAct)
+        self.setCrossToMeanAct = QAction('Set Cross to Mean Position', self)
+        self.setCrossToMeanAct.setShortcut('Ctrl+Shift+M')
+        self.setCrossToMeanAct.triggered.connect(self.setCrossToMean)
+        self.optionMenu.addAction(self.setCrossToMeanAct)
         
         # Layout principal
         mainLayout = QVBoxLayout()
@@ -563,6 +574,7 @@ class WINPOINTING(QMainWindow):
         # Juste ajouter les données - PAS de mise à jour graphique ici !
         self.Xec.append(xec)
         self.Yec.append(yec)
+        self.timestamps.append(time.time())
         # Démarrer le timer au premier point
         if not self.plot_update_timer.isActive():
             self.plot_update_timer.start(self.plot_update_interval)
@@ -760,6 +772,92 @@ class WINPOINTING(QMainWindow):
         
         print('Reset complete')
 
+    def showFFT(self):
+        """Ouvrir la fenêtre FFT avec les données actuelles"""
+        if len(self.Xec) < 10:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Icon.Warning)
+            msg.setText("Not enough data points for FFT")
+            msg.setInformativeText("Need at least 10 points")
+            msg.setWindowTitle("Warning")
+            msg.exec()
+            return
+        if len(self.timestamps) > 1:
+            ts = np.array(self.timestamps)
+            dt_measured = np.median(np.diff(ts))
+            self.winFFT.dtInput.setText(f'{dt_measured:.4f}')
+            
+        self.winFFT.compute(np.array(self.Xec), np.array(self.Yec))
+        self.winFFT.show()
+        self.winFFT.raise_()
+
+    def setCrossToMean(self):
+        """Positionner la croix du parent sur la moyenne X, Y"""
+        if len(self.Xec) == 0:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Icon.Warning)
+            msg.setText("No data available")
+            msg.setInformativeText("Need at least one point to compute mean position")
+            msg.setWindowTitle("Warning")
+            msg.setWindowFlags(QtCore.Qt.WindowType.WindowStaysOnTopHint)
+            msg.exec()
+            return
+        
+        if self.parent is None:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Icon.Warning)
+            msg.setText("No parent window")
+            msg.setInformativeText("This window needs a parent visu to set the cross position")
+            msg.setWindowTitle("Warning")
+            msg.setWindowFlags(QtCore.Qt.WindowType.WindowStaysOnTopHint)
+            msg.exec()
+            return
+        
+        # Calculer les moyennes
+        Xmean = np.array(self.Xec).mean()
+        Ymean = np.array(self.Yec).mean()
+        
+        # Convertir en pixels si nécessaire (les données sont en µm si stepX/Y != 1)
+        if self.current_stepX != 1:
+            xc_pixel = int(round(Xmean / self.current_stepX))
+        else:
+            xc_pixel = int(round(Xmean))
+        
+        if self.current_stepY != 1:
+            yc_pixel = int(round(Ymean / self.current_stepY))
+        else:
+            yc_pixel = int(round(Ymean))
+        
+        # Mettre à jour la croix du parent
+        try:
+            self.parent.xc = xc_pixel
+            self.parent.yc = yc_pixel
+            self.parent.vLine.setPos(xc_pixel)
+            self.parent.hLine.setPos(yc_pixel)
+            
+            # Mettre à jour le ROI si roiCross est activé
+            if hasattr(self.parent, 'roiCross') and self.parent.roiCross:
+                self.parent.ro1.setPos([xc_pixel - self.parent.rx/2, 
+                                        yc_pixel - self.parent.ry/2])
+            
+            # Sauvegarder dans la config
+            self.parent.conf.setValue(self.parent.name + "/xc", xc_pixel)
+            self.parent.conf.setValue(self.parent.name + "/yc", yc_pixel)
+            
+            # Rafraîchir l'affichage
+            self.parent.Coupe()
+            
+            print(f"Cross set to mean position: X={xc_pixel}, Y={yc_pixel}")
+            
+        except Exception as e:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Icon.Critical)
+            msg.setText("Error setting cross position")
+            msg.setInformativeText(str(e))
+            msg.setWindowTitle("Error")
+            msg.setWindowFlags(QtCore.Qt.WindowType.WindowStaysOnTopHint)
+            msg.exec()
+
     def closeEvent(self, event):
         """Arrêter le worker et le timer proprement"""
         print('Closing WINPOINTING...')
@@ -785,7 +883,184 @@ class WINPOINTING(QMainWindow):
         
         print('WINPOINTING closed')
         event.accept()
-     
+
+
+class WinPointingFFT(QMainWindow):
+    """Fenêtre FFT séparée - calcul à la demande uniquement"""
+    
+    def __init__(self, parent=None):
+        super().__init__()
+        self.parent = parent
+        self.isWinOpen = False
+        self.setWindowTitle('FFT - Frequency Analysis')
+        self.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
+        
+        if parent:
+            self.setWindowIcon(QIcon(parent.icon + 'LOA.png'))
+        
+        self.setGeometry(150, 150, 1200, 700)
+        self.Xdata = None
+        self.Ydata = None
+        self.setup()
+    
+    def setup(self):
+        mainLayout = QVBoxLayout()
+        mainLayout.setSpacing(8)
+        mainLayout.setContentsMargins(10, 10, 10, 10)
+        
+        # === Barre d'options ===
+        optionLayout = QHBoxLayout()
+        
+        dtLabel = QLabel('Δt between shots (s):')
+        dtLabel.setStyleSheet("color: white; font: 10pt;")
+        
+        self.dtInput = QLineEdit('0.1')
+        self.dtInput.setMaximumWidth(100)
+        self.dtInput.setStyleSheet("font: 10pt;")
+        self.dtInput.returnPressed.connect(self.recompute)
+        
+        self.recalcButton = QPushButton('Recompute')
+        self.recalcButton.setStyleSheet("font: 10pt; padding: 4px 12px;")
+        self.recalcButton.clicked.connect(self.recompute)
+        
+        optionLayout.addWidget(dtLabel)
+        optionLayout.addWidget(self.dtInput)
+        optionLayout.addWidget(self.recalcButton)
+        optionLayout.addStretch()
+        
+        mainLayout.addLayout(optionLayout)
+        
+        # === Graphiques FFT ===
+        plotsLayout = QHBoxLayout()
+        
+        # FFT X
+        self.winFFTx = pg.PlotWidget(title='FFT X')
+        self.winFFTx.setBackground('#1e1e1e')
+        self.pFFTx = self.winFFTx.plot(pen=pg.mkPen('#ff6b6b', width=2))
+        self.winFFTx.setLabel('left', 'Amplitude', color='#ff6b6b')
+        self.winFFTx.setLabel('bottom', 'Frequency', color='white')
+        self.winFFTx.showGrid(x=True, y=True, alpha=0.3)
+        
+        self.vLineFFTx = pg.InfiniteLine(angle=90, movable=False,
+            pen=pg.mkPen('#ff6b6b', width=1, style=QtCore.Qt.PenStyle.DashLine))
+        self.winFFTx.addItem(self.vLineFFTx, ignoreBounds=True)
+        self.labelFFTx = pg.TextItem(color='#ff6b6b', anchor=(0, 1))
+        self.winFFTx.addItem(self.labelFFTx)
+        
+        # FFT Y
+        self.winFFTy = pg.PlotWidget(title='FFT Y')
+        self.winFFTy.setBackground('#1e1e1e')
+        self.pFFTy = self.winFFTy.plot(pen=pg.mkPen('#51cf66', width=2))
+        self.winFFTy.setLabel('left', 'Amplitude', color='#51cf66')
+        self.winFFTy.setLabel('bottom', 'Frequency', color='white')
+        self.winFFTy.showGrid(x=True, y=True, alpha=0.3)
+        
+        self.vLineFFTy = pg.InfiniteLine(angle=90, movable=False,
+            pen=pg.mkPen('#51cf66', width=1, style=QtCore.Qt.PenStyle.DashLine))
+        self.winFFTy.addItem(self.vLineFFTy, ignoreBounds=True)
+        self.labelFFTy = pg.TextItem(color='#51cf66', anchor=(0, 1))
+        self.winFFTy.addItem(self.labelFFTy)
+        
+        plotsLayout.addWidget(self.winFFTx)
+        plotsLayout.addWidget(self.winFFTy)
+        mainLayout.addLayout(plotsLayout)
+        
+        # === Info en bas ===
+        self.infoLabel = QLabel()
+        self.infoLabel.setStyleSheet("color: #aaa; font: 10pt;")
+        self.infoLabel.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        mainLayout.addWidget(self.infoLabel)
+        
+        widget = QWidget()
+        widget.setLayout(mainLayout)
+        self.setCentralWidget(widget)
+    
+    def compute(self, Xarray, Yarray):
+        """Stocker les données et calculer la FFT"""
+        self.Xdata = Xarray.copy()
+        self.Ydata = Yarray.copy()
+        self._doFFT()
+    
+    def recompute(self):
+        """Recalculer avec le nouveau dt"""
+        if self.Xdata is not None:
+            self._doFFT()
+    
+    def _doFFT(self):
+        """Calcul FFT interne"""
+        n = len(self.Xdata)
+        if n < 10:
+            return
+        
+        # Lire dt
+        try:
+            dt = float(self.dtInput.text())
+            if dt <= 0:
+                dt = 1.0
+        except ValueError:
+            dt = 1.0
+        
+        # Soustraire la moyenne
+        Xc = self.Xdata - self.Xdata.mean()
+        Yc = self.Ydata - self.Ydata.mean()
+        
+        # Fenêtre de Hanning
+        window = np.hanning(n)
+        Xc = Xc * window
+        Yc = Yc * window
+        
+        # FFT
+        fftX = np.abs(np.fft.rfft(Xc)) * 2 / n
+        fftY = np.abs(np.fft.rfft(Yc)) * 2 / n
+        
+        # Fréquences en Hz
+        freq = np.fft.rfftfreq(n, d=dt)
+        freq_unit = 'Hz'
+        period_unit = 's'
+        
+        # Ignorer DC
+        fftX[0] = 0
+        fftY[0] = 0
+        
+        # Afficher
+        self.pFFTx.setData(x=freq, y=fftX)
+        self.pFFTy.setData(x=freq, y=fftY)
+        
+        self.winFFTx.setLabel('bottom', f'Frequency ({freq_unit})', color='white')
+        self.winFFTy.setLabel('bottom', f'Frequency ({freq_unit})', color='white')
+        
+        # Pic dominant X
+        if len(fftX) > 1:
+            idx = np.argmax(fftX[1:]) + 1
+            f0 = freq[idx]
+            T = 1.0 / f0 if f0 > 0 else float('inf')
+            self.vLineFFTx.setPos(f0)
+            self.labelFFTx.setText(f'f = {f0:.2f} {freq_unit}  (T = {T:.3f} {period_unit})')
+            self.labelFFTx.setPos(f0, fftX[idx])
+        
+        # Pic dominant Y
+        if len(fftY) > 1:
+            idx = np.argmax(fftY[1:]) + 1
+            f0 = freq[idx]
+            T = 1.0 / f0 if f0 > 0 else float('inf')
+            self.vLineFFTy.setPos(f0)
+            self.labelFFTy.setText(f'f = {f0:.2f} {freq_unit}  (T = {T:.3f} {period_unit})')
+            self.labelFFTy.setPos(f0, fftY[idx])
+        
+        # Info
+        nyquist = 1.0 / (2 * dt)
+        df = 1.0 / (n * dt)
+        self.infoLabel.setText(
+            f'{n} points | Δt = {dt} s ({1/dt:.1f} Hz rep. rate) | '
+            f'Nyquist = {nyquist:.1f} {freq_unit} | '
+            f'Resolution = {df:.4f} {freq_unit}'
+        )
+    
+    def closeEvent(self, event):
+        self.isWinOpen = False
+        event.accept()
+
+
 
 if __name__ == "__main__":
     appli = QApplication(sys.argv)
