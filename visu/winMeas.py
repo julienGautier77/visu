@@ -1,21 +1,23 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Sun Feb 10 09:44:07 2019
 Window for Measurement
+Réécriture avec connexion ZMQ directe au serveur RSAI
+Sans utiliser le client MOTORRSAI complet
+
 @author: juliengautier
-modified 2019/08/13 : add motors RSAI position and zoom windows
-modified 2023/07/04 add user function
+@modified: 2025 - Connexion ZMQ directe
 """
 
-
-import qdarkstyle 
+import qdarkstyle
 from PyQt6 import QtCore, QtGui
-from PyQt6.QtWidgets import QApplication, QVBoxLayout, QHBoxLayout, QMainWindow, QHeaderView
-from PyQt6.QtWidgets import QWidget, QTableWidget, QTableWidgetItem, QAbstractItemView, QComboBox, QInputDialog
-from PyQt6.QtGui import QAction
-from PyQt6.QtGui import QIcon
-from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import (QApplication, QVBoxLayout, QHBoxLayout, QMainWindow, 
+                              QHeaderView, QWidget, QTableWidget, QTableWidgetItem, 
+                              QAbstractItemView, QComboBox, QInputDialog, QLabel,
+                              QDialog, QLineEdit, QDialogButtonBox, QFormLayout,
+                              QMessageBox, QGroupBox)
+from PyQt6.QtGui import QAction, QIcon
+from PyQt6.QtCore import Qt, QMutex,QTimer
 from visu.WinCut import GRAPHCUT
 from visu.winZoom import ZOOM
 import pathlib
@@ -23,8 +25,254 @@ import numpy as np
 import sys
 import time
 import os
+import zmq
+import ast
 from scipy import ndimage
 
+
+class ServerConfigDialog(QDialog):
+    """
+    Dialogue pour configurer l'adresse IP et le port du serveur ZMQ
+    """
+    
+    def __init__(self, current_host='localhost', current_port='5555', parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Configuration Serveur ZMQ")
+        self.setModal(True)
+        self.setMinimumWidth(350)
+        
+        # Appliquer le style sombre
+        self.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
+        
+        layout = QVBoxLayout()
+        
+        # Groupe de configuration
+        groupBox = QGroupBox("Paramètres du serveur RSAI")
+        formLayout = QFormLayout()
+        
+        # Champ IP/Host
+        self.hostEdit = QLineEdit(current_host)
+        self.hostEdit.setPlaceholderText("Ex: 192.168.1.100 ou localhost")
+        formLayout.addRow("Adresse IP / Host:", self.hostEdit)
+        
+        # Champ Port
+        self.portEdit = QLineEdit(current_port)
+        self.portEdit.setPlaceholderText("Ex: 5555")
+        formLayout.addRow("Port:", self.portEdit)
+        
+        groupBox.setLayout(formLayout)
+        layout.addWidget(groupBox)
+        
+        # Info
+        infoLabel = QLabel("⚠️ Les modifications seront appliquées au prochain démarrage.")
+        infoLabel.setStyleSheet("color: orange; font-style: italic;")
+        layout.addWidget(infoLabel)
+        
+        # Boutons
+        buttonBox = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | 
+            QDialogButtonBox.StandardButton.Cancel
+        )
+        buttonBox.accepted.connect(self.accept)
+        buttonBox.rejected.connect(self.reject)
+        layout.addWidget(buttonBox)
+        
+        self.setLayout(layout)
+    
+    def getValues(self):
+        """Retourne les valeurs saisies"""
+        return self.hostEdit.text().strip(), self.portEdit.text().strip()
+
+
+class ZMQMotorClient:
+    """
+    Client ZMQ léger pour communiquer avec le serveur RSAI
+    Basé sur le code fonctionnel de mainMotor.py
+    """
+    
+    def __init__(self, server_host='localhost', server_port='5555'):
+        self.server_address = f"tcp://{server_host}:{server_port}"
+        self.context = zmq.Context()
+        self.socket = None
+        self.isconnected = False
+        self.server_available = False
+        self.mut = QMutex()
+        self._connect()
+    
+    def _connect(self):
+        """Établit la connexion ZMQ DEALER"""
+        try:
+            if self.socket:
+                self.socket.close()
+            
+            self.socket = self.context.socket(zmq.DEALER)
+            self.socket.setsockopt(zmq.RCVTIMEO, 5000)  # 5s timeout
+            self.socket.setsockopt(zmq.SNDTIMEO, 5000)
+            self.socket.setsockopt(zmq.LINGER, 1000)
+            self.socket.setsockopt(zmq.SNDHWM, 100)
+            self.socket.setsockopt(zmq.RCVHWM, 100)
+            
+            # Identité unique
+            import uuid
+            identity = f"MEAS_{uuid.uuid4()}".encode('utf-8')
+            self.socket.setsockopt(zmq.IDENTITY, identity)
+            
+            self.socket.connect(self.server_address)
+            
+            # Vider le buffer au démarrage (comme dans mainMotor.py)
+            self.socket.setsockopt(zmq.LINGER, 0)
+            self.socket.setsockopt(zmq.RCVTIMEO, 1000)  # Timeout 1 seconde
+            
+            # Vider les messages résiduels éventuels
+            try:
+                while True:
+                    self.socket.recv(zmq.NOBLOCK)
+                    print("🧹 Message résiduel vidé")
+            except zmq.Again:
+                print("✅ Buffer vidé, socket prêt")
+            
+            # Remettre le timeout normal
+            self.socket.setsockopt(zmq.RCVTIMEO, 5000)
+            
+            self.isconnected = True
+            self.server_available = True
+            print(f"✅ ZMQMotorClient connecté à {self.server_address}")
+            time.sleep(0.5)  # Attendre un peu comme dans mainMotor.py
+            
+        except Exception as e:
+            self.isconnected = False
+            self.server_available = False
+            print(f"❌ Erreur connexion ZMQ: {e}")
+    
+    def sendMessage(self, message):
+        """Envoie un message et retourne la réponse"""
+        if not self.server_available:
+            print("⚠️ Serveur non disponible")
+            return "error: server not available"
+        
+        self.mut.lock()
+        try:
+            # DEALER envoie: [frame vide, message]
+            self.socket.send(b'', zmq.SNDMORE)
+            self.socket.send_string(message)
+            
+            # Recevoir: frame vide + réponse
+            empty = self.socket.recv()
+            retour_brut = self.socket.recv_string()
+            
+            # Nettoyer la réponse
+            response = retour_brut.strip()
+            
+            self.isconnected = True
+            self.server_available = True
+            return response
+            
+        except zmq.Again:
+            print(f"⏱️ Timeout ZMQ pour: {message}")
+            self.isconnected = False
+            self.server_available = False
+            return "error: timeout"
+        except Exception as e:
+            print(f"❌ Erreur ZMQ: {e}")
+            self.isconnected = False
+            self.server_available = False
+            return f"error: {e}"
+        finally:
+            self.mut.unlock()
+    
+    def getListRack(self):
+        """Récupère la liste des IPs des racks"""
+        response = self.sendMessage("listRack")
+        print(f"📋 getListRack response: '{response}'")
+        try:
+            result = ast.literal_eval(response)
+            print(f"📋 Liste des racks: {result}")
+            return result
+        except Exception as e:
+            print(f"❌ Erreur parsing listRack: {e}")
+            return []
+    
+    def getDict(self):
+        """Récupère le dictionnaire des moteurs"""
+        response = self.sendMessage("dict")
+        print(f"📋 getDict response length: {len(response)}")
+        try:
+            result = ast.literal_eval(response)
+            return result
+        except Exception as e:
+            print(f"❌ Erreur parsing dict: {e}")
+            return {}
+    
+    def getNbMotorRack(self):
+        """Récupère le nombre de moteurs par rack"""
+        response = self.sendMessage("nbMotRack")
+        print(f"📋 getNbMotorRack response: '{response}'")
+        try:
+            return ast.literal_eval(response)
+        except:
+            return []
+    
+    def getRackName(self, ip):
+        """Récupère le nom du rack"""
+        response = self.sendMessage(f"{ip}, 1, nomRack")
+        return response if response else ip
+    
+    def getMotorList(self, ip, dict_moteurs):
+        """Récupère la liste des noms de moteurs pour un rack"""
+        dict_name = f"self.dictMotor_{ip}"
+        print(f"🔍 Recherche moteurs pour: {dict_name}")
+        print(f"🔍 Clés disponibles: {list(dict_moteurs.keys())}")
+        
+        if dict_name in dict_moteurs:
+            motor_dict = dict_moteurs[dict_name]
+            motor_names = []
+            # Trier les clés numériques
+            numeric_keys = sorted([k for k in motor_dict.keys() if isinstance(k, int)])
+            for key in numeric_keys:
+                # Récupérer le nom du moteur
+                name = self.sendMessage(f"{ip}, {key}, name")
+                motor_names.append(name if name else f"Motor_{key}")
+            print(f"📋 Moteurs trouvés: {motor_names}")
+            return motor_names
+        return []
+    
+    def getMotorListFromCount(self, ip, count):
+        """Récupère la liste des noms de moteurs en utilisant le nombre de moteurs"""
+        motor_names = []
+        for i in range(1, count + 1):
+            name = self.sendMessage(f"{ip}, {i}, name")
+            motor_names.append(name if name else f"Motor_{i}")
+        return motor_names
+    
+    def getPosition(self, ip, numMotor):
+        """Récupère la position du moteur"""
+        response = self.sendMessage(f"{ip}, {numMotor}, position")
+        try:
+            return float(response)
+        except:
+            return 0.0
+    
+    def getStep(self, ip, numMotor):
+        """Récupère la valeur du pas"""
+        response = self.sendMessage(f"{ip}, {numMotor}, step")
+        try:
+            return float(response)
+        except:
+            return 1.0
+    
+    def getMotorName(self, ip, numMotor):
+        """Récupère le nom du moteur"""
+        return self.sendMessage(f"{ip}, {numMotor}, name")
+    
+    def close(self):
+        """Ferme la connexion"""
+        try:
+            if self.socket:
+                self.socket.close()
+            self.context.term()
+        except:
+            pass
+        self.isconnected = False
 
 
 class MEAS(QMainWindow):
@@ -39,69 +287,77 @@ class MEAS(QMainWindow):
         self.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
         p = pathlib.Path(__file__)
         sepa = os.sep
+        
         if conf is None:
-            self.conf = QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.IniFormat)
+            self.conf = QtCore.QSettings(str(p.parent / 'confVisu.ini'), QtCore.QSettings.Format.IniFormat)
         else:
             self.conf = conf
-        self.confMot = confMot   # le Qsetting des moteurs obsolete 
+        self.confMot = confMot
         self.name = name
         self.ThresholdState = False
         self.symbol = False
         
-        if 'motRSAI' in kwds :
-            self.motRSAI = kwds["motRSAI"]
-            if self.motRSAI is True:
-                import visu.moteurRSAISERVER as RSAI
-                self.RSAI = RSAI
-                self.listRack = self.RSAI.listRack()
-                self.IPadress = self.listRack[0]
-                self.rackName = []
-                self.listMotorName = self.RSAI.listMotorName(self.IPadress)
-                print('RSAI motor connected to python server')  
-        else : 
-            self.motRSAI = False
+        # Configuration serveur ZMQ
+        self.serverHost = 'localhost'
+        self.serverPort = '5555'
         
-        if 'motA2V' in kwds :
-            self.motA2V = kwds["motA2V"]
-            if self.motA2V is True:
-                # import importlib.utils
-                # module_name = 'moteurA2V'
-                sys.path.append('C:/Users/UPX/Desktop/python/camera')
-                import moteurA2V as A2V
-                self.A2V = A2V
-                self.listRack = list()
-                
-                self.rackName = []
-                self.listMotorName = self.A2V.listMotorName
-                self.listMotor = self.A2V.listMotor
-                print('TMCL motor connected to database')  
-        else : 
-            self.motA2V = False
+        # Lecture config serveur si disponible
+        fileconf = str(p.parent) + sepa + "confServer.ini"
+        if os.path.exists(fileconf):
+            confServer = QtCore.QSettings(fileconf, QtCore.QSettings.Format.IniFormat)
+            self.serverHost = str(confServer.value('MAIN/server_host', 'localhost'))
+            self.serverPort = str(confServer.value('MAIN/serverPort', '5555'))
+        
+        # Gestion moteurs RSAI via ZMQ
+        self.motRSAI = kwds.get('motRSAI', False)
+        self.zmqClient = None
+        self.listRack = []
+        self.listRackNames = []
+        self.listMotorName = []
+        self.dict_moteurs = {}
+        self.currentIP = None
+        self.currentMotorNum = 0
+        self.stepmotor = 1
+        
+        if self.motRSAI:
+            self._initZMQConnection()
+        
+        # Gestion moteurs A2V (inchangé)
+        self.motA2V = kwds.get('motA2V', False)
+        if self.motA2V:
+            sys.path.append('C:/Users/UPX/Desktop/python/camera')
+            import moteurA2V as A2V
+            self.A2V = A2V
+            self.listMotorName = self.A2V.listMotorName
+            self.listMotor = self.A2V.listMotor
+            print('TMCL motor connected to database')
 
-
-        self.indexUnit = 1 # micron
-        self.icon = str(p.parent) + sepa+'icons' + sepa
+        self.indexUnit = 1  # micron
+        self.icon = str(p.parent) + sepa + 'icons' + sepa
         self.isWinOpen = False
         self.setup()
         
         self.setWindowTitle('MEASUREMENTS')
         self.shoot = 0
         self.nomFichier = ' '
-        self.TableSauv = ['file,Max,Min,x Max,y max,Sum,Mean,Size,x c.mass,y c.mass, user1']
+        self.TableSauv = ['file,Max,Min,x Max,y max,Sum,Mean,Size,x c.mass,y c.mass,user1']
         
-        self.path = self.conf.value(self.name+"/path")
-        self.winCoupeMax = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None,lastColored=True)
-        self.winCoupeMin = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None,lastColored=True)
-        self.winCoupeXmax = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None,lastColored=True)
-        self.winCoupeYmax = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None,lastColored=True)
-        self.winCoupeSum = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None,lastColored=True)
-        self.winCoupeMean = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None,lastColored=True)
-        self.winCoupeXcmass = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None,lastColored=True)
-        self.winCoupeYcmass = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None,lastColored=True)
-        self.winCoupeSumThreshold = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None,lastColored=True)
-        self.winCoupeUser1 = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None,lastColored=True)
+        self.path = self.conf.value(self.name + "/path")
+        
+        # Création des fenêtres de graphiques
+        self.winCoupeMax = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None, lastColored=True)
+        self.winCoupeMin = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None, lastColored=True)
+        self.winCoupeXmax = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None, lastColored=True)
+        self.winCoupeYmax = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None, lastColored=True)
+        self.winCoupeSum = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None, lastColored=True)
+        self.winCoupeMean = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None, lastColored=True)
+        self.winCoupeXcmass = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None, lastColored=True)
+        self.winCoupeYcmass = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None, lastColored=True)
+        self.winCoupeSumThreshold = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None, lastColored=True)
+        self.winCoupeUser1 = GRAPHCUT(parent=self, conf=self.conf, name=self.name, symbol='t', pen=None, lastColored=True)
         self.signalTrans = dict()
         
+        # Listes de données
         self.Maxx = []
         self.Minn = []
         self.Summ = []
@@ -114,6 +370,8 @@ class MEAS(QMainWindow):
         self.posMotor = []
         self.SummThre = []
         self.USER1 = []
+        
+        # Fenêtres zoom
         self.winZoomMax = ZOOM()
         self.winZoomSum = ZOOM()
         self.winZoomMean = ZOOM()
@@ -123,31 +381,99 @@ class MEAS(QMainWindow):
         self.winZoomCymax = ZOOM()
         self.winZoomSumThreshold = ZOOM()
         self.winZoomUser1 = ZOOM()
+        
         self.maxx = 0
         self.summ = 0
         self.moy = 0
         self.user1 = 0
         self.label = 'Shoot'
-        self.setWindowIcon(QIcon(self.icon+'LOA.png'))
+        self.setWindowIcon(QIcon(self.icon + 'LOA.png'))
         self.setGeometry(100, 300, 1000, 300)
-        if self.motRSAI is True or self.motA2V is True:
-            self.stepmotor = 1
+        
+        if self.motRSAI or self.motA2V:
             self.unit()
+            
+            # Timer pour mise à jour de la position moteur (200ms)
+            self.positionTimer = QTimer()
+            self.positionTimer.timeout.connect(self._updatePositionLabel)
+            self.positionTimer.start(200)
+
+    def _initZMQConnection(self):
+        """Initialise la connexion ZMQ et récupère les infos des racks/moteurs"""
+        try:
+            self.zmqClient = ZMQMotorClient(self.serverHost, self.serverPort)
+            
+            if self.zmqClient.isconnected:
+                # Récupérer la liste des racks
+                self.listRack = self.zmqClient.getListRack()
+                print(f"🔧 Racks trouvés: {self.listRack}")
+                
+                if not self.listRack:
+                    print("⚠️ Aucun rack trouvé, vérifiez le serveur")
+                    return
+                
+                # Récupérer le nombre de moteurs par rack
+                self.nbMotorRack = self.zmqClient.getNbMotorRack()
+                print(f"🔧 Nombre de moteurs par rack: {self.nbMotorRack}")
+                
+                # Récupérer les noms des racks
+                self.listRackNames = []
+                for ip in self.listRack:
+                    name = self.zmqClient.getRackName(ip)
+                    self.listRackNames.append(name)
+                print(f"🔧 Noms des racks: {self.listRackNames}")
+                
+                # Récupérer le dictionnaire des moteurs
+                self.dict_moteurs = self.zmqClient.getDict()
+                print(f"🔧 Dict moteurs récupéré: {len(self.dict_moteurs)} entrées")
+                
+                # Initialiser avec le premier rack
+                if self.listRack:
+                    self.currentIP = self.listRack[0]
+                    self._updateMotorList()
+                
+                print('✅ RSAI motors connected via ZMQ server')
+            else:
+                print('⚠️ Impossible de se connecter au serveur ZMQ')
+                self.motRSAI = False
+                
+        except Exception as e:
+            print(f'❌ Erreur initialisation ZMQ: {e}')
+            import traceback
+            traceback.print_exc()
+            self.motRSAI = False
+
+    def _updateMotorList(self):
+        """Met à jour la liste des moteurs pour le rack actuel"""
+        if self.currentIP and self.zmqClient:
+            # Essayer d'abord avec le dictionnaire
+            self.listMotorName = self.zmqClient.getMotorList(self.currentIP, self.dict_moteurs)
+            
+            # Si pas de résultat, utiliser le nombre de moteurs
+            if not self.listMotorName and hasattr(self, 'nbMotorRack') and self.nbMotorRack:
+                try:
+                    idx = self.listRack.index(self.currentIP)
+                    count = self.nbMotorRack[idx]
+                    print(f"🔧 Utilisation du nombre de moteurs: {count}")
+                    self.listMotorName = self.zmqClient.getMotorListFromCount(self.currentIP, count)
+                except Exception as e:
+                    print(f"❌ Erreur récupération moteurs: {e}")
+            
+            print(f"🔧 Liste moteurs pour {self.currentIP}: {self.listMotorName}")
 
     def setFile(self, file):
         self.nomFichier = file
         
     def setup(self):
-            
         vLayout = QVBoxLayout()
         hLayout1 = QHBoxLayout()
-        # self.toolBar  = self.addToolBar('tools')
-        # self.setStyleSheet("{background-color: black}")
+        
         menubar = self.menuBar()
         menubar.setNativeMenuBar(False)
         self.fileMenu = menubar.addMenu('&File')
         self.PlotMenu = menubar.addMenu('&Plot')
         self.ZoomMenu = menubar.addMenu('&Zoom')
+        self.settingsMenu = menubar.addMenu('&Settings')
         
         self.ThresholdAct = QAction('Threshold', self)
         self.ThresholdMenu = menubar.addAction(self.ThresholdAct)
@@ -155,18 +481,32 @@ class MEAS(QMainWindow):
         
         self.setContentsMargins(0, 0, 0, 0)
        
-        self.openAct = QAction(QtGui.QIcon(self.icon+"Open.png"), 'Open File', self)
+        self.openAct = QAction(QtGui.QIcon(self.icon + "Open.png"), 'Open File', self)
         self.openAct.setShortcut('Ctrl+o')
         self.openAct.triggered.connect(self.openF)
-        
         self.fileMenu.addAction(self.openAct)
         
-        self.saveAct = QAction(QtGui.QIcon(self.icon+"disketteSave.png"), 'Save file', self)
+        self.saveAct = QAction(QtGui.QIcon(self.icon + "disketteSave.png"), 'Save file', self)
         self.saveAct.setShortcut('Ctrl+s')
         self.saveAct.triggered.connect(self.saveF)
-        
         self.fileMenu.addAction(self.saveAct)
         
+        # Menu Settings
+        self.serverConfigAct = QAction('🔧 Configure Serveur Motors ZMQ...', self)
+        self.serverConfigAct.triggered.connect(self.openServerConfig)
+        self.settingsMenu.addAction(self.serverConfigAct)
+        
+        self.reconnectAct = QAction('🔄 Reconnect', self)
+        self.reconnectAct.triggered.connect(self.reconnectServer)
+        self.settingsMenu.addAction(self.reconnectAct)
+        
+        self.settingsMenu.addSeparator()
+        
+        self.showConnectionInfoAct = QAction('ℹ️ Info Connexion', self)
+        self.showConnectionInfoAct.triggered.connect(self.showConnectionInfo)
+        self.settingsMenu.addAction(self.showConnectionInfoAct)
+        
+        # Menus Plot
         self.PlotMenu.addAction('max', self.PlotMAX)
         self.PlotMenu.addAction('min', self.PlotMIN)
         self.PlotMenu.addAction('x max', self.PlotXMAX)
@@ -177,6 +517,7 @@ class MEAS(QMainWindow):
         self.PlotMenu.addAction('y center mass', self.PlotYCMASS)
         self.PlotMenu.addAction('User 1', self.PlotUSER1)
 
+        # Menus Zoom
         self.ZoomMenu.addAction('max', self.ZoomMAX)
         self.ZoomMenu.addAction('Sum', self.ZoomSUM)
         self.ZoomMenu.addAction('Mean', self.ZoomMEAN)
@@ -187,7 +528,6 @@ class MEAS(QMainWindow):
         self.ZoomMenu.addAction(' User1', self.ZoomUser1)
         
         self.But_reset = QAction('Reset', self)
-        # self.PlotMenu.addAction(self.But_reset)
         menubar.addAction(self.But_reset)
         
         hLayout2 = QHBoxLayout()
@@ -195,46 +535,63 @@ class MEAS(QMainWindow):
         hLayout2.addWidget(self.table)
         
         self.table.setColumnCount(12)
-        # self.table.setRowCount(10)
-       
         self.table.setHorizontalHeaderLabels(('File', 'Max', 'Min', 'x max', 'y max', 'Sum', 'Mean', 'Size', 'x c.mass', 'y c.mass', 'user1', 'date'))
         header = self.table.horizontalHeader()
         header.setDefaultAlignment(Qt.AlignmentFlag.AlignHCenter)
         header.setDefaultAlignment(Qt.AlignmentFlag.AlignVCenter)
         header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
 
-        if self.motRSAI is True or self.motA2V is True:
-            self.motorNameBox = QComboBox()
-            self.motorNameBox.addItem('Choose a Motor')
+        # Configuration pour moteurs RSAI ou A2V
+        if self.motRSAI or self.motA2V:
+            # Indicateur de connexion
+            self.connectionLabel = QLabel()
+            self._updateConnectionStatus()
+            hLayout1.addWidget(self.connectionLabel)
+            
+            # Sélecteur d'unité
             self.unitBouton = QComboBox()
-            self.unitBouton.addItem('Step')
-            self.unitBouton.addItem('um')
-            self.unitBouton.addItem('mm')
-            self.unitBouton.addItem('ps')
-            self.unitBouton.addItem('°')
+            self.unitBouton.addItems(['Step', 'µm', 'mm', 'ps', '°'])
             self.unitBouton.setMaximumWidth(100)
-            self.unitBouton.setMinimumWidth(100)
+            self.unitBouton.setMinimumWidth(80)
             self.unitBouton.setCurrentIndex(self.indexUnit)
+            self.unitBouton.currentIndexChanged.connect(self.unit)
             hLayout1.addWidget(self.unitBouton)
-            self.unitBouton.currentIndexChanged.connect(self.unit) 
+            
+            # Sélecteur de rack (IP)
             self.rackChoise = QComboBox()
-
-            for rack in self.listRack: #
-                self.rackChoise.addItem( str(self.RSAI.nameEquipment(rack))+ '  (' + rack +')')
-            hLayout1.addWidget(self.rackChoise)
-            self.motorNameBox.addItems(self.listMotorName)
-            hLayout1.addWidget(self.motorNameBox)
-            self.table.setColumnCount(13)   
-            self.table.setHorizontalHeaderLabels(('File', 'Max', 'Min', 'x max', 'y max', 'Sum', 'Mean', 'Size', 'x c.mass', 'y c.mass', 'user1', 'Motor', 'date'))
-            
+            self.rackChoise.setMinimumWidth(200)
+            if self.motRSAI:
+                for i, ip in enumerate(self.listRack):
+                    name = self.listRackNames[i] if i < len(self.listRackNames) else ip
+                    self.rackChoise.addItem(f"{name}  ({ip})")
             self.rackChoise.currentIndexChanged.connect(self.ChangeIPRack)
-            self.motorNameBox.currentIndexChanged.connect(self.motorChange)
+            hLayout1.addWidget(self.rackChoise)
             
+            # Sélecteur de moteur
+            self.motorNameBox = QComboBox()
+            self.motorNameBox.setMinimumWidth(200)
+            self.motorNameBox.addItem('Choose a Motor')
+            if self.motRSAI:
+                self.motorNameBox.addItems(self.listMotorName)
+            elif self.motA2V:
+                self.motorNameBox.addItems(self.listMotorName)
+            self.motorNameBox.currentIndexChanged.connect(self.motorChange)
+            hLayout1.addWidget(self.motorNameBox)
+            
+            # Label position moteur
+            self.positionLabel = QLabel("Pos: ---")
+            self.positionLabel.setStyleSheet("font-weight: bold; color: #00ff00;")
+            self.positionLabel.setMinimumWidth(150)
+            hLayout1.addWidget(self.positionLabel)
+            
+            # Configuration table avec colonne Motor
+            self.table.setColumnCount(13)
+            self.table.setHorizontalHeaderLabels(('File', 'Max', 'Min', 'x max', 'y max', 'Sum', 'Mean', 'Size', 'x c.mass', 'y c.mass', 'user1', 'Motor', 'date'))
              
         self.table.horizontalHeader().setVisible(True)
         self.table.setAlternatingRowColors(True)
         self.table.resizeColumnsToContents()
-        self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)  # no modifiableEditTriggers=QAbstractItemView.editTriggers(QAbstractItemView.NoEditTriggers)
+        self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         
         vLayout.addLayout(hLayout1)
         vLayout.addLayout(hLayout2)
@@ -247,10 +604,211 @@ class MEAS(QMainWindow):
         if self.parent is not None:
             self.parent.signalMeas.connect(self.Display)
             
-        # if self.parent is not None:
-        #     self.parent.newMesurment.connect(self.Display)
         self.But_reset.triggered.connect(self.Reset)
+
+    def _updateConnectionStatus(self):
+        """Met à jour l'indicateur de connexion"""
+        if hasattr(self, 'connectionLabel'):
+            if self.zmqClient and self.zmqClient.isconnected:
+                self.connectionLabel.setText("🟢 Motors Connected")
+                self.connectionLabel.setStyleSheet("color: #00ff00; font-weight: bold;")
+            else:
+                self.connectionLabel.setText("🔴 Motors not Connected")
+                self.connectionLabel.setStyleSheet("color: #ff0000; font-weight: bold;")
+
+    def _updatePositionLabel(self):
+        """Met à jour l'affichage de la position du moteur"""
+        if hasattr(self, 'positionLabel') and self.motRSAI:
+            if self.motorNameBox.currentIndex() > 0 and self.zmqClient:
+                pos = self.zmqClient.getPosition(self.currentIP, self.currentMotorNum)
+                pos_converted = pos / self.unitChange if self.unitChange != 0 else pos
+                self.positionLabel.setText(f"Pos: {pos_converted:.2f} {self.unitName}")
+            else:
+                self.positionLabel.setText("Pos: ---")
+
+    def openServerConfig(self):
+        """Ouvre le dialogue de configuration du serveur"""
+        dialog = ServerConfigDialog(
+            current_host=self.serverHost,
+            current_port=self.serverPort,
+            parent=self
+        )
         
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            new_host, new_port = dialog.getValues()
+            
+            # Validation basique
+            if not new_host:
+                QMessageBox.warning(self, "Erreur", "L'adresse IP ne peut pas être vide.")
+                return
+            
+            if not new_port.isdigit() or not (1 <= int(new_port) <= 65535):
+                QMessageBox.warning(self, "Erreur", "Le port doit être un nombre entre 1 et 65535.")
+                return
+            
+            # Sauvegarder dans le fichier ini
+            self._saveServerConfig(new_host, new_port)
+            
+            # Demander si on veut reconnecter maintenant
+            reply = QMessageBox.question(
+                self, 
+                "Reconnecter ?",
+                f"Configuration sauvegardée:\n\nHost: {new_host}\nPort: {new_port}\n\nVoulez-vous reconnecter maintenant ?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.Yes
+            )
+            
+            if reply == QMessageBox.StandardButton.Yes:
+                self.serverHost = new_host
+                self.serverPort = new_port
+                self.reconnectServer()
+    
+    def _saveServerConfig(self, host, port):
+        """Sauvegarde la configuration du serveur dans confServer.ini"""
+        p = pathlib.Path(__file__)
+        sepa = os.sep
+        fileconf = str(p.parent) + sepa + "confServer.ini"
+        
+        confServer = QtCore.QSettings(fileconf, QtCore.QSettings.Format.IniFormat)
+        confServer.setValue('MAIN/server_host', host)
+        confServer.setValue('MAIN/serverPort', port)
+        confServer.sync()
+        
+        print(f"✅ Configuration sauvegardée: {host}:{port}")
+    
+    def reconnectServer(self):
+        """Reconnecte au serveur ZMQ"""
+        print(f"🔄 Reconnexion au serveur {self.serverHost}:{self.serverPort}...")
+        
+        # Fermer l'ancienne connexion
+        if self.zmqClient:
+            self.zmqClient.close()
+            time.sleep(0.3)
+        
+        # Réinitialiser les données
+        self.listRack = []
+        self.listRackNames = []
+        self.listMotorName = []
+        self.dict_moteurs = {}
+        self.currentIP = None
+        
+        # Reconnecter
+        self._initZMQConnection()
+        
+        # Mettre à jour l'interface
+        self._updateConnectionStatus()
+        
+        if self.motRSAI and hasattr(self, 'rackChoise'):
+            # Mettre à jour le combo des racks
+            self.rackChoise.clear()
+            for i, ip in enumerate(self.listRack):
+                name = self.listRackNames[i] if i < len(self.listRackNames) else ip
+                self.rackChoise.addItem(f"{name}  ({ip})")
+            
+            # Mettre à jour le combo des moteurs
+            self.motorNameBox.clear()
+            self.motorNameBox.addItem('Choose a motor')
+            if self.listMotorName:
+                self.motorNameBox.addItems(self.listMotorName)
+        
+        if self.zmqClient and self.zmqClient.isconnected:
+            QMessageBox.information(self, "Connexion", "✅ Connexion réussie !")
+        else:
+            QMessageBox.warning(self, "Connexion", "❌ Échec de la connexion au serveur.")
+    
+    def showConnectionInfo(self):
+        """Affiche les informations de connexion"""
+        if self.zmqClient:
+            status = "✅ Connecté" if self.zmqClient.isconnected else "❌ Déconnecté"
+            server_status = "✅ Disponible" if self.zmqClient.server_available else "❌ Non disponible"
+        else:
+            status = "❌ Non initialisé"
+            server_status = "❌ Non disponible"
+        
+        info = f"""
+<b>Configuration Serveur ZMQ</b><br><br>
+<b>Adresse:</b> {self.serverHost}<br>
+<b>Port:</b> {self.serverPort}<br>
+<b>URL complète:</b> tcp://{self.serverHost}:{self.serverPort}<br><br>
+<b>État connexion:</b> {status}<br>
+<b>État serveur:</b> {server_status}<br><br>
+<b>Racks détectés:</b> {len(self.listRack)}<br>
+<b>Moteurs disponibles:</b> {len(self.listMotorName)}
+        """
+        
+        msgBox = QMessageBox(self)
+        msgBox.setWindowTitle("Info Connexion")
+        msgBox.setTextFormat(Qt.TextFormat.RichText)
+        msgBox.setText(info)
+        msgBox.setIcon(QMessageBox.Icon.Information)
+        msgBox.exec()
+
+    def ChangeIPRack(self):
+        """Changement de rack sélectionné"""
+        if not self.motRSAI or not self.listRack:
+            return
+            
+        index = self.rackChoise.currentIndex()
+        if 0 <= index < len(self.listRack):
+            self.currentIP = self.listRack[index]
+            print(f"🔧 Rack sélectionné: {self.currentIP}")
+            
+            # Mettre à jour la liste des moteurs
+            self.motorNameBox.clear()
+            self.motorNameBox.addItem('Choose a motor')
+            
+            self._updateMotorList()
+            
+            if self.listMotorName:
+                self.motorNameBox.addItems(self.listMotorName)
+                print(f"🔧 {len(self.listMotorName)} moteurs ajoutés au menu")
+
+    def motorChange(self):
+        """Changement de moteur sélectionné"""
+        if self.motorNameBox.currentIndex() > 0:
+            self.currentMotorNum = self.motorNameBox.currentIndex()
+            
+            if self.motA2V:
+                self.currentMotorNum -= 1
+                self.MOT = self.A2V.MOTORA2V(self.listMotor[self.currentMotorNum])
+                self.stepmotor = self.MOT.step
+                
+            elif self.motRSAI and self.zmqClient:
+                # Récupérer le step du moteur via ZMQ
+                self.stepmotor = self.zmqClient.getStep(self.currentIP, self.currentMotorNum)
+                if self.stepmotor == 0:
+                    self.stepmotor = 1
+                    
+            self.unit()
+            self._updatePositionLabel()
+            
+            print(f"Moteur sélectionné: {self.currentMotorNum}, step: {self.stepmotor}")
+
+    def unit(self):
+        """Changement d'unité"""
+        self.indexUnit = self.unitBouton.currentIndex()
+        
+        if self.indexUnit == 0:  # step
+            self.unitChange = 1
+            self.unitName = 'step'
+        elif self.indexUnit == 1:  # micron
+            self.unitChange = float(1 * self.stepmotor)
+            self.unitName = 'µm'
+        elif self.indexUnit == 2:  # mm
+            self.unitChange = float(1000 * self.stepmotor)
+            self.unitName = 'mm'
+        elif self.indexUnit == 3:  # ps (double passage: 1 micron = 6fs)
+            self.unitChange = float(1 * self.stepmotor / 0.0066666666)
+            self.unitName = 'ps'
+        elif self.indexUnit == 4:  # degrés
+            self.unitChange = 1 * self.stepmotor
+            self.unitName = '°'
+        
+        if self.unitChange == 0:
+            self.unitChange = 1
+            
+        self._updatePositionLabel()
+
     def Reset(self):
         self.shoot = 0
         self.table.setRowCount(0)
@@ -265,22 +823,19 @@ class MEAS(QMainWindow):
         self.labelsVert = []
         self.posMotor = []
         self.SummThre = []
-        self.USER = []
+        self.USER1 = []
 
     def saveF(self):
-       
         fname = QtGui.QFileDialog.getSaveFileName(self, "Save Measurements as txt file", self.path)
         self.path = os.path.dirname(str(fname[0]))
-        f = open(str(fname[0])+'.txt', 'w')
+        f = open(str(fname[0]) + '.txt', 'w')
         f.write("\n".join(self.TableSauv))
         f.close()
         
     def openF(self):
-        '''
-        to do
-        '''
         print('open not done yet')
     
+    # Méthodes Zoom
     def ZoomMAX(self):
         self.open_widget(self.winZoomMax)
         self.winZoomMax.SetTITLE('MAX')
@@ -307,36 +862,33 @@ class MEAS(QMainWindow):
         self.winZoomYmax.setZoom(self.ymax) 
     
     def ZoomCxmax(self):
-        self.open_widget(self.winZoomCymax)
+        self.open_widget(self.winZoomCxmax)
         self.winZoomCxmax.SetTITLE('x center of mass')
         self.winZoomCxmax.setZoom(self.xcmass)   
     
     def ZoomCymax(self):
-        self.open_widget(self.winZoomCxmax)
+        self.open_widget(self.winZoomCymax)
         self.winZoomCymax.SetTITLE('y center of mass')
         self.winZoomCymax.setZoom(self.ycmass)
         
     def ZoomSUMThreshold(self):
         self.open_widget(self.winZoomSumThreshold)
-        
         self.winZoomSumThreshold.SetTITLE('Sum threshold')
         self.winZoomSumThreshold.setZoom(self.summThre) 
     
     def ZoomUser1(self):
         self.open_widget(self.winZoomUser1)
-        
         self.winZoomUser1.SetTITLE('User 1')
         self.winZoomUser1.setZoom(self.user1)
 
+    # Méthodes Plot
     def PlotMAX(self):
         self.open_widget(self.winCoupeMax)
         self.winCoupeMax.SetTITLE('Plot Max')
         self.signalTrans['data'] = self.Maxx
         self.signalTrans['axis'] = self.posMotor
         self.signalTrans['label'] = self.label
-        
         self.signalPlot.emit(self.signalTrans)
-        # self.winCoupeMax.PLOT(self.Maxx,axis = self.posMotor, label = self.label)
     
     def PlotMIN(self):
         self.open_widget(self.winCoupeMin)
@@ -344,30 +896,23 @@ class MEAS(QMainWindow):
         self.signalTrans['data'] = self.Minn
         self.signalTrans['axis'] = self.posMotor
         self.signalTrans['label'] = self.label
-        
         self.signalPlot.emit(self.signalTrans)
-        # self.winCoupeMin.PLOT(self.Minn,axis = self.posMotor,label = self.label)
         
     def PlotXMAX(self):
         self.open_widget(self.winCoupeXmax)
-        self.winCoupeXmax.SetTITLE('Plot  X MAX')
+        self.winCoupeXmax.SetTITLE('Plot X MAX')
         self.signalTrans['data'] = self.Xmax
         self.signalTrans['axis'] = self.posMotor
         self.signalTrans['label'] = self.label
-        
         self.signalPlot.emit(self.signalTrans)
-        
-        # self.winCoupeXmax.PLOT(self.Xmax,axis = self.posMotor,label = self.label)
     
     def PlotYMAX(self):
         self.open_widget(self.winCoupeYmax)
-        self.winCoupeYmax.SetTITLE('Plot  Y MAX')
+        self.winCoupeYmax.SetTITLE('Plot Y MAX')
         self.signalTrans['data'] = self.Ymax
         self.signalTrans['axis'] = self.posMotor
         self.signalTrans['label'] = self.label
-        
         self.signalPlot.emit(self.signalTrans)
-        # self.winCoupeYmax.PLOT(self.Ymax,axis = self.posMotor,label = self.label)
      
     def PlotSUM(self):
         self.open_widget(self.winCoupeSum)
@@ -375,9 +920,7 @@ class MEAS(QMainWindow):
         self.signalTrans['data'] = self.Summ
         self.signalTrans['axis'] = self.posMotor
         self.signalTrans['label'] = self.label
-        
         self.signalPlot.emit(self.signalTrans)
-        # self.winCoupeSum.PLOT(self.Summ,axis = self.posMotor,label = self.label)
     
     def PlotMEAN(self):
         self.open_widget(self.winCoupeMean)
@@ -385,9 +928,7 @@ class MEAS(QMainWindow):
         self.signalTrans['data'] = self.Mean
         self.signalTrans['axis'] = self.posMotor
         self.signalTrans['label'] = self.label
-        
         self.signalPlot.emit(self.signalTrans)
-        # self.winCoupeMean.PLOT(self.Mean,axis = self.posMotor,label = self.label)
         
     def PlotXCMASS(self):
         self.open_widget(self.winCoupeXcmass)
@@ -395,9 +936,7 @@ class MEAS(QMainWindow):
         self.signalTrans['data'] = self.Xcmass
         self.signalTrans['axis'] = self.posMotor
         self.signalTrans['label'] = self.label
-        
         self.signalPlot.emit(self.signalTrans)
-        # self.winCoupeXcmass.PLOT(self.Xcmass,axis = self.posMotor,label = self.label)
     
     def PlotYCMASS(self):
         self.open_widget(self.winCoupeYcmass)
@@ -405,52 +944,43 @@ class MEAS(QMainWindow):
         self.signalTrans['data'] = self.Ycmass
         self.signalTrans['axis'] = self.posMotor
         self.signalTrans['label'] = self.label
-        
         self.signalPlot.emit(self.signalTrans)
-        # self.winCoupeYcmass.PLOT(self.Xcmass,axis = self.posMotor,label = self.label)    
     
     def PlotSUMTHRESHOLD(self):
         self.open_widget(self.winCoupeSumThreshold)
         self.winCoupeSumThreshold.SetTITLE('Plot Sum with Threshold')
-        # print('fct',self.SummThre,self.posMotor)
         self.signalTrans['data'] = self.SummThre
         self.signalTrans['axis'] = self.posMotor
         self.signalTrans['label'] = self.label
-       
         self.signalPlot.emit(self.signalTrans)
     
     def Threshold(self):
-        
-        threshold, ok = QInputDialog.getInt(self, 'Threshold Filter ', 'Enter thresold value')
+        threshold, ok = QInputDialog.getInt(self, 'Threshold Filter', 'Enter threshold value')
         if ok:
             self.ThresholdState = True
             self.threshold = threshold
             self.Reset()
             self.PlotMenu.addAction('Sum Threshold', self.PlotSUMTHRESHOLD)
-            self.ZoomMenu.addAction(' Sum  with Threshold', self.ZoomSUMThreshold)
+            self.ZoomMenu.addAction('Sum with Threshold', self.ZoomSUMThreshold)
             self.Display(self.data)
         else:
             self.ThresholdState = False
-            self.PlotMenu.removeAction('Sum Threshold', self.PlotSUMTHRESHOLD)
-            self.ZoomMenu.removeAction(' Sum  with Threshold', self.ZoomSUMThreshold)
 
     def PlotUSER1(self):
-        self.openwidget(self.winCoupeUser1)
+        self.open_widget(self.winCoupeUser1)
         self.winCoupeUser1.SetTITLE('User1')
         self.signalTrans['data'] = self.USER1
         self.signalTrans['axis'] = self.posMotor
         self.signalTrans['label'] = self.label
-        
         self.signalPlot.emit(self.signalTrans)
 
     def Display(self, data):
         self.data = data[0]
-        self.transx=data[1]
-        self.transy=data[2]
-        self.scalex=data[3]
-        self.scaley=data[4]
+        self.transx = data[1]
+        self.transy = data[2]
+        self.scalex = data[3]
+        self.scaley = data[4]
         
-        #print(self.transx,self.scaley)
         self.maxx = round(self.data.max(), 3)
         self.minn = round(self.data.min(), 3)
         self.summ = round(self.data.sum(), 3)
@@ -460,15 +990,17 @@ class MEAS(QMainWindow):
         
         (self.xmax, self.ymax) = np.unravel_index(self.data.argmax(), self.data.shape)
         self.xmax = (self.xmax + self.transx) * self.scalex 
-        self.ymax = (self.ymax  + self.transy) * self.scaley 
-        # print(self.maxx,data[int(self.xmax),int(self.ymax)])
+        self.ymax = (self.ymax + self.transy) * self.scaley 
+        
         (self.xcmass, self.ycmass) = ndimage.center_of_mass(self.data)
-        self.xcmass = (round(self.xcmass, 3) + self.transx) *self.scalex
-        self.ycmass = (round(self.ycmass, 3) + self.transy) *self.scaley
+        self.xcmass = (round(self.xcmass, 3) + self.transx) * self.scalex
+        self.ycmass = (round(self.ycmass, 3) + self.transy) * self.scaley
         
         self.xs = self.data.shape[0]
         self.ys = self.data.shape[1]
-        self.table.setRowCount(self.shoot+1)
+        
+        # Remplissage du tableau
+        self.table.setRowCount(self.shoot + 1)
         self.table.setItem(self.shoot, 0, QTableWidgetItem(str(self.nomFichier)))
         self.table.setItem(self.shoot, 1, QTableWidgetItem(str(self.maxx)))
         self.table.setItem(self.shoot, 2, QTableWidgetItem(str(self.minn)))
@@ -481,15 +1013,23 @@ class MEAS(QMainWindow):
         self.table.setItem(self.shoot, 9, QTableWidgetItem(str(self.ycmass)))
         self.table.setItem(self.shoot, 10, QTableWidgetItem(str(self.user1)))
 
-        if self.motRSAI is True or self.motA2V is True :
-            if self.motorNameBox.currentIndex() ==0 :
+        # Gestion de la position moteur
+        if self.motRSAI or self.motA2V:
+            if self.motorNameBox.currentIndex() == 0:
                 Posi = self.shoot
                 self.label = 'Shoot'
             else:
-                Posi = round((self.MOT.position())/self.unitChange,2)
-                
-                self.label = self.MOT.name + '  ( '+self.unitName+' )'
-        
+                if self.motRSAI and self.zmqClient:
+                    pos = self.zmqClient.getPosition(self.currentIP, self.currentMotorNum)
+                    Posi = round(pos / self.unitChange, 2)
+                    motorName = self.zmqClient.getMotorName(self.currentIP, self.currentMotorNum)
+                    self.label = f"{motorName} ({self.unitName})"
+                elif self.motA2V:
+                    Posi = round(self.MOT.position() / self.unitChange, 2)
+                    self.label = f"{self.MOT.name} ({self.unitName})"
+                else:
+                    Posi = self.shoot
+                    self.label = 'Shoot'
         else:
             Posi = self.shoot
             self.label = 'Shoot'
@@ -498,28 +1038,25 @@ class MEAS(QMainWindow):
         self.table.resizeColumnsToContents()
         self.labelsVert.append('%s' % self.shoot)
         
-        if self.ThresholdState is True:
-            dataCor = np.where(self.data < self.threshold, 0, data)
+        # Gestion du threshold
+        if self.ThresholdState:
+            dataCor = np.where(self.data < self.threshold, 0, self.data)
             self.summThre = round(dataCor.sum(), 3)
             self.SummThre.append(self.summThre)
-            self.TableSauv.append('%s,%.1f,%.1f,%i,%i,%.1f,%.3f,%.2f,%.2f,%.2f, %.2f,%.2f,%.2f,%.2f,%s' % (self.nomFichier, self.maxx, self.minn, self.xmax, self.ymax, self.summ, self.moy, self.xs, self.ys, self.xcmass, self.ycmass, Posi, self.summThre, self.user1, self.date))
             
-            if self.motRSAI is True or self.motA2V is True:
+            if self.motRSAI or self.motA2V:
                 self.table.setColumnCount(14)
-                self.table.setHorizontalHeaderLabels(('File', 'Max', 'Min', 'x max', 'y max', 'Sum Mean', 'Size', 'x c.mass', 'y c.mass', 'Sum Thr', ' Motor', 'date'))
+                self.table.setHorizontalHeaderLabels(('File', 'Max', 'Min', 'x max', 'y max', 'Sum', 'Mean', 'Size', 'x c.mass', 'y c.mass', 'Sum Thr', 'user1', 'Motor', 'date'))
                 self.table.setItem(self.shoot, 12, QTableWidgetItem(str(Posi)))
                 self.table.setItem(self.shoot, 13, QTableWidgetItem(str(self.date)))
             else:
                 self.table.setColumnCount(13)
                 self.table.setHorizontalHeaderLabels(('File', 'Max', 'Min', 'x max', 'y max', 'Sum', 'Mean', 'Size', 'x c.mass', 'y c.mass', 'Sum Thr', 'user1', 'date'))
-                self.TableSauv = ['file,Max,Min,x Max,y max,Sum,Mean,Size,x c.mass, y c.mass,SumCorr,date']
-                self.table.setItem(self.shoot, 11, QTableWidgetItem(str(self.date)))
+                self.table.setItem(self.shoot, 12, QTableWidgetItem(str(self.date)))
             self.table.setItem(self.shoot, 10, QTableWidgetItem("{:.3e}".format(self.summThre)))
             
         else:
-            self.TableSauv.append('%s,%.1f,%.1f,%i,%i,%.1f,%.3f,%.2f,%.2f,%.2f, %.2f,%.2f,%.2f,%s' % (self.nomFichier, self.maxx, self.minn, self.xmax, self.ymax, self.summ, self.moy, self.xs, self.ys, self.xcmass, self.ycmass, self.user1, Posi, self.date))
-            
-            if self.motRSAI is True or self.motA2V is True:
+            if self.motRSAI or self.motA2V:
                 self.table.setHorizontalHeaderLabels(('File', 'Max', 'Min', 'x max', 'y max', 'Sum', 'Mean', 'Size', 'x c.mass', 'y c.mass', 'user1', 'Motor', 'date'))
                 self.table.setColumnCount(13)
                 self.table.setItem(self.shoot, 11, QTableWidgetItem(str(Posi)))
@@ -530,6 +1067,8 @@ class MEAS(QMainWindow):
                 self.table.setItem(self.shoot, 11, QTableWidgetItem(str(self.date)))
         
         self.table.selectRow(self.shoot)
+        
+        # Mise à jour des listes
         self.Maxx.append(self.maxx)
         self.Minn.append(self.minn)
         self.Summ.append(self.summ)
@@ -542,150 +1081,90 @@ class MEAS(QMainWindow):
 
         self.table.setVerticalHeaderLabels(self.labelsVert)
 
-        #  plot Update plot
-        if self.winCoupeMax.isWinOpen is True:
-            self.PlotMAX()  # (self.Maxx,axis=self.posMotor,symbol = self.symbol, pen=None,label=self.motor)
-        if self.winCoupeMin.isWinOpen is True:
+        # Mise à jour des fenêtres de plot ouvertes
+        if self.winCoupeMax.isWinOpen:
+            self.PlotMAX()
+        if self.winCoupeMin.isWinOpen:
             self.PlotMIN()
-        if self.winCoupeXmax.isWinOpen is True:
+        if self.winCoupeXmax.isWinOpen:
             self.PlotXMAX()
-        if self.winCoupeYmax.isWinOpen is True:
+        if self.winCoupeYmax.isWinOpen:
             self.PlotYMAX()
-        if self.winCoupeSum.isWinOpen is True:
+        if self.winCoupeSum.isWinOpen:
             self.PlotSUM()
-        if self.winCoupeMean.isWinOpen is True:
+        if self.winCoupeMean.isWinOpen:
             self.PlotMEAN()
-        if self.winCoupeXcmass.isWinOpen is True:
+        if self.winCoupeXcmass.isWinOpen:
             self.PlotXCMASS()
-        if self.winCoupeYcmass.isWinOpen is True:
+        if self.winCoupeYcmass.isWinOpen:
             self.PlotYCMASS()
-        if self.winCoupeSumThreshold.isWinOpen is True:
+        if self.winCoupeSumThreshold.isWinOpen:
             self.PlotSUMTHRESHOLD()
-        if self.winCoupeUser1.isWinOpen is True:
+        if self.winCoupeUser1.isWinOpen:
             self.PlotUSER1()
 
-        # update zoom windows  
-        if self.winZoomMax.isWinOpen is True:
+        # Mise à jour des fenêtres zoom ouvertes
+        if self.winZoomMax.isWinOpen:
             self.ZoomMAX()
-        if self.winZoomSum.isWinOpen is True:
+        if self.winZoomSum.isWinOpen:
             self.ZoomSUM()
-        if self.winZoomMean.isWinOpen is True:
+        if self.winZoomMean.isWinOpen:
             self.ZoomMEAN() 
-        if self.winZoomXmax.isWinOpen is True:
-            self.ZoomXmaX()
-        if self.winZoomYmax.isWinOpen is True:
-            self.ZoomYmAX()
-        if self.winZoomCxmax.isWinOpen is True:
-            self.ZoomCxmaX()
-        if self.winZoomCymax.isWinOpen is True:
-            self.ZoomCymAX()   
-        if self.winZoomSumThreshold.isWinOpen is True:
+        if self.winZoomXmax.isWinOpen:
+            self.ZoomXmax()
+        if self.winZoomYmax.isWinOpen:
+            self.ZoomYmax()
+        if self.winZoomCxmax.isWinOpen:
+            self.ZoomCxmax()
+        if self.winZoomCymax.isWinOpen:
+            self.ZoomCymax()   
+        if self.winZoomSumThreshold.isWinOpen:
             self.ZoomSUMThreshold()
-        if self.winZoomUser1.isWinOpen is True:
-            self.ZoomUser1()   
+        if self.winZoomUser1.isWinOpen:
+            self.ZoomUser1()
+            
+        # Mise à jour position
+        self._updatePositionLabel()
+        
         self.shoot += 1
       
     def closeEvent(self, event):
-        """ when closing the window
-        """
+        """Fermeture de la fenêtre"""
         self.isWinOpen = False
         self.shoot = 0
         self.TableSauv = ['file,Max,Min,x Max,y max,Sum,Mean,Size,x c.mass,y c.mass']
         
-        if self.winCoupeMax.isWinOpen is True:
-            self.winCoupeMax.close()
-        if self.winCoupeMin.isWinOpen is True:
-            self.winCoupeMin.close()
-        if self.winCoupeXmax.isWinOpen is True:
-            self.winCoupeXmax.close()
-        if self.winCoupeYmax.isWinOpen is True:
-            self.winCoupeYmax.close()
-        if self.winCoupeSum.isWinOpen is True:
-            self.winCoupeSum.close()
-        if self.winCoupeMean.isWinOpen is True:
-            self.winCoupeMean.close()
-        if self.winCoupeXcmass.isWinOpen is True:
-            self.winCoupeXcmass.close()
-        if self.winCoupeYcmass.isWinOpen is True:
-            self.winCoupeYcmass.close()
-        if self.winCoupeSumThreshold.isWinOpen is True:
-            self.winCoupeSumThreshold.close()
+        # Arrêter le timer de position
+        if hasattr(self, 'positionTimer'):
+            self.positionTimer.stop()
+        
+        # Fermeture des fenêtres de graphiques
+        for win in [self.winCoupeMax, self.winCoupeMin, self.winCoupeXmax, 
+                    self.winCoupeYmax, self.winCoupeSum, self.winCoupeMean,
+                    self.winCoupeXcmass, self.winCoupeYcmass, self.winCoupeSumThreshold]:
+            if win.isWinOpen:
+                win.close()
+        
+        # Fermeture de la connexion ZMQ
+        if self.zmqClient:
+            self.zmqClient.close()
+            
         time.sleep(0.1)
         event.accept()
 
     def open_widget(self, fene):
-        """ ouverture widget suplementaire
-        """
-
+        """Ouverture widget supplémentaire"""
         if fene.isWinOpen is False:
             fene.setup
             fene.isWinOpen = True
-            # A=self.geometry()
-            # fene.setGeometry(A.left()+A.width(),A.top(),500,A.height())
             fene.show()
         else:
-            # fene.activateWindow()
-            # fene.raise_()
             fene.showNormal()
 
     def FctUser1(self):
-        # The USER1 function
-        a = 0  # 10*random()
-        
-        return (a)
-
-    def motorChange(self):
-        if self.motorNameBox.currentIndex() != 0 :
-            self.numMotor = self.motorNameBox.currentIndex()
-            
-            if self.motA2V is True:
-                self.numMotor = self.numMotor -1
-                self.MOT = self.A2V.MOTORA2V(self.listMotor[self.numMotor])
-                self.stepmotor = self.MOT.step
-            if self.motRSAI is True :
-                self.IPadress = self.listRack [self.rackChoise.currentIndex()]
-                self.MOT = self.RSAI.MOTORRSAI(self.IPadress, self.numMotor)
-                self.stepmotor = self.MOT.step
-               
-            
-            self.unit()
-        
-
-    def ChangeIPRack(self):
-        self.motorNameBox.clear()
-        self.IPadress = str( self.listRack[self.rackChoise.currentIndex()])
-        #print('ip',self.IPadress)
-        self.listMotorName = self.RSAI.listMotorName(self.IPadress)
-        #print('listmotorname',self.listMotorName)
-        self.rackName = self.RSAI.nameEquipment(self.IPadress)
-        self.motorNameBox.addItem('Choose a motor')
-        self.motorNameBox.addItems(self.listMotorName)
-
-    def unit(self):
-        '''
-        unit change mot foc
-        '''
-        self.indexUnit = self.unitBouton.currentIndex()
-        #print('winMeas',self.stepmotor)
-        if self.indexUnit == 0:  # step
-            self.unitChange = 1
-            self.unitName = 'step'
-            
-        if self.indexUnit == 1:  # micron
-            self.unitChange = float((1*self.stepmotor))
-            self.unitName = 'um'
-        if self.indexUnit == 2:  # mm
-            self.unitChange = float((1000*self.stepmotor))
-            self.unitName = 'mm'
-        if self.indexUnit == 3:  # ps  double passage : 1 microns=6fs
-            self.unitChange = float(1*self.stepmotor/0.0066666666)
-            self.unitName = ' ps'
-        if self.indexUnit == 4:  # en degres
-            self.unitChange = 1 * self.stepmotor
-            self.unitName = '°'
-        
-        if self.unitChange == 0:
-            self.unitChange = 1  # avoid /0
+        """Fonction utilisateur personnalisable"""
+        a = 0
+        return a
 
 
 if __name__ == "__main__":
@@ -693,4 +1172,4 @@ if __name__ == "__main__":
     appli.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
     e = MEAS(motRSAI=True)
     e.show()
-    appli.exec_()
+    appli.exec()
