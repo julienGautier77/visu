@@ -59,6 +59,7 @@ class OPTION(QWidget):
         self.dataBgExist = False
         self.rotateValue = 0
         self.modeTrig = False
+        self.isPathFileChanged = False
 
     def setFile(self, file):
         self.nomFichier = file
@@ -140,12 +141,14 @@ class OPTION(QWidget):
     def pathTextChanged(self):
         self.pathAutoSave = self.pathBox.text()
         self.conf.setValue(self.name+"/pathAutoSave", str(self.pathAutoSave))
+        self.isPathFileChanged = True
         
     def PathChanged(self):
        
         self.pathAutoSave = str(QFileDialog.getExistingDirectory(self, "Select Directory", self.pathAutoSave))
         self.pathBox.setText(self.pathAutoSave)
         self.conf.setValue(self.name+"/pathAutoSave", str(self.pathAutoSave))
+        self.isPathFileChanged = True
         
     def nameFileChanged(self):
         self.fileName = self.nameBox.text()
@@ -162,16 +165,23 @@ class OPTION(QWidget):
  
     def selectBg(self):
         
-        fname = QFileDialog.getOpenFileName(self, "Select a background file", self.pathBg, "Images (*.txt *.spe *.TIFF *.sif);;Text File(*.txt);;Ropper File (*.SPE);;Andor File(*.sif);; TIFF file(*.TIFF)")
+        fname = QFileDialog.getOpenFileName(
+            self, "Select a background file", self.pathBg, 
+            "Images (*.txt *.spe *.TIFF *.sif);;Text File(*.txt);;Ropper File (*.SPE);;Andor File(*.sif);; TIFF file(*.TIFF)")
+        
         fichier = fname[0]
+        self.loadBg(fichier)
+    
+    def loadBg(self, fichier):
         ext = os.path.splitext(fichier)[1]
         self.fileBgBox.setText(fichier)
         
         self.conf.setValue(self.name+"/pathBg", os.path.dirname(fichier))
         
         self.dataBgExist = True
-        self.parent.checkBoxBg.setChecked(True)
-        self.parent.BackgroundF()
+        if self.parent is not None:
+            self.parent.checkBoxBg.setChecked(True)
+            self.parent.BackgroundF()
 
         if ext == '.txt':  # text file
             self.dataBg = np.loadtxt(str(fichier))
@@ -193,6 +203,11 @@ class OPTION(QWidget):
             self.dataBg = np.rot90(im, 3)
             
         else:
+            self.dataBgExist = False
+            if self.parent is None:
+                self.parent.checkBoxBg.setChecked(False)
+                self.parent.BackgroundF()
+            self.fileBgBox.setText("bgfile not selected")
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Icon.Critical)
             msg.setText("Wrong file format !")
@@ -200,7 +215,6 @@ class OPTION(QWidget):
             msg.setWindowTitle("Warning ...")
             msg.setWindowFlags(QtCore.Qt.WindowType.WindowStaysOnTopHint)
             msg.exec_()
-            self.dataBgExist = False
     
     def checkBoxServerChange(self):
         

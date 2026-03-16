@@ -62,6 +62,16 @@ from visu.spectrum_analysis.winSpectro import WINSPECTRO
 import pathlib
 import visu
 
+try:
+    from laplace_server.server_lhc import ServerLHC
+    from laplace_server.protocol import DEVICE_CAMERA
+    from laplace_server.server_controller import ServerController
+    IS_LHC = True
+    print("Running with Server LHC.")
+except Exception:
+    IS_LHC = False
+    print("Server LHC is not available.")
+
 __version__ = visu.__version__
 __author__ = visu.__author__
 
@@ -94,6 +104,7 @@ class SEE(QMainWindow):
     signalPlot = QtCore.pyqtSignal(object)
     signalCrop = QtCore.pyqtSignal(object)
     signalSpectro = QtCore.pyqtSignal(object)
+    signalSpectroList = QtCore.pyqtSignal(object)
     signalDisplayed = QtCore.pyqtSignal(object)  # Emit when display a image
 
     def __init__(self, file=None, path=None, parent=None, **kwds):
@@ -116,6 +127,11 @@ class SEE(QMainWindow):
         self.aboutWidget = aboutWindows.ABOUT()
         self.signalTrans = dict()  # dict to emit multivariable
         self.frameNumber = 0
+
+        self.threshold = 0
+        self.sigma = 0
+
+        self.numSnapbg = 0
         # kwds definition  :
 
         # Configuration avec valeurs par défaut
@@ -187,6 +203,8 @@ class SEE(QMainWindow):
         
         if self.spectro:
             self.winSpectro = WINSPECTRO(parent=self,conf=self.conf)
+        else:
+            self.winSpectro = None
 
         if self.encercled:
             self.winEncercled = WINENCERCLED(parent=self, conf=self.conf,
@@ -207,6 +225,7 @@ class SEE(QMainWindow):
         self.bloqq = 1  # block the cross by click on mouse
 
         # initialize variable :
+        self.snapSaveWarningShowed = False
         self.filter = 'origin'  # filter initial value
         self.ite = None
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
@@ -268,6 +287,29 @@ class SEE(QMainWindow):
         self.activateWindow()
         self.raise_()
         self.showNormal()
+
+        if IS_LHC:
+            is_valid_port = False
+            port = 1423
+            server = 1
+            while not is_valid_port:
+                try:
+                    self.serv = ServerLHC(
+                        name = f"Spectro {server}",
+                        address = f"tcp://*:{port}",
+                        freedom = 0,
+                        device = DEVICE_CAMERA,
+                        data = {}
+                    )
+                    is_valid_port = True
+                except Exception as e:
+                    print(f"Port {port} already taken, Error: {e}")
+                    print(f"looking for next available port...")
+                    port += 1
+                    server += 1
+
+            self.server_controller = ServerController()
+            self.serv.start() # start the server thread
 
     def setup(self):
         # definition of all button
@@ -489,6 +531,16 @@ class SEE(QMainWindow):
         self.toolBar.addAction(self.checkBoxBg)
         self.checkBoxBg.triggered.connect(self.BackgroundF)
 
+        # streaming
+        self.checkBoxStream = QAction(QtGui.QIcon(self.icon+"antennaOff.png"),'Streaming Off', self)
+        self.checkBoxStream.setCheckable(True)
+        self.checkBoxStream.setChecked(False)
+        self.ImageMenu.addAction(self.checkBoxStream)
+        self.toolBar.addAction(self.checkBoxStream)
+        self.checkBoxStream.triggered.connect(self.StreamingIcon)
+        self.checkBoxStream.triggered.connect(self.Streaming)
+
+
         if self.encercled:
             self.energyBox = QAction(QtGui.QIcon(self.icon+"coin.png"),
                                      'Energy Encercled', self)
@@ -597,20 +649,29 @@ class SEE(QMainWindow):
 
         self.ligneButton = QAction(QtGui.QIcon(self.icon+"line.png"),
                                    'add  Line', self)
-        
+        self.ligneButton.setCheckable(True)
         self.toolBar.addAction(self.ligneButton)
 
         self.rectangleButton = QAction(QtGui.QIcon(self.icon+"rectangle.png"),
-                                       'Add Rectangle', self)
+                                       'add Rectangle', self)
+        self.rectangleButton.setCheckable(True)
         self.toolBar.addAction(self.rectangleButton)
 
         self.circleButton = QAction(QtGui.QIcon(self.icon+"Red_circle.png"),
                                     'add  Cercle', self)
+        self.circleButton.setCheckable(True)
         self.toolBar.addAction(self.circleButton)
 
         self.pentaButton = QAction(QtGui.QIcon(self.icon+"pentagon.png"),
                                    'add  Pentagon', self)
+        self.pentaButton.setCheckable(True)
         self.toolBar.addAction(self.pentaButton)
+
+
+        self.snapBgButton = QAction(QtGui.QIcon(self.icon+"snapBackground.png"), 
+                                    "snap background", self)
+        self.toolBar.addAction(self.snapBgButton)
+        self.snapBgButton.triggered.connect(self.snapAct)
 
         self.PlotButton = QAction(QtGui.QIcon(self.icon+"analytics.png"),
                                   'Plot Profile', self)
@@ -822,9 +883,12 @@ class SEE(QMainWindow):
             pass
 
         if self.ite == 'line':
+            self.uncheckPolygones()
             self.p1.removeItem(self.plotLine)
             self.ite = None
         else:
+            self.uncheckPolygones()
+            self.ligneButton.setChecked(True)
             self.ite = 'line'
             # Positionner la ligne dans la zone visible
             if self.plotRectZoomEtat == "ZoomOut":
@@ -881,9 +945,12 @@ class SEE(QMainWindow):
             pass
 
         if self.ite == 'rect':
+            self.uncheckPolygones()
             self.p1.removeItem(self.plotRect)
             self.ite = None
         else:
+            self.uncheckPolygones()
+            self.rectangleButton.setChecked(True)
             self.ite = 'rect'
             self.p1.addItem(self.plotRect)
             if self.plotRectZoomEtat == "ZoomOut":
@@ -895,7 +962,17 @@ class SEE(QMainWindow):
                 self.plotRect.setPos([centerX - sizeX/2, centerY - sizeY/2])
             else:
                 self.plotRect.setPos([self.dimx/2, self.dimy/2])
-            
+    
+    def uncheckPolygones(self):
+        """
+        function made to visually uncheck the QAction related of the polygones
+        (rectangle, circle, and pentagon) on the tool bar.
+        """
+        self.rectangleButton.setChecked(False)
+        self.circleButton.setChecked(False)
+        self.pentaButton.setChecked(False)
+        self.ligneButton.setChecked(False)
+
     def RectChanged(self):
         '''Take ROI
         '''
@@ -934,9 +1011,12 @@ class SEE(QMainWindow):
 
     def CERCLE(self):
         if self.ite == 'cercle':
+            self.uncheckPolygones()
             self.p1.removeItem(self.plotCercle)
             self.ite = None
         else:
+            self.uncheckPolygones()
+            self.circleButton.setChecked(True)
             self.ite = 'cercle'
             self.p1.addItem(self.plotCercle)
             if self.plotRectZoomEtat == "ZoomOut":
@@ -973,9 +1053,12 @@ class SEE(QMainWindow):
             pass
 
         if self.ite == 'pentagon':
+            self.uncheckPolygones()
             self.p1.removeItem(self.plotPentagon)
             self.ite = None
         else:
+            self.uncheckPolygones()
+            self.pentaButton.setChecked(True)
             self.ite = 'pentagon'
             self.p1.addItem(self.plotPentagon)
         # Positionner le pentagone dans la zone visible
@@ -1013,6 +1096,48 @@ class SEE(QMainWindow):
             self.open_widget(self.winCoupe)
             # self.winCoupe.PLOT(self.cut1)#,symbol = False)
             self.signalPlot.emit(self.signalTrans)
+
+
+    def snapAct(self):
+        self.pathAutoSave = str(self.conf.value(self.name+'/pathAutoSave'))
+        
+        if not self.winOpt.isPathFileChanged: # if the name has not been changed since last restart
+            if not self.snapSaveWarningShowed: # if the warning did not have already been by pass
+                self.snapSaveWarningShowed = True
+                msg = QMessageBox()
+                msg.setIcon(QMessageBox.Icon.Warning)
+                msg.setText("You did not change the saving path since last restart:")
+                msg.setInformativeText(f"The backgound will be saved following the path:\n\n'{self.pathAutoSave}'.")
+                msg.setWindowTitle("Snap Background Warning ...")
+                msg.setWindowFlags(QtCore.Qt.WindowType.WindowStaysOnTopHint)
+                msg.setStandardButtons(QMessageBox.StandardButton.Cancel | QMessageBox.StandardButton.Save)
+                answer = msg.exec()
+                if answer == QMessageBox.StandardButton.Cancel:
+                    self.snapSaveWarningShowed = False
+                    return
+        self.numSnapbg += 1
+        date = time.strftime("%Y_%m_%d_%H_%M_%S")
+        fileName = "snap_background"
+        if self.winOpt.checkBoxDate.isChecked():  # add the date
+            # nomFichier = str(str(self.pathAutoSave) + '/' + self.fileNameSave + '_' + num+'_' + date)
+            nomFichier = f"{self.pathAutoSave}/{fileName}_{self.numSnapbg}_{date}"
+        else:
+            # nomFichier = str(str(self.pathAutoSave) + '/' + self.fileNameSave + '_'+num)
+            nomFichier = f"{self.pathAutoSave}/{fileName}_{self.numSnapbg}"
+            #print(nomFichier)
+            
+        print(nomFichier, 'saved')
+        if self.winOpt.checkBoxTiff.isChecked():  # save as tiff
+            self.dataS = np.rot90(self.data, 1)
+            img_PIL = Image.fromarray(self.dataS)
+            ext = "TIFF"
+            img_PIL.save(str(nomFichier) + f'.{ext}', format=ext)
+        else:
+            ext = "txt"
+            np.savetxt(str(nomFichier)+'.{ext}', self.data)
+
+        self.winOpt.loadBg(nomFichier + f'.{ext}')
+
 
     # def Graph3D (self):
 
@@ -1114,8 +1239,12 @@ class SEE(QMainWindow):
                 self.winOpt.dataBgExist is True):
             self.labelFrameName.setText('bg sub  on frame :')
             try:
-                self.data = self.data-self.winOpt.dataBg
-            except:
+                self.data = np.where( self.data - self.winOpt.dataBg > 0,  self.data - self.winOpt.dataBg, 0)
+            except Exception:
+                self.winOpt.dataBgExist = False
+                self.checkBoxBg.setChecked(False)
+                self.BackgroundF()
+                self.winOpt.fileBgBox.setText("bgfile not selected")
                 msg = QMessageBox()
                 msg.setIcon(QMessageBox.Icon.Critical)
                 msg.setText("Background not soustracred !")
@@ -1123,9 +1252,8 @@ class SEE(QMainWindow):
                 msg.setWindowTitle("Warning ...")
                 msg.setWindowFlags(QtCore.Qt.WindowType.WindowStaysOnTopHint)
                 msg.exec_()
-        else : 
-            self.labelFrameName.setText('bgsub  off frame :')
-        if (self.checkBoxBg.isChecked() is True and
+
+        elif (self.checkBoxBg.isChecked() is True and
                 self.winOpt.dataBgExist is False):
             
             msg = QMessageBox()
@@ -1135,6 +1263,9 @@ class SEE(QMainWindow):
             msg.setWindowTitle("Warning ...")
             msg.setWindowFlags(QtCore.Qt.WindowType.WindowStaysOnTopHint)
             msg.exec()
+        
+        else : 
+            self.labelFrameName.setText('bgsub  off frame :')        
 
         # filtre
         if self.filter == 'gauss':
@@ -1193,8 +1324,21 @@ class SEE(QMainWindow):
 
         if self.encercled is True:
             if self.winEncercled.isWinOpen is True:
-                self.signalEng.emit(self.data)
+                # self.signalEng.emit(self.data)
                 # self.winEncercled.Display(self.data) ## energy update
+                
+                # select the data in the corresponding ROI or the full image
+                if self.ite == "rect":
+                    reduced = self.plotRect.getArrayRegion(self.data, self.imh)
+                elif self.ite == "cercle":
+                    reduced = self.plotCercle.getArrayRegion(self.data, self.imh)
+                else:
+                    # self.Rectangle()
+                    # reduced = self.plotRect.getArrayRegion(self.data, self.imh)
+                    reduced = self.data
+                # print(f"reduced shape = {reduced.shape}")
+                self.signalEng.emit(reduced)
+                # self.winEncercled.Display(reduced) ## energy update
 
         if self.winCoupe.isWinOpen is True:
             if self.ite == 'line':
@@ -1647,6 +1791,34 @@ class SEE(QMainWindow):
             self.checkBoxBg.setIcon(QtGui.QIcon(self.icon+"user.png"))
             self.checkBoxBg.setText('Background soustraction Off')
 
+
+    def updateServer(self):
+        if IS_LHC:
+            if self.winSpectro:
+                data = {
+                    "state": "running", 
+                    "data":self.winSpectro.data_dict,
+                    "name":"spectrum"
+                }
+                self.serv.set_data(data)
+
+
+    def StreamingIcon(self):
+        if self.checkBoxStream.isChecked():
+            self.checkBoxStream.setIcon(QtGui.QIcon(self.icon+"antennaOn.png"))
+            self.checkBoxStream.setText('Streaming On')
+            print("On")
+        else :
+            self.checkBoxStream.setIcon(QtGui.QIcon(self.icon+"antennaOff.png"))
+            self.checkBoxStream.setText('Streaming Off')
+            print("Off")
+
+
+    def Streaming(self):
+        pass
+
+
+
     def roiChanged(self):
 
         self.rx = self.ro1.size()[0]
@@ -1928,6 +2100,7 @@ class SEE(QMainWindow):
         self.dataOrg = self.data
 
         self.Display(self.data)
+        self.updateServer()
         self.frameName.setText(f'{self.frameNumber}')
         self.frameNumber = self.frameNumber + 1
 
@@ -2117,6 +2290,9 @@ class SEE(QMainWindow):
         if self.spectro is True:
             if self.winSpectro.isWinOpen is True:
                 self.winSpectro.close()
+        
+        if IS_LHC:
+            self.serv.stop()
 
 
 class DialogColorBar(QDialog):
