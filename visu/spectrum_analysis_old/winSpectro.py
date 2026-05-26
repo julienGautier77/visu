@@ -46,7 +46,6 @@ class WINSPECTRO(Build_Interface.Spectrometer_Interface):
         # Load calibration data
         self.load_calib()
         self.graph_setup()
-        self.actions_setup()
         self.signal_setup()
 
 
@@ -61,10 +60,9 @@ class WINSPECTRO(Build_Interface.Spectrometer_Interface):
         self.calibration_data = Deconvolve.CalibrationData(cal_path=self.deconv_calib + 'dsdE_default.txt')
         self.calibration_data_json = None
         # Create initialization object for spectrum deconvolution
-
         initImage = Deconvolve.spectrum_image(im_path=self.deconv_calib +
                                                       'calib_image.TIFF',
-                                              revert=True, rotate=self.rotate_image, k=self.angle.currentData())
+                                              revert=True)
         self.deconvolved_spectrum = Deconvolve.DeconvolvedSpectrum(initImage, self.calibration_data,
                                                                    self.energy_resolution_ctl.value(),
                                                                    self.px_per_mm_ctl.value(),
@@ -91,16 +89,6 @@ class WINSPECTRO(Build_Interface.Spectrometer_Interface):
         self.dnde_image.setLabel('bottom', 'Energy')
         self.dnde_image.setLabel('left', 'dN/dE (pC/MeV)')
 
-    def recalibrate(self):
-        pass
-    
-    #####################################################################
-    #                    Interface action signals
-    #####################################################################
-
-    def actions_setup(self):
-        self.rotate_image.stateChanged.connect(self.recalibrate)
-
 
     #####################################################################
     #                       Setup DiagServ signal
@@ -118,10 +106,6 @@ class WINSPECTRO(Build_Interface.Spectrometer_Interface):
     #####################################################################
     def Display(self, data):
 
-        if self.rotate_image.isChecked():
-            k = self.angle.currentData()
-            data = np.rot90(data, k)
-                        
         # Deconvolve and display 2D data
         if self.flip_image.isChecked():
             self.deconvolved_spectrum.deconvolve_data(np.flip(data.T, axis=1))
@@ -132,9 +116,6 @@ class WINSPECTRO(Build_Interface.Spectrometer_Interface):
         # Integrate over angle and show graph
         self.deconvolved_spectrum.integrate_spectrum(self.integration_bounds_dict()['signal'],
                                                      self.integration_bounds_dict()['bkg'])
-        if self.stack_graphs_toggle.isChecked() == False:
-            self.dnde_image.clear()
-            
         self.dnde_image.plot(self.deconvolved_spectrum.energy, self.deconvolved_spectrum.integrated_spectrum)
 
     def spectro_dict(self, temp_dataArray):

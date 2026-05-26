@@ -2367,6 +2367,6 @@ def runVisu(file=None, path=None):
 if __name__ == "__main__":
     appli = QApplication(sys.argv)
     appli.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt6'))
-    e = SEE(motRSAI=True)#,conf=conf,name=name)
+    e = SEE(motRSAI=False, spectro= True)
     e.show()
     appli.exec_()

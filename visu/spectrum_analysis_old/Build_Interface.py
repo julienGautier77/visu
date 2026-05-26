@@ -165,14 +165,6 @@ class Spectrometer_Interface(QMainWindow):
         self.flip_image = QCheckBox()
         self.flip_image.setChecked(True)
 
-        rotate_image_label = QLabel('Rotate image')
-        self.rotate_image = QCheckBox()
-        self.rotate_image.setChecked(False)
-
-        self.angle = QComboBox()
-        self.angle.addItem("+90°", 1)
-        self.angle.addItem("-90°", -1)
-
         lanex_offset_label = QLabel('Lanex Offset (+ to low E)')
         self.lanex_offset_mm_ctl = Numeric_IO(min=-100, max=100, incr=0.1, value=0, enabled=True)
 
@@ -197,30 +189,19 @@ class Spectrometer_Interface(QMainWindow):
 
         grid_layout_calib.addWidget(flip_image_label, 0, 0)
         grid_layout_calib.addWidget(self.flip_image, 0, 2)
-
-        grid_layout_calib.addWidget(rotate_image_label, 1, 0)
-        grid_layout_calib.addWidget(self.rotate_image, 1, 1)
-        grid_layout_calib.addWidget(self.angle, 1, 2)
-
-
-        grid_layout_calib.addWidget(lanex_offset_label, 2, 0)
-        grid_layout_calib.addWidget(self.lanex_offset_mm_ctl, 2, 2)
-
-        grid_layout_calib.addWidget(px_per_mm_label, 3, 0)
-        grid_layout_calib.addWidget(self.px_per_mm_ctl, 3, 2)
-
-        grid_layout_calib.addWidget(mrad_per_px_label, 4, 0)
-        grid_layout_calib.addWidget(self.mrad_per_px_ctl, 4, 2)
-
-        grid_layout_calib.addWidget(reference_label, 5, 0)
-        grid_layout_calib.addWidget(self.reference_method, 5, 2)
-
-        grid_layout_calib.addWidget(self.reference_pts_label, 6, 0)
-        grid_layout_calib.addWidget(self.refpoint_x_or_energy, 6, 1)
-        grid_layout_calib.addWidget(self.refpoint_y_or_s, 6, 2)
-
-        grid_layout_calib.addWidget(pC_per_count_label, 7, 0)
-        grid_layout_calib.addWidget(self.pC_per_count_ctl, 7, 2)
+        grid_layout_calib.addWidget(lanex_offset_label, 1, 0)
+        grid_layout_calib.addWidget(self.lanex_offset_mm_ctl, 1, 2)
+        grid_layout_calib.addWidget(px_per_mm_label, 2, 0)
+        grid_layout_calib.addWidget(self.px_per_mm_ctl, 2, 2)
+        grid_layout_calib.addWidget(mrad_per_px_label, 3, 0)
+        grid_layout_calib.addWidget(self.mrad_per_px_ctl, 3, 2)
+        grid_layout_calib.addWidget(reference_label, 4, 0)
+        grid_layout_calib.addWidget(self.reference_method, 4, 2)
+        grid_layout_calib.addWidget(self.reference_pts_label, 5, 0)
+        grid_layout_calib.addWidget(self.refpoint_x_or_energy, 5, 1)
+        grid_layout_calib.addWidget(self.refpoint_y_or_s, 5, 2)
+        grid_layout_calib.addWidget(pC_per_count_label, 6, 0)
+        grid_layout_calib.addWidget(self.pC_per_count_ctl, 6, 2)
         self.vbox2.addLayout(grid_layout_calib)
 
         self.vbox2.addStretch(1)
@@ -288,13 +269,8 @@ class Spectrometer_Interface(QMainWindow):
         #  Interface comfort
         ######################
         self.clear_graph_ctl = QPushButton(text="Clear Graph")
-        stack_graphs_toggle = QLabel('Stack graphs')
-        self.stack_graphs_toggle = QCheckBox()
-        self.stack_graphs_toggle.setChecked(False)
         interface_comfort_layout = QGridLayout()
-        interface_comfort_layout.addWidget(stack_graphs_toggle, 0, 1)
-        interface_comfort_layout.addWidget(self.stack_graphs_toggle, 0, 2)
-        interface_comfort_layout.addWidget(self.clear_graph_ctl, 0, 3)
+        interface_comfort_layout.addWidget(self.clear_graph_ctl, 0, 1)
         self.vbox2.addLayout(interface_comfort_layout)
 
         #####################################################################
@@ -399,7 +375,6 @@ class Numeric_IO(QDoubleSpinBox):
         self.setEnabled(enabled)
         self.setFixedWidth(80)
         self.setValue(value)
-
 
 
 if __name__ == "__main__":

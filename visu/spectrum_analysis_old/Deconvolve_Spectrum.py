@@ -9,16 +9,12 @@ from os import sep
 VIRIDIS = pg.colormap.get('viridis')
 
 
-def spectrum_image(im_path: str, revert: bool, rotate: bool, k: int):
+def spectrum_image(im_path: str, revert: bool):
     """Opens image from file, returns 2D numpy array"""
-    image = np.array(Image.open(im_path))
-    if rotate: 
-        image = np.rot90(image, k)
     if revert:
-        return np.flip(image, axis=1)
+        return np.flip(np.array(Image.open(im_path)), axis=1)
     else:
-        return np.array(image)
-    
+        return np.array(Image.open(im_path))
 
 
 class CalibrationData:
