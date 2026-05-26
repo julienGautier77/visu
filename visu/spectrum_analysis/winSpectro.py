@@ -44,6 +44,8 @@ class WINSPECTRO(Build_Interface.Spectrometer_Interface):
         # (Main window setup from parent class)
 
         # Load calibration data
+        p = pathlib.Path(__file__)
+        #self.default_deconv_calib = str(p.parent) + sepa
         self.load_calib()
         self.graph_setup()
         self.actions_setup()
@@ -54,15 +56,16 @@ class WINSPECTRO(Build_Interface.Spectrometer_Interface):
     #                  Setup calibration for deconvolution
     #####################################################################
 
-    def load_calib(self):
+    def load_calib(self, cal_file= None):
         # Load calibration for spectrum deconvolution
-        p = pathlib.Path(__file__)
-        self.deconv_calib = str(p.parent) + sepa
-        self.calibration_data = Deconvolve.CalibrationData(cal_path=self.deconv_calib + 'dsdE_default.txt')
+        if cal_file == None:
+            cal_file = self.default_deconv_calib + self.config_path_box.text()
+
+        self.calibration_data = Deconvolve.CalibrationData(cal_file)
         self.calibration_data_json = None
         # Create initialization object for spectrum deconvolution
 
-        initImage = Deconvolve.spectrum_image(im_path=self.deconv_calib +
+        initImage = Deconvolve.spectrum_image(im_path=self.default_deconv_calib +
                                                       'calib_image.TIFF',
                                               revert=True, rotate=self.rotate_image, k=self.angle.currentData())
         self.deconvolved_spectrum = Deconvolve.DeconvolvedSpectrum(initImage, self.calibration_data,
@@ -92,14 +95,18 @@ class WINSPECTRO(Build_Interface.Spectrometer_Interface):
         self.dnde_image.setLabel('left', 'dN/dE (pC/MeV)')
 
     def recalibrate(self):
-        pass
+        print(f'Recalibrating')
+        cal_file = self.config_path_box.text()
+        self.load_calib(cal_file)
+        self.graph_setup()
     
     #####################################################################
     #                    Interface action signals
     #####################################################################
 
     def actions_setup(self):
-        self.rotate_image.stateChanged.connect(self.recalibrate)
+        #self.rotate_image.stateChanged.connect(self.recalibrate)
+        self.update_config_btn.clicked.connect(self.recalibrate)
 
 
     #####################################################################
@@ -136,12 +143,13 @@ class WINSPECTRO(Build_Interface.Spectrometer_Interface):
             self.dnde_image.clear()
             
         self.dnde_image.plot(self.deconvolved_spectrum.energy, self.deconvolved_spectrum.integrated_spectrum)
+        self.spectro_dict()
 
-    def spectro_dict(self, temp_dataArray):
+    def spectro_dict(self, shotNum: int=1):
         # Creation of dictionary to pass to diagServ ; cut energy from interface to remove noise
         self.spectro_data_dict = Spectrum_Features.build_dict(self.deconvolved_spectrum.energy,
                                                               self.deconvolved_spectrum.integrated_spectrum,
-                                                              temp_dataArray[1],
+                                                              shotNum,
                                                               energy_bounds=[self.min_cutoff_energy_ctl.value(),
                                                                              self.max_cutoff_energy_ctl.value()])
         # Display values on interface

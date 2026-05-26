@@ -7,7 +7,7 @@ Build Spectrometer Interface - GUI only
 """
 from PyQt6.QtWidgets import QApplication, QVBoxLayout, QWidget, QHBoxLayout, QGridLayout
 from PyQt6.QtWidgets import (QLabel, QMainWindow, QStatusBar, QComboBox,
-                             QCheckBox, QDoubleSpinBox,  QPushButton, QLineEdit)
+                             QCheckBox, QDoubleSpinBox,  QPushButton, QLineEdit, QFileDialog)
 from PyQt6.QtGui import QIcon, QFont
 from PyQt6.QtCore import Qt
 import sys
@@ -25,6 +25,7 @@ class Spectrometer_Interface(QMainWindow):
         super().__init__()
         p = pathlib.Path(__file__)
         self.icon = str(p.parent.parent) + sepa + 'icons' + sepa
+        self.default_deconv_calib = str(p.parent) + sepa
         self.setup()
         self._cache_setup()
         self.action_button()
@@ -145,14 +146,15 @@ class Spectrometer_Interface(QMainWindow):
         calibration_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.vbox2.addWidget(calibration_label)
 
-
         grid_layout_config = QGridLayout()
         self.config_path_button = QPushButton('Path : ')
         self.config_path_button.setFixedWidth(50)
-        self.config_path_box = QLineEdit('spectrum analysis')
+        self.config_path_box = QLineEdit('dsdE_default.txt')
         self.config_path_box.setMaximumHeight(60)
+        self.update_config_btn = QPushButton('Load')
         grid_layout_config.addWidget(self.config_path_button, 0, 0)
         grid_layout_config.addWidget(self.config_path_box, 0, 1)
+        grid_layout_config.addWidget(self.update_config_btn, 0, 2)
         self.vbox2.addLayout(grid_layout_config)
 
         ######################
@@ -235,12 +237,27 @@ class Spectrometer_Interface(QMainWindow):
         self.vbox2.addWidget(postproc_label)
 
         cutoff_energies_label = QLabel('Cutoff energies (MeV)')
-        self.min_cutoff_energy_ctl = Numeric_IO(min=0, max=10000, incr=1, value=10, enabled=True)
-        self.max_cutoff_energy_ctl = Numeric_IO(min=0, max=10000, incr=1, value=150, enabled=True)
+        min_cutoff_energy_default = 5
+        self.min_cutoff_energy_ctl = Numeric_IO(min=0, max=10000, incr=1, value=min_cutoff_energy_default, enabled=True)
+        self.min_cutoff_energy_line = pg.InfiniteLine(pos=min_cutoff_energy_default, angle = 90, pen=pg.mkPen('y', width=2), movable=True)
+        self.spectrum_2D_image.addItem(self.min_cutoff_energy_line)
+
+        max_cutoff_energy_default = 10
+        self.max_cutoff_energy_ctl = Numeric_IO(min=0, max=10000, incr=1, value=max_cutoff_energy_default, enabled=True)
+        self.max_cutoff_energy_line = pg.InfiniteLine(pos=max_cutoff_energy_default, angle = 90, pen=pg.mkPen('y', width=2), movable=True)
+        self.spectrum_2D_image.addItem(self.max_cutoff_energy_line)
+
 
         integration_label = QLabel('Integrated rows (mrad)')
-        self.min_int_mrad_ctl = Numeric_IO(min=-5000, max=5000, incr=1, value=0)
-        self.max_int_mrad_ctl = Numeric_IO(min=-5000, max=5000, incr=1, value=15)
+        min_int_mrad_default = 0
+        self.min_int_mrad_ctl = Numeric_IO(min=-5000, max=5000, incr=1, value=min_int_mrad_default)
+        self.min_cutoff_mrad_line = pg.InfiniteLine(pos=min_int_mrad_default, angle = 0, pen=pg.mkPen('y', width=2), movable=True)
+        self.spectrum_2D_image.addItem(self.min_cutoff_mrad_line)
+
+        max_int_mrad_default = 15
+        self.max_int_mrad_ctl = Numeric_IO(min=-5000, max=5000, incr=1, value=max_int_mrad_default)
+        self.max_cutoff_mrad_line = pg.InfiniteLine(pos=max_int_mrad_default, angle = 0, pen=pg.mkPen('y', width=2), movable=True)
+        self.spectrum_2D_image.addItem(self.max_cutoff_mrad_line)
 
         background_label = QLabel('Background rows (mrad)')
         self.min_bkg_mrad_ctl = Numeric_IO(min=-5000, max=10000, incr=1, value=-40)
@@ -300,23 +317,50 @@ class Spectrometer_Interface(QMainWindow):
         #####################################################################
         #                       Interface actions
         #####################################################################
+
+    def calibPath_changed(self):
+   
+        calib_path = QFileDialog.getOpenFileName(self, "Select your calibration file",
+                        self.default_deconv_calib,
+                        "Text (*.dat *.txt )")[0]
+        print(f'Type of calibpath = {type(calib_path)}')
+        self.config_path_box.setText(calib_path)
+
     def _cache_setup(self):
         self._bounds_cache = None
+
     def action_button(self) -> None:
+
+        self.config_path_button.clicked.connect(self.calibPath_changed)
         self.min_cutoff_energy_ctl.valueChanged.connect(self.change_energy_bounds)
+        self.min_cutoff_energy_ctl.valueChanged.connect(self.update_line)       
+        self.min_cutoff_energy_line.sigDragged.connect(self.moved_line)
+
         self.max_cutoff_energy_ctl.valueChanged.connect(self.change_energy_bounds)
+        self.max_cutoff_energy_ctl.valueChanged.connect(self.update_line)
+        self.max_cutoff_energy_line.sigDragged.connect(self.moved_line)
+
         self.lanex_offset_mm_ctl.valueChanged.connect(self.change_lanex_offset_mm)
         self.enable_controls.stateChanged.connect(self.enable_disable_controls)
         self.flip_image.stateChanged.connect(self.clear_graph)
         self.reference_method.currentTextChanged.connect(self.update_refpoint)
+
         self.min_int_mrad_ctl.valueChanged.connect(self.clear_bounds_cache)
+        self.min_int_mrad_ctl.valueChanged.connect(self.update_line)
+        self.min_cutoff_mrad_line.sigDragged.connect(self.moved_line)
+        
         self.max_int_mrad_ctl.valueChanged.connect(self.clear_bounds_cache)
+        self.max_int_mrad_ctl.valueChanged.connect(self.update_line)
+        self.max_cutoff_mrad_line.sigDragged.connect(self.moved_line)
+
         self.min_bkg_mrad_ctl.valueChanged.connect(self.clear_bounds_cache)
         self.max_bkg_mrad_ctl.valueChanged.connect(self.clear_bounds_cache)
         self.clear_graph_ctl.clicked.connect(self.clear_graph)
 
+
     def clear_bounds_cache(self):
         self._bounds_cache = None
+
     def integration_bounds_dict(self) -> dict:
         if self._bounds_cache is None:
             px_bound = lambda value: round(value/self.mrad_per_px_ctl.value()+self.image_dimensions[0]/2)
@@ -326,8 +370,19 @@ class Spectrometer_Interface(QMainWindow):
             max_bkg_px = px_bound(self.max_bkg_mrad_ctl.value())
             self._bounds_cache = dict({('bkg', (min_bkg_px, max_bkg_px)), ('signal', (min_int_px, max_int_px))})
         return self._bounds_cache
+    
+    def update_line(self) -> None:
+        self.min_cutoff_mrad_line.setPos(self.min_int_mrad_ctl.value())
+        self.max_cutoff_mrad_line.setPos(self.max_int_mrad_ctl.value())
+        self.min_cutoff_energy_line.setPos(self.min_cutoff_energy_ctl.value())
+        self.max_cutoff_energy_line.setPos(self.max_cutoff_energy_ctl.value())
 
-
+    def moved_line(self) -> None:
+        self.min_int_mrad_ctl.setValue(self.min_cutoff_mrad_line.value())
+        self.max_int_mrad_ctl.setValue(self.max_cutoff_mrad_line.value())
+        self.min_cutoff_energy_ctl.setValue(self.min_cutoff_energy_line.value())
+        self.max_cutoff_energy_ctl.setValue(self.max_cutoff_energy_line.value())
+        
 
     def update_refpoint(self) -> None:
         if self.reference_method.currentText() == "Zero":
@@ -347,28 +402,34 @@ class Spectrometer_Interface(QMainWindow):
         Enable or disable elements on interface
         :return:
         '''
-        if self.enable_controls.isChecked():
+        is_checked = self.enable_controls.isChecked()
+        if is_checked:
             self.locked_unlocked.setText('Unlocked')
         else:
             self.locked_unlocked.setText('Locked')
 
-        self.min_cutoff_energy_ctl.setEnabled(self.enable_controls.isChecked())
-        self.max_cutoff_energy_ctl.setEnabled(self.enable_controls.isChecked())
-        self.flip_image.setEnabled(self.enable_controls.isChecked())
-        self.lanex_offset_mm_ctl.setEnabled(self.enable_controls.isChecked())
-        self.config_path_button.setEnabled(self.enable_controls.isChecked())
-        self.config_path_box.setEnabled(self.enable_controls.isChecked())
-        self.px_per_mm_ctl.setEnabled(self.enable_controls.isChecked())
-        self.mrad_per_px_ctl.setEnabled(self.enable_controls.isChecked())
-        self.pC_per_count_ctl.setEnabled(self.enable_controls.isChecked())
-        self.reference_method.setEnabled(self.enable_controls.isChecked())
-        self.energy_resolution_ctl.setEnabled(self.enable_controls.isChecked())
-        self.refpoint_x_or_energy.setEnabled(self.enable_controls.isChecked())
-        self.refpoint_y_or_s.setEnabled(self.enable_controls.isChecked())
-        self.min_int_mrad_ctl.setEnabled((self.enable_controls.isChecked()))
-        self.max_int_mrad_ctl.setEnabled((self.enable_controls.isChecked()))
-        self.min_bkg_mrad_ctl.setEnabled((self.enable_controls.isChecked()))
-        self.max_bkg_mrad_ctl.setEnabled((self.enable_controls.isChecked()))
+        self.min_cutoff_energy_ctl.setEnabled(is_checked)
+        self.max_cutoff_energy_ctl.setEnabled(is_checked)
+        self.flip_image.setEnabled(is_checked)
+        self.lanex_offset_mm_ctl.setEnabled(is_checked)
+        self.config_path_button.setEnabled(is_checked)
+        self.config_path_box.setEnabled(is_checked)
+        self.px_per_mm_ctl.setEnabled(is_checked)
+        self.mrad_per_px_ctl.setEnabled(is_checked)
+        self.pC_per_count_ctl.setEnabled(is_checked)
+        self.reference_method.setEnabled(is_checked)
+        self.energy_resolution_ctl.setEnabled(is_checked)
+        self.refpoint_x_or_energy.setEnabled(is_checked)
+        self.refpoint_y_or_s.setEnabled(is_checked)
+        self.min_int_mrad_ctl.setEnabled(is_checked)
+        self.max_int_mrad_ctl.setEnabled(is_checked)
+        self.min_bkg_mrad_ctl.setEnabled(is_checked)
+        self.max_bkg_mrad_ctl.setEnabled(is_checked)
+        self.min_cutoff_mrad_line.setMovable(is_checked)
+        self.max_cutoff_mrad_line.setMovable(is_checked)
+        self.min_cutoff_energy_line.setMovable(is_checked)
+        self.max_cutoff_energy_line.setMovable(is_checked)
+
 
     def change_energy_bounds(self) -> None:
         '''
