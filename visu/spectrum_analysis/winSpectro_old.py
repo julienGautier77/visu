@@ -39,12 +39,13 @@ class WINSPECTRO(Build_Interface.Spectrometer_Interface):
         self.parent = parent
         p = pathlib.Path(__file__)
         self.icon = str(p.parent) + sepa + 'icons' + sepa
-        self.default_deconv_calib = str(p.parent) + sepa
         self.data_dict = {}
 
         # (Main window setup from parent class)
 
         # Load calibration data
+        p = pathlib.Path(__file__)
+        self.default_deconv_calib = str(p.parent) + sepa
         self.load_calib()
         self.graph_setup()
         self.actions_setup()
@@ -61,8 +62,9 @@ class WINSPECTRO(Build_Interface.Spectrometer_Interface):
             cal_file = self.default_deconv_calib + self.config_path_box.text()
 
         self.calibration_data = Deconvolve.CalibrationData(cal_file)
-
+        self.calibration_data_json = None
         # Create initialization object for spectrum deconvolution
+
         initImage = Deconvolve.spectrum_image(im_path=self.default_deconv_calib +
                                                       'calib_image.TIFF',
                                               revert=True, rotate=self.rotate_image, k=self.angle.currentData())
@@ -96,8 +98,8 @@ class WINSPECTRO(Build_Interface.Spectrometer_Interface):
         print(f'Recalibrating')
         cal_file = self.config_path_box.text()
         self.load_calib(cal_file)
-        self.graph_setup()    
-        
+        self.graph_setup()
+    
     #####################################################################
     #                    Interface action signals
     #####################################################################
@@ -123,44 +125,37 @@ class WINSPECTRO(Build_Interface.Spectrometer_Interface):
     #####################################################################
     def Display(self, data):
 
+        if self.rotate_image.isChecked():
+            k = self.angle.currentData()
+            data = np.rot90(data, k)
                         
         # Deconvolve and display 2D data
         if self.flip_image.isChecked():
             self.deconvolved_spectrum.deconvolve_data(np.flip(data.T, axis=1))
         else:
             self.deconvolved_spectrum.deconvolve_data(data.T)
-        #self.image_histogram.setImage(self.deconvolved_spectrum.image.T, autoLevels=True, autoDownsample=True)
         self.image_histogram.setImage(self.deconvolved_spectrum.image.T, autoLevels=True, autoDownsample=True)
 
         # Integrate over angle and show graph
         self.deconvolved_spectrum.integrate_spectrum(self.integration_bounds_dict()['signal'],
                                                      self.integration_bounds_dict()['bkg'])
         if self.stack_graphs_toggle.isChecked() == False:
-            self.dnde_image.clear()      
+            self.dnde_image.clear()
+            
         self.dnde_image.plot(self.deconvolved_spectrum.energy, self.deconvolved_spectrum.integrated_spectrum)
-        self.spectro_dict(["test0", "test1"])
+        self.spectro_dict()
 
-    def spectro_dict(self, temp_dataArray):
-        print("spectro_dict method is called")
+    def spectro_dict(self, shotNum: int=1):
         # Creation of dictionary to pass to diagServ ; cut energy from interface to remove noise
         self.spectro_data_dict = Spectrum_Features.build_dict(self.deconvolved_spectrum.energy,
                                                               self.deconvolved_spectrum.integrated_spectrum,
-                                                              temp_dataArray[1],
+                                                              shotNum,
                                                               energy_bounds=[self.min_cutoff_energy_ctl.value(),
                                                                              self.max_cutoff_energy_ctl.value()])
-  
-
         # Display values on interface
-        if self.spectro_data_dict['Charge'] < 0.7:
-            self.mean_energy_ind.setValue(1e-6)
-            self.stdev_energy_ind.setValue(1e-6)
-            self.spectro_data_dict['Mean energy'] = 1e-6
-            self.spectro_data_dict['Std energy'] = 1e-6
-            self.charge_ind.setValue(self.spectro_data_dict['Charge'])
-        else:
-            self.mean_energy_ind.setValue(self.spectro_data_dict['Mean energy'])
-            self.stdev_energy_ind.setValue(self.spectro_data_dict['Std energy'])
-            self.charge_ind.setValue(self.spectro_data_dict['Charge'])
+        self.mean_energy_ind.setValue(self.spectro_data_dict['Mean energy'])
+        self.stdev_energy_ind.setValue(self.spectro_data_dict['Std energy'])
+        self.charge_ind.setValue(self.spectro_data_dict['Charge'])
         self.signalSpectroDict.emit(self.spectro_data_dict)  # Signal for diagServ
 
 

@@ -169,12 +169,12 @@ class Spectrometer_Interface(QMainWindow):
 
         rotate_image_label = QLabel('Rotate image')
         self.rotate_image = QCheckBox()
-        self.rotate_image.setChecked(False)
+        self.rotate_image.setChecked(True)
 
         self.angle = QComboBox()
         self.angle.addItem("+90°", 1)
         self.angle.addItem("-90°", -1)
-
+        
         lanex_offset_label = QLabel('Lanex Offset (+ to low E)')
         self.lanex_offset_mm_ctl = Numeric_IO(min=-100, max=100, incr=0.1, value=0, enabled=True)
 
@@ -185,24 +185,24 @@ class Spectrometer_Interface(QMainWindow):
         self.mrad_per_px_ctl = Numeric_IO(min=1e-6, max=1, incr=0.1, value=0.1, enabled=True)
 
         pC_per_count_label = QLabel('pC/count ×10<sup>-6</sup>')
-        self.pC_per_count_ctl = Numeric_IO(min=0.001, max=1000, incr=0.1, value=4.33, enabled=True)
+        self.pC_per_count_ctl = Numeric_IO(min=0.001, max=1000, incr=0.1, value=8.66, enabled=True)
 
         reference_label = QLabel('Ref. Method')
         self.reference_method = QComboBox()
-        self.reference_method.addItem('Zero')
-        self.reference_method.addItem('RefPoint')
+        self.reference_method.addItem('Zero', 0)
+        self.reference_method.addItem('RefPoint', 1)
 
         self.reference_pts_label = QLabel('(x, y): (px, px)')
-        self.refpoint_x_or_energy = Numeric_IO(min=0, max=10000, incr=1, value=1953, enabled=True)
-        self.refpoint_y_or_s = Numeric_IO(min=0, max=10000, incr=1, value=650, enabled=True)
+        self.refpoint_x_or_energy = Numeric_IO(min=0, max=10000, incr=1, value=1743, enabled=True)
+        self.refpoint_y_or_s = Numeric_IO(min=0, max=10000, incr=1, value=530, enabled=True)
 
 
         grid_layout_calib.addWidget(flip_image_label, 0, 0)
         grid_layout_calib.addWidget(self.flip_image, 0, 2)
 
-        grid_layout_calib.addWidget(rotate_image_label, 1, 0)
-        grid_layout_calib.addWidget(self.rotate_image, 1, 1)
-        grid_layout_calib.addWidget(self.angle, 1, 2)
+        #grid_layout_calib.addWidget(rotate_image_label, 1, 0)
+        #grid_layout_calib.addWidget(self.rotate_image, 1, 1)
+        #grid_layout_calib.addWidget(self.angle, 1, 2)
 
 
         grid_layout_calib.addWidget(lanex_offset_label, 2, 0)
@@ -264,7 +264,7 @@ class Spectrometer_Interface(QMainWindow):
         self.max_bkg_mrad_ctl = Numeric_IO(min=-5000, max=10000, incr=1, value=-35)
 
         energy_resolution_label = QLabel('Energy resolution (MeV)')
-        self.energy_resolution_ctl = Numeric_IO(min=0.1, max=10, incr=0.5, value=0.5, enabled=True)
+        self.energy_resolution_ctl = Numeric_IO(min=0.01, max=10, incr=0.5, value=0.1, enabled=True)
 
         mean_energy_label = QLabel('Mean energy (MeV)')
         self.mean_energy_ind = Numeric_IO(enabled=False)
