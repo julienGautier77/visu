@@ -22,7 +22,7 @@ import pyqtgraph as pg
 from PyQt6.QtWidgets import QApplication, QVBoxLayout, QHBoxLayout, QPushButton
 from PyQt6.QtWidgets import QInputDialog, QSlider, QLabel, QSizePolicy, QMenu
 from PyQt6.QtWidgets import QFileDialog, QMessageBox, QLineEdit, QDialog, QDialogButtonBox
-from PyQt6.QtWidgets import QMainWindow, QToolButton, QStatusBar, QFrame, QFormLayout
+from PyQt6.QtWidgets import QMainWindow, QToolButton, QStatusBar, QFrame, QFormLayout, QWidget
 from PyQt6.QtGui import QShortcut, QAction
 from PyQt6 import QtCore, QtGui
 from PyQt6.QtCore import pyqtSlot, Qt
@@ -218,7 +218,9 @@ class SEE(QMainWindow):
                                  name=self.name)
 
         self.winCrop = WINCROP(parent=self, conf=self.conf)
-        
+
+        self.winHistogram = WINHISTOGRAM(parent=self)
+
         self.path = path
         self.setWindowTitle('Visualization'+'       v.' + self.version)
         self.bloqKeyboard = True  # block cross by keyboard
@@ -389,6 +391,9 @@ class SEE(QMainWindow):
         self.checkBoxAutoSave.triggered.connect(self.autoSaveColor)
         self.toolBar.addAction(self.checkBoxAutoSave)
         self.fileMenu.addAction(self.checkBoxAutoSave)
+        self.checkBoxAutoSave.toggled.connect(
+            lambda checked: self.setToolButtonHighlight(self.checkBoxAutoSave, checked))
+        self.setToolButtonHighlight(self.checkBoxAutoSave, self.checkBoxAutoSave.isChecked())
 
         self.optionAutoSaveAct = QAction(QtGui.QIcon(self.icon+"Settings.png"),
                                          'Options', self)
@@ -483,6 +488,11 @@ class SEE(QMainWindow):
         self.toolBar.addAction(self.checkBoxScale)
         self.ImageMenu.addAction(self.checkBoxScale)
         self.checkBoxScale.triggered.connect(self.checkBoxScaleImage)
+        # toggled fires for both user clicks and programmatic setChecked(),
+        # so the green highlight always stays in sync with the real state
+        self.checkBoxScale.toggled.connect(
+            lambda checked: self.setToolButtonHighlight(self.checkBoxScale, checked))
+        self.setToolButtonHighlight(self.checkBoxScale, self.checkBoxScale.isChecked())
 
         self.checkBoxColor = QAction(QtGui.QIcon(self.icon+"colors-icon.png"),
                                      'Color on', self)
@@ -500,6 +510,12 @@ class SEE(QMainWindow):
         self.checkBoxHist.setChecked(False)
         self.checkBoxHist.triggered.connect(self.HIST)
         self.ImageMenu.addAction(self.checkBoxHist)
+
+        self.histoImageAction = QAction('Show Image Histogram', self)
+        self.histoImageAction.setCheckable(True)
+        self.histoImageAction.setChecked(False)
+        self.histoImageAction.triggered.connect(self.ShowHistogramImage)
+        self.ImageMenu.addAction(self.histoImageAction)
 
         self.checkBoxSetColorBarValue = QAction(
                                      'set color Bar value', self)
@@ -530,7 +546,9 @@ class SEE(QMainWindow):
         self.ImageMenu.addAction(self.checkBoxBg)
         self.toolBar.addAction(self.checkBoxBg)
         self.checkBoxBg.triggered.connect(self.BackgroundF)
-
+        self.checkBoxBg.toggled.connect(
+            lambda checked: self.setToolButtonHighlight(self.checkBoxBg, checked))
+        self.setToolButtonHighlight(self.checkBoxBg, self.checkBoxBg.isChecked())
         # streaming
         self.checkBoxStream = QAction(QtGui.QIcon(self.icon+"antennaOff.png"),'Streaming Off', self)
         self.checkBoxStream.setCheckable(True)
@@ -1322,6 +1340,9 @@ class SEE(QMainWindow):
         self.Coupe()  # self.PlotXY() # graph update
         self.zoomRectupdate()  # update zoom rect
 
+        if self.winHistogram.isWinOpen:
+            self.winHistogram.Display(self.data)  # update live image histogram
+
         if self.encercled is True:
             if self.winEncercled.isWinOpen is True:
                 # self.signalEng.emit(self.data)
@@ -1851,6 +1872,17 @@ class SEE(QMainWindow):
         else:
             self.winImage.addItem(self.hist)
 
+    def ShowHistogramImage(self):
+        ''' open/close the live histogram (pixel intensity distribution) window
+        toggled from the Image menu, updates live each time a new image is displayed
+        '''
+        if self.histoImageAction.isChecked():
+            self.open_widget(self.winHistogram)
+            self.winHistogram.Display(self.data)
+        else:
+            if self.winHistogram.isWinOpen:
+                self.winHistogram.hide()
+
     def Gauss(self):
         '''gauss filter
         '''
@@ -2219,6 +2251,18 @@ class SEE(QMainWindow):
             self.checkBoxScale.setIcon(QtGui.QIcon(self.icon+"minimize.png"))
             self.checkBoxScale.setText('Auto Scale Off')
 
+    def setToolButtonHighlight(self, action, checked):
+        ''' soft, semi-transparent green highlight on a toolbar button
+        when its checkable action is on (used for autoscale and autosave)
+        '''
+        btn = self.toolBar.widgetForAction(action)
+        if btn is not None:
+            if checked:
+                btn.setStyleSheet(
+                    "QToolButton { background-color: rgba(0, 255, 0, 80); border-radius: 4px; }")
+            else:
+                btn.setStyleSheet("")
+
     def autoSaveColor(self):
 
         if self.checkBoxAutoSave.isChecked():
@@ -2287,12 +2331,147 @@ class SEE(QMainWindow):
                 self.winFFT1D.close()
         if self.winCrop.isWinOpen is True:
             self.winCrop.close()
+        if self.winHistogram.isWinOpen is True:
+            self.winHistogram.close()
         if self.spectro is True:
             if self.winSpectro.isWinOpen is True:
                 self.winSpectro.close()
         
         if IS_LHC:
             self.serv.stop()
+
+
+class WINHISTOGRAM(QWidget):
+    ''' Standalone window showing the live histogram (pixel intensity
+    distribution) of the image currently displayed in SEE.
+    Opened/closed from the Image menu ('Show Image Histogram') and
+    refreshed automatically each time SEE.Display() is called, as long
+    as the window is open.
+    '''
+
+    def __init__(self, parent=None):
+        super().__init__()
+        self.parentSEE = parent
+        self.isWinOpen = False
+        self.nbins = 256
+        self.histLocked = False
+        self.histEdges = None
+        self.histCounts = None
+        self.setWindowTitle('Image Histogram')
+        if parent is not None:
+            try:
+                self.setWindowIcon(QIcon(parent.icon + 'LOA.png'))
+            except Exception:
+                pass
+        self.setup()
+
+    def setup(self):
+        self.histPlot = pg.PlotWidget()
+        self.histPlot.setLabel('bottom', 'pixel value')
+        self.histPlot.setLabel('left', 'counts')
+        self.histPlot.showGrid(x=True, y=True, alpha=0.3)
+        try:
+            self.curve = self.histPlot.plot([0, 1], [0], stepMode="center",
+                                            fillLevel=0,
+                                            brush=(0, 170, 255, 120),
+                                            pen=pg.mkPen('c', width=1))
+        except TypeError:
+            # older pyqtgraph versions use a boolean stepMode
+            self.curve = self.histPlot.plot([0, 1], [0], stepMode=True,
+                                            fillLevel=0,
+                                            brush=(0, 170, 255, 120),
+                                            pen=pg.mkPen('c', width=1))
+        layout = QVBoxLayout()
+        layout.setContentsMargins(4, 4, 4, 4)
+        layout.addWidget(self.histPlot)
+
+        # crosshair + readout of the value under the mouse
+        self.vLineHist = pg.InfiniteLine(angle=90, movable=False, pen='y')
+        self.hLineHist = pg.InfiniteLine(angle=0, movable=False, pen='y')
+        self.histPlot.addItem(self.vLineHist, ignoreBounds=True)
+        self.histPlot.addItem(self.hLineHist, ignoreBounds=True)
+        self.vLineHist.hide()
+        self.hLineHist.hide()
+
+        self.label_HistMouse = QLabel('value =        counts = ')
+        layout.addWidget(self.label_HistMouse)
+
+        self.setLayout(layout)
+        self.resize(500, 380)
+
+        self.proxyHist = pg.SignalProxy(self.histPlot.scene().sigMouseMoved,
+                                        rateLimit=60, slot=self.mouseMovedHist)
+        self.histPlot.scene().sigMouseClicked.connect(self.mouseClickHist)
+
+    def mouseClickHist(self, evt):
+        ''' click on the histogram plot locks/unlocks the crosshair
+        on its current position (same idea as the cross lock on the
+        main image)
+        '''
+        self.histLocked = not self.histLocked
+        if self.histLocked:
+            self.vLineHist.setPen('r')
+            self.hLineHist.setPen('r')
+        else:
+            self.vLineHist.setPen('y')
+            self.hLineHist.setPen('y')
+
+    def mouseMovedHist(self, evt):
+        ''' move the crosshair along the histogram curve (snapped to the
+        actual bin under the mouse) and show its value/counts.
+        Does nothing while the crosshair is locked (after a click).
+        '''
+        if self.histLocked:
+            return
+        if self.histEdges is None or self.histCounts is None:
+            return
+
+        pos = evt[0]  # SignalProxy turns original arguments into a tuple
+        vb = self.histPlot.plotItem.vb
+        if vb.sceneBoundingRect().contains(pos):
+            mousePoint = vb.mapSceneToView(pos)
+            x = mousePoint.x()
+
+            # snap to the histogram bin under the mouse
+            idx = int(np.searchsorted(self.histEdges, x) - 1)
+            idx = int(np.clip(idx, 0, len(self.histCounts) - 1))
+            xVal = 0.5 * (self.histEdges[idx] + self.histEdges[idx + 1])
+            yVal = self.histCounts[idx]
+
+            self.label_HistMouse.setText(f'value = {xVal:.2f}    counts = {int(yVal)}')
+            self.vLineHist.setPos(xVal)
+            self.hLineHist.setPos(yVal)
+            self.vLineHist.show()
+            self.hLineHist.show()
+        else:
+            self.vLineHist.hide()
+            self.hLineHist.hide()
+
+    def Display(self, data):
+        ''' compute the histogram of data and update the live plot
+        '''
+        try:
+            arr = np.asarray(data).ravel()
+            arr = arr[np.isfinite(arr)]
+            if arr.size == 0:
+                return
+            y, x = np.histogram(arr, bins=self.nbins)
+            self.histEdges = x
+            self.histCounts = y
+            self.curve.setData(x, y)
+        except Exception as e:
+            print('histogram update error : ', e)
+
+    def closeEvent(self, event):
+        ''' when closing the window
+        '''
+        self.isWinOpen = False
+        if self.parentSEE is not None:
+            try:
+                self.parentSEE.histoImageAction.setChecked(False)
+            except Exception:
+                pass
+        event.accept()
 
 
 class DialogColorBar(QDialog):
