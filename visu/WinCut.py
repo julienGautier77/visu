@@ -843,8 +843,21 @@ class GRAPHCUT(QMainWindow):
         ext = os.path.splitext(fichier)[1]
         
         if ext == '.txt':
-            self.cutData = np.genfromtxt(fichier, delimiter=" ")
-            self.PLOT(self.cutData)
+            loaded = np.genfromtxt(fichier, delimiter=" ")
+            # SaveF() écrit 2 colonnes [axis, cutData] dès que self.axis
+            # n'est pas None (cas quasi systématique venant de winMeas,
+            # qui fournit toujours un axe : Tir/Shoot ou position moteur).
+            # Sans cette reconstruction, le tableau 2D entier était passé
+            # tel quel comme cutData avec axis=None, ce qui faisait planter
+            # PLOT() (max() sur un tableau 2D) : c'est pour ça que le
+            # bouton "Open" ne fonctionnait pas pour ces fichiers.
+            if loaded.ndim == 2 and loaded.shape[1] == 2:
+                axisLoaded = loaded[:, 0]
+                self.cutData = loaded[:, 1]
+                self.PLOT(self.cutData, axis=axisLoaded)
+            else:
+                self.cutData = loaded
+                self.PLOT(self.cutData)
         else:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Icon.Critical)
@@ -957,15 +970,46 @@ class GRAPHCUT(QMainWindow):
                 
         self.PLOT(cutData, axis=axis, label=label, labelY=labelY)
     
+    # Au-delà de ce nombre de points, les symboles par point (triangle,
+    # etc.) sont automatiquement désactivés sur la courbe principale :
+    # leur rendu coûte cher et grandit avec le nombre de points à chaque
+    # mise à jour (mesuré : ~0.07 ms/appel sans symbole contre ~6 ms/appel
+    # avec, à 5000 points), ce qui devient la cause principale de
+    # ralentissement/blocage sur les longues acquisitions. En dessous du
+    # seuil, l'affichage garde les symboles configurés (plus lisible pour
+    # un petit nombre de points).
+    SYMBOL_POINTS_THRESHOLD = 300
+
     def PLOT(self, cutData, axis=None, label=None, labelY=None):
         self.label = label
         self.labelY = labelY
         self.cutData = cutData
         self.axis = axis
         
+        if len(cutData) == 0:
+            # Rien à tracer (ex: après un Reset côté winMeas) : on vide
+            # juste la courbe affichée, sans planter sur max()/min() d'une
+            # liste vide et sans polluer l'historique des plots.
+            if hasattr(self, 'pCut'):
+                self.pCut.setData([], [])
+            return
+        
         # Ajouter à l'historique si activé
         if self.keepPlotsAct.isChecked():
             self.addToHistory(cutData, axis=axis, label=label)
+        
+        # Symbole effectif à utiliser sur la courbe principale, dégradé
+        # automatiquement pour rester rapide sur les grands jeux de données
+        effectiveSymbol = self.symbol if len(cutData) <= self.SYMBOL_POINTS_THRESHOLD else None
+        
+        # Si on désactive le symbole ET qu'aucune ligne n'est configurée
+        # (pen=None, le style utilisé par winMeas : uniquement des
+        # symboles, pas de trait), la courbe deviendrait totalement
+        # invisible au-delà du seuil. On retombe alors sur une fine ligne
+        # blanche pour garder les données visibles dans tous les cas.
+        effectivePen = self.pen
+        if effectiveSymbol is None and self.pen is None:
+            effectivePen = pg.mkPen('w', width=1)
         
         self.dimy = max(cutData)
         self.minY = min(cutData)
@@ -975,16 +1019,25 @@ class GRAPHCUT(QMainWindow):
             self.data = self.cutData
             
             if self.clearPlot is False:
-                self.pCut = self.winPLOT.plot(self.cutData, clear=self.clearPlot, symbol=self.symbol, symbolPen=self.symbolPen, symbolBrush=self.symbolBrush, pen=self.pen)          
+                self.pCut = self.winPLOT.plot(self.cutData, clear=self.clearPlot, symbol=effectiveSymbol, symbolPen=self.symbolPen, symbolBrush=self.symbolBrush, pen=effectivePen)          
             else:
                 self.pCut.setData(self.data)
             self.axisOn = False
         else:
-            self.axis = np.array(axis)
+            # Conversion en tableaux numpy AVANT toute utilisation
+            # (notamment .flatten() juste après) : sans ça, avec des
+            # données fournies en listes Python de scalaires (le cas de
+            # winMeas), self.cutData[-1] est un simple float sans méthode
+            # .flatten(), ce qui provoquait une exception silencieusement
+            # avalée par Qt à chaque tir (la courbe ne se mettait alors
+            # jamais à jour, donnant l'impression d'un graphique figé).
+            self.cutData = np.array(self.cutData)
+            self.axis = np.array(self.axis)
+
             self.dimx = max(self.axis)
             self.minX = min(self.axis)
             if self.clearPlot is False:
-                self.pCut = self.winPLOT.plot(y=self.cutData, x=self.axis, clear=self.clearPlot, symbol=self.symbol, symbolPen=self.symbolPen, symbolBrush=self.symbolBrush, pen=self.pen)
+                self.pCut = self.winPLOT.plot(y=self.cutData, x=self.axis, clear=self.clearPlot, symbol=effectiveSymbol, symbolPen=self.symbolPen, symbolBrush=self.symbolBrush, pen=effectivePen)
             else:
                 if self.lastColored is True:
                     
@@ -992,8 +1045,8 @@ class GRAPHCUT(QMainWindow):
                         self.winPLOT.removeItem(self.scatter_point)
                         
                     self.scatter_point = pg.ScatterPlotItem(
-                        x=self.axis[-1].flatten(), 
-                        y=self.cutData[-1].flatten(), 
+                        x=self.axis[-1:], 
+                        y=self.cutData[-1:], 
                         pen=None,
                         symbol='d',
                         brush=pg.mkBrush(255, 0, 0),
@@ -1002,13 +1055,19 @@ class GRAPHCUT(QMainWindow):
                         name='Last Shoot')
                     self.winPLOT.addItem(self.scatter_point)
                     self.scatter = True
-                    self.uniqueAxis = np.unique(self.axis)
-                    self.cutData = np.array(self.cutData)
-                    self.axis = np.array(self.axis)
-                    self.moy = np.array([np.mean(self.cutData[self.axis == val]) for val in self.uniqueAxis])
+
+                    # Moyenne par position unique, vectorisée (np.unique +
+                    # np.bincount) au lieu d'une boucle Python recalculant
+                    # tout depuis zéro à chaque tir (O(n²) avec l'ancienne
+                    # méthode, cause de ralentissement avec beaucoup de
+                    # données).
+                    self.uniqueAxis, inverse = np.unique(self.axis, return_inverse=True)
+                    sums = np.bincount(inverse, weights=self.cutData)
+                    counts = np.bincount(inverse)
+                    self.moy = sums / counts
                     
-                    self.pCut2.setData(y=self.moy, x=self.uniqueAxis, clear=False, symbol='o', symbolPen=self.symbolPen, symbolBrush='g', pen=self.pen, name='Mean')
-                self.pCut.setData(y=self.cutData[:-1], x=self.axis[:-1], clear=self.clearPlot, symbol=self.symbol, symbolPen=self.symbolPen, symbolBrush=self.symbolBrush, pen=self.pen)
+                    self.pCut2.setData(y=self.moy, x=self.uniqueAxis, clear=False, symbol='o' if len(self.uniqueAxis) <= self.SYMBOL_POINTS_THRESHOLD else None, symbolPen=self.symbolPen, symbolBrush='g', pen=self.pen, name='Mean')
+                self.pCut.setData(y=self.cutData[:-1], x=self.axis[:-1], clear=self.clearPlot, symbol=effectiveSymbol, symbolPen=self.symbolPen, symbolBrush=self.symbolBrush, pen=effectivePen)
     
             self.axisOn = True
             

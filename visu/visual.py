@@ -140,7 +140,7 @@ class SEE(QMainWindow):
             'color': None,
             'roiCross': False,
             'aff': 'right',
-            'fft': False,
+            'fft': True,
             'meas': True,
             'encercled': True,
             'winFilter': True,
@@ -727,7 +727,8 @@ class SEE(QMainWindow):
         self.vbox2.addWidget(self.winImage)
         self.vbox2.setContentsMargins(0, 0, 0, 0)
 
-        self.p1 = self.winImage.addPlot()
+        # Image principale, placée en haut à droite de la grille (row=0, col=1)
+        self.p1 = self.winImage.addPlot(row=0, col=1)
         self.imh = pg.ImageItem()
         self.axeX = self.p1.getAxis('bottom')
         self.axeY = self.p1.getAxis('left')
@@ -740,6 +741,42 @@ class SEE(QMainWindow):
         self.p1.showAxis('top', show=False)
         self.p1.showAxis('left', show=False)
         self.p1.showAxis('bottom', show=False)
+
+        # Coupe verticale (profil selon Y) : à gauche de l'image, avec son
+        # axe Y lié à celui de l'image (zoom/pan synchronisés
+        # automatiquement, plus besoin de faire suivre le zoom manuellement).
+        # Axe des valeurs inversé pour que 0 soit contre l'image et que
+        # l'intensité grandisse en s'en éloignant (vers la gauche).
+        self.pProfileLeft = self.winImage.addPlot(row=0, col=0)
+        self.pProfileLeft.setYLink(self.p1)
+        self.pProfileLeft.setMouseEnabled(x=False, y=False)
+        self.pProfileLeft.showAxis('bottom', show=False)
+        self.pProfileLeft.showAxis('left', show=False)
+        self.pProfileLeft.invertX(True)
+        self.pProfileLeft.hide()  # affiché seulement si "Cross Section" est coché
+
+        # Coupe horizontale (profil selon X) : en dessous de l'image, avec
+        # son axe X lié à celui de l'image. Axe des valeurs inversé pour que
+        # 0 soit contre l'image et que l'intensité grandisse vers le bas.
+        self.pProfileBottom = self.winImage.addPlot(row=1, col=1)
+        self.pProfileBottom.setXLink(self.p1)
+        self.pProfileBottom.setMouseEnabled(x=False, y=False)
+        self.pProfileBottom.showAxis('bottom', show=False)
+        self.pProfileBottom.showAxis('left', show=False)
+        self.pProfileBottom.invertY(True)
+        self.pProfileBottom.hide()
+
+        # L'état initial est "coupe non affichée" : on retire tout de suite
+        # les deux graphes de la grille (voir plus bas, PlotXY() les
+        # rajoutera dynamiquement quand la croix + "Cross Section" seront
+        # activées). Sans ça, la colonne/ligne qui leur est réservée serait
+        # visible (bande noire) dès le démarrage, avant toute interaction.
+        self.winImage.removeItem(self.pProfileLeft)
+        self.winImage.removeItem(self.pProfileBottom)
+        self.winImage.ci.layout.setColumnStretchFactor(0, 0)
+        self.winImage.ci.layout.setColumnStretchFactor(1, 1)
+        self.winImage.ci.layout.setRowStretchFactor(0, 1)
+        self.winImage.ci.layout.setRowStretchFactor(1, 0)
 
         if self.bloqKeyboard is True:  # cross : fixed (red) or not (yellow) 
             self.vLine = pg.InfiniteLine(angle=90, movable=False, pen='r')  
@@ -768,9 +805,16 @@ class SEE(QMainWindow):
                                         pen='b', movable=True)
         self.roiFluence.setPos([self.xc-(self.rx/2), self.yc-(self.ry/2)])
 
-        # text for fwhm on p1
-        self.textX = pg.TextItem(angle=-90)
-        self.textY = pg.TextItem()
+        # text for fwhm : textX correspond au profil vertical (curve2 /
+        # pProfileLeft), textY au profil horizontal (curve3 / pProfileBottom)
+        # anchor=(0.5, 0.5) : texte centré sur le point donné, indépendant
+        # du sens de l'axe (utile ici car les axes sont inversés)
+        # textX pivoté à -90° : la colonne de gauche est étroite, un texte
+        # horizontal déborderait et serait coupé par le bord du widget
+        self.textX = pg.TextItem(angle=-90, color='w', anchor=(0.5, 0.5))
+        self.textY = pg.TextItem(angle=0, color='w', anchor=(0.5, 0.5))
+        self.pProfileLeft.addItem(self.textX)
+        self.pProfileBottom.addItem(self.textY)
 
         # histogram
         self.hist = pg.HistogramLUTItem()
@@ -778,9 +822,12 @@ class SEE(QMainWindow):
         self.hist.autoHistogramRange()
         self.hist.gradient.loadPreset('flame')
         
-        #  XY  plot graph
-        self.curve2 = pg.PlotCurveItem()
-        self.curve3 = pg.PlotCurveItem()
+        #  Courbes de coupe (profils), chacune dans son propre graphe dédié
+        # plutôt que superposées sur l'image : plus lisibles, avec leur
+        # propre échelle auto-ajustée au lieu d'être normalisées/compressées
+        # pour tenir dans les bornes en pixels de l'image.
+        self.curve2 = self.pProfileLeft.plot(pen='y')  # profil vertical (coupeX vs yyy)
+        self.curve3 = self.pProfileBottom.plot(pen='y')    # profil horizontal (xxx vs coupeY)
 
         # slider to open multi file
         self.sliderImage = QSlider(Qt.Horizontal)
@@ -1165,12 +1212,21 @@ class SEE(QMainWindow):
     def Measurement(self):
         '''how widget for measurement on all image or ROI  (max, min mean ...)
         '''
+        # Échelle utilisée par winMeas pour x max/y max/x c.mass/y c.mass :
+        # si "Scale Factor" est coché dans les Préférences (winPref), on
+        # utilise stepX/stepY (µm/pixel réels) ; sinon pas d'échelle (1, 1,
+        # positions affichées en pixels bruts).
+        if self.winPref.checkBoxAxeScale.isChecked():
+            scalex, scaley = self.winPref.stepX, self.winPref.stepY
+        else:
+            scalex, scaley = 1, 1
+
         if self.ite == 'rect':
             self.RectChanged()
             if self.meas is True:
                 self.winM.setFile(self.nomFichier)
                 self.open_widget(self.winM)
-                MeasData=[self.cut,self.xini,self.yini,0,0]
+                MeasData=[self.cut,self.xini,self.yini,scalex,scaley]
                 self.signalMeas.emit(MeasData)
                 # self.winM.Display(self.cut)
 
@@ -1179,7 +1235,7 @@ class SEE(QMainWindow):
             if self.meas is True:
                 self.winM.setFile(self.nomFichier)
                 self.open_widget(self.winM)
-                MeasData=[self.cut,self.xini,self.yini,0,0]
+                MeasData=[self.cut,self.xini,self.yini,scalex,scaley]
                 self.signalMeas.emit(MeasData)
                 # self.winM.Display(self.cut)
 
@@ -1188,14 +1244,14 @@ class SEE(QMainWindow):
             if self.meas is True:
                 self.winM.setFile(self.nomFichier)
                 self.open_widget(self.winM)
-                MeasData=[self.cut,0,0,0,0]
+                MeasData=[self.cut,self.xini,self.yini,scalex,scaley]
                 self.signalMeas.emit(MeasData)
 
         if self.ite is None:
             if self.meas is True:
                 self.winM.setFile(self.nomFichier)
                 self.open_widget(self.winM)
-                MeasData=[self.data,0,0,0,0]
+                MeasData=[self.data,0,0,scalex,scaley]
                 self.signalMeas.emit(MeasData)
 
     def Pointing(self):
@@ -1247,6 +1303,63 @@ class SEE(QMainWindow):
         if self.ite is None:
             self.open_widget(self.winFFT)
             self.winFFT.Display(self.data)
+
+    def _fitViewFullImage(self, imgWidth, imgHeight):
+        """
+        Ajuste la vue pour que l'image COMPLÈTE [0,imgWidth]x[0,imgHeight]
+        reste toujours visible, sans jamais être recadrée.
+
+        pyqtgraph, avec setAspectLocked + setRange/autoRange, choisit
+        parfois de ROGNER un axe plutôt que d'agrandir l'autre pour
+        respecter l'aspect ratio (comportement incohérent selon l'état
+        interne) : l'axe X pouvait alors ne pas commencer à 0. Ici, on
+        calcule nous-mêmes la marge nécessaire sur l'axe le "moins large"
+        (relativement au widget), en n'agrandissant jamais l'image, jamais
+        en la rognant.
+        """
+        vb = self.p1.vb
+        pxW = vb.width()
+        pxH = vb.height()
+
+        if pxW <= 0 or pxH <= 0:
+            # Widget pas encore dimensionné : repli simple, sera recalculé
+            # correctement au premier resizeEvent
+            self.p1.setLimits(xMin=0, xMax=imgWidth, yMin=0, yMax=imgHeight)
+            self.p1.setRange(xRange=(0, imgWidth), yRange=(0, imgHeight), padding=0)
+            return
+
+        dataAspect = imgWidth / imgHeight
+        widgetAspect = pxW / pxH
+
+        if widgetAspect > dataAspect:
+            # Widget relativement plus large que l'image : on garde Y
+            # exact et on élargit X — toute la marge est ajoutée du côté
+            # positif (0 reste l'origine des deux axes, plus intuitif
+            # qu'un axe qui démarre en négatif)
+            newWidth = imgHeight * widgetAspect
+            xRange = (0, max(newWidth, imgWidth))
+            yRange = (0, imgHeight)
+        else:
+            # Widget relativement plus haut : on garde X exact et on
+            # élargit Y, toujours à partir de 0
+            newHeight = imgWidth / widgetAspect
+            xRange = (0, imgWidth)
+            yRange = (0, max(newHeight, imgHeight))
+
+        self.p1.setLimits(xMin=xRange[0], xMax=xRange[1], yMin=yRange[0], yMax=yRange[1])
+        self.p1.setRange(xRange=xRange, yRange=yRange, padding=0)
+
+    def resizeEvent(self, event):
+        """
+        Recalcule la vue si la fenêtre est redimensionnée : le ratio
+        largeur/hauteur du widget change, donc la marge nécessaire pour
+        garder l'image complète visible (sans la rogner) change aussi.
+        """
+        super().resizeEvent(event)
+        imgWidth = self.imh.width()
+        imgHeight = self.imh.height()
+        if imgWidth and imgHeight:
+            self._fitViewFullImage(imgWidth, imgHeight)
 
     @pyqtSlot(object)
     def Display(self, data):
@@ -1335,6 +1448,22 @@ class SEE(QMainWindow):
             self.imh.setImage(self.data, autoLevels=True, autoDownsample=True)
         else:
             self.imh.setImage(self.data, autoLevels=False, autoDownsample=True)
+
+        # Ajuste la vue pour que l'image COMPLÈTE reste toujours visible
+        # (jamais recadrée), quel que soit le ratio largeur/hauteur du
+        # widget — pyqtgraph, avec setAspectLocked + setRange, choisit
+        # parfois de ROGNER un axe plutôt que d'agrandir l'autre pour
+        # respecter l'aspect ratio (comportement incohérent selon l'état
+        # interne), ce qui pouvait faire commencer l'axe X ailleurs qu'à 0.
+        # Les graphes de coupe (axes liés à p1) suivent automatiquement.
+        # Ne réinitialise la vue que lors du premier affichage ou si la
+        # taille de l'image change (sinon ça annulerait le zoom de
+        # l'utilisateur à chaque nouvelle acquisition).
+        imgWidth = self.imh.width()
+        imgHeight = self.imh.height()
+        if imgWidth and imgHeight and (imgWidth, imgHeight) != getattr(self, '_lastImgSize', None):
+            self._fitViewFullImage(imgWidth, imgHeight)
+            self._lastImgSize = (imgWidth, imgHeight)
 
         # update
         self.Coupe()  # self.PlotXY() # graph update
@@ -1546,7 +1675,7 @@ class SEE(QMainWindow):
             self.p1.addItem(self.hLineCrossMax, ignoreBounds=False)
             self.p1.addItem(self.labelCmax)
             self.labelCmax.setColor('g')
-            self.labelCmax.setTextWidth(60)
+            self.labelCmax.setTextWidth(70)
             f = QFont()
             f.setPointSize(9)
             self.labelCmax.setFont(f)
@@ -1585,7 +1714,7 @@ class SEE(QMainWindow):
             self.ycMax = round(self.ycMax + y, 0)
             self.vLineCrossMax.setPos(self.xcMax)
             self.hLineCrossMax.setPos(self.ycMax)
-            self.labelCmax.setText(f"{self.xcMax}, {self.ycMax}, {round(self.data[int(self.xcMax),int(self.ycMax)], 1)}")
+            self.labelCmax.setText(f"x= {self.xcMax}\ny= {self.ycMax}\nv= {round(self.data[int(self.xcMax),int(self.ycMax)], 1)}")
             self.labelCmax.setPos(int(self.xcMax), int(self.ycMax))
 
         
@@ -1621,26 +1750,29 @@ class SEE(QMainWindow):
 
             self.label_CrossValue.setText(f' v.= {dataCross}')
 
-            coupeXnorm = (self.data.shape[0]/10)*(coupeX/coupeXMax)
-            coupeYnorm = (self.data.shape[1]/10)*(coupeY/coupeYMax)
+            # Les deux graphes de coupe (pProfileBottom/pProfileLeft) ont leur
+            # propre échelle auto-ajustée et leurs axes liés à ceux de
+            # l'image : plus besoin de normaliser/décaler les courbes pour
+            # les faire tenir dans les bornes en pixels de l'image, ni de
+            # faire suivre le zoom manuellement (l'axe lié s'en charge).
+            self.curve2.setData(coupeX, yyy, clear=True)
+            self.curve3.setData(xxx, coupeY, clear=True)
 
-            if self.plotRectZoomEtat == "ZoomOut":  # the cut line follow the zoom
-
-                self.curve2.setData(20 + self.xZoomMin + coupeXnorm, yyy, clear=True)
-                self.curve3.setData(xxx, 20 + self.yZoomMin + coupeYnorm, clear=True)
-
-            else:  # normalize the curves
-                self.curve2.setData(20+self.xminR + coupeXnorm, yyy, clear=True)
-                self.curve3.setData(xxx, 20+self.yminR + coupeYnorm, clear=True)
+            # Marge garantie au-delà du pic (30%), pour que le texte FWHM ait
+            # toujours de la place visible, peu importe l'auto-range par
+            # défaut de pyqtgraph (qui peut coller le texte pile au bord de
+            # la vue et le faire disparaître, notamment avec les axes
+            # inversés utilisés ici).
+            self.pProfileLeft.setXRange(0, coupeXMax * 1.3, padding=0)
+            self.pProfileBottom.setYRange(0, coupeYMax * 1.3, padding=0)
 
             # fwhm on the  X et Y curves if max  >20 counts if checked in winOpt
 
             if self.winPref.checkBoxFwhm.isChecked():  # show fwhm values on graph
-                xCXmax = np.amax(coupeXnorm)  # max
-                if xCXmax > 20:
+                if coupeXMax > 20:
                     try:
-                        fwhmX = self.fwhm(yyy, coupeXnorm, order=3)
-                    except:
+                        fwhmX = self.fwhm(yyy, coupeX, order=3)
+                    except Exception:
                         fwhmX = None
                     if fwhmX is None:
                         self.textX.setText('')
@@ -1649,18 +1781,15 @@ class SEE(QMainWindow):
                             self.textX.setText(f'fwhm = {round(fwhmX*self.winPref.stepX, 2)}um', color='w')
                         else:
                             self.textX.setText(f'fwhm = {round(fwhmX, 2)}', color='w')
-                    yCXmax = yyy[coupeXnorm.argmax()]
+                    yCXmax = yyy[np.argmax(coupeX)]
+                    self.textX.setPos(coupeXMax * 1.15, yCXmax)
 
-                    self.textX.setPos(xCXmax + 70, yCXmax + 60)
-
-                yCYmax = np.amax(coupeYnorm)  # max
-
-                if yCYmax > 20:
+                if coupeYMax > 20:
                     try:
-                        fwhmY = self.fwhm(xxx, coupeYnorm, order=3)
-                    except:
+                        fwhmY = self.fwhm(xxx, coupeY, order=3)
+                    except Exception:
                         fwhmY = None
-                    xCYmax = xxx[coupeYnorm.argmax()]
+                    xCYmax = xxx[np.argmax(coupeY)]
                     if fwhmY is None:
                         self.textY.setText('', color='w')
                     else:
@@ -1668,8 +1797,7 @@ class SEE(QMainWindow):
                             self.textY.setText(f'fwhm = {round(fwhmY*self.winPref.stepY, 2)}um', color='w')
                         else:
                             self.textY.setText(f'fwhm = {round(fwhmY, 2)}', color='w')
-
-                    self.textY.setPos(xCYmax-60, yCYmax+70)
+                    self.textY.setPos(xCYmax, coupeYMax * 1.15)
 
         else:  # write mouse value and not cross value
             
@@ -1692,27 +1820,51 @@ class SEE(QMainWindow):
     def PlotXY(self):
         '''plot curves on the  graph
         '''
+        # Les graphes de coupe doivent être visibles seulement si la croix
+        # est active ET que l'option "Cross Section" est cochée
+        showProfiles = (self.checkBoxPlot.isChecked() == 1 and self.winPref.labelCrossOpt.isChecked() == True)
+
+        if showProfiles:
+            # Remet les graphes de coupe dans la grille s'ils n'y sont plus
+            # (masquer seul via .hide() ne suffit pas : la grille pyqtgraph
+            # continue de réserver l'espace de la colonne/ligne, ce qui
+            # laissait des bandes noires autour de l'image quand les coupes
+            # étaient masquées)
+            if self.pProfileLeft not in self.winImage.ci.items:
+                self.winImage.addItem(self.pProfileLeft, row=0, col=0)
+                self.winImage.addItem(self.pProfileBottom, row=1, col=1)
+                self.winImage.ci.layout.setColumnStretchFactor(0, 1)
+                self.winImage.ci.layout.setColumnStretchFactor(1, 4)
+                self.winImage.ci.layout.setRowStretchFactor(0, 4)
+                self.winImage.ci.layout.setRowStretchFactor(1, 1)
+            self.pProfileLeft.show()
+            self.pProfileBottom.show()
+        else:
+            # Retire complètement les graphes de coupe de la grille : la
+            # colonne/ligne qui leur était réservée disparaît, et l'image
+            # reprend alors tout l'espace du widget. Il faut aussi remettre
+            # les facteurs d'étirement à zéro pour ces colonnes/lignes,
+            # sinon la grille continue de réserver leur proportion même
+            # sans élément dedans (bandes noires persistantes sinon).
+            if self.pProfileLeft in self.winImage.ci.items:
+                self.winImage.removeItem(self.pProfileLeft)
+                self.winImage.removeItem(self.pProfileBottom)
+                self.winImage.ci.layout.setColumnStretchFactor(0, 0)
+                self.winImage.ci.layout.setColumnStretchFactor(1, 1)
+                self.winImage.ci.layout.setRowStretchFactor(0, 1)
+                self.winImage.ci.layout.setRowStretchFactor(1, 0)
+
         if self.checkBoxPlot.isChecked() == 1:
             self.p1.addItem(self.vLine, ignoreBounds=False)
             self.p1.addItem(self.hLine, ignoreBounds=False)
-            if self.winPref.labelCrossOpt.isChecked() == True:
-                self.p1.addItem(self.curve2)
-                self.p1.addItem(self.curve3)
             self.p1.showAxis('left', show=True)
             self.p1.showAxis('bottom', show=True)
-            self.p1.addItem(self.textX)
-            self.p1.addItem(self.textY)
             if self.roiCross is True:
                 self.p1.addItem(self.ro1)
             self.Coupe()
         else:
             self.p1.removeItem(self.vLine)
             self.p1.removeItem(self.hLine)
-            #if self.winPref.labelCrossOpt.isChecked() == True:
-            self.p1.removeItem(self.curve2)
-            self.p1.removeItem(self.curve3)
-            self.p1.removeItem(self.textX)
-            self.p1.removeItem(self.textY)
             self.p1.showAxis('left', show=False)
             self.p1.showAxis('bottom', show=False)
             if self.roiCross is True:
