@@ -100,6 +100,10 @@ class OPTION(QWidget):
         self.checkBoxDate = QCheckBox('add date', self)
         self.checkBoxDate.setChecked(False)
         hbox2.addWidget(self.checkBoxDate)
+
+        self.checkBoxSaveOrg = QCheckBox('save origin data', self)
+        self.checkBoxSaveOrg.setChecked(False)
+        hbox3.addWidget(self.checkBoxSaveOrg)
         vbox1.addLayout(hbox3)
         
         hbox4 = QHBoxLayout()

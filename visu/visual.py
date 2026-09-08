@@ -857,6 +857,7 @@ class SEE(QMainWindow):
         # ROI definition 
         self.plotLine = pg.LineSegmentROI(positions=((0, 200), (200, 200)),
                                           movable=True, angle=0, pen='w')
+        self.textLineLength = pg.TextItem(angle=0, color='w', anchor=(0.5, 1))
 
         self.plotRect = pg.RectROI([self.xc, self.yc], [4*self.rx, self.ry],
                                    pen='g')
@@ -950,6 +951,7 @@ class SEE(QMainWindow):
         if self.ite == 'line':
             self.uncheckPolygones()
             self.p1.removeItem(self.plotLine)
+            self.p1.removeItem(self.textLineLength)
             self.ite = None
         else:
             self.uncheckPolygones()
@@ -971,7 +973,8 @@ class SEE(QMainWindow):
                                             movable=True, pen='w')
             self.plotLine.sigRegionChangeFinished.connect(self.LigneChanged)
             self.p1.addItem(self.plotLine)
-        
+            self.p1.addItem(self.textLineLength)
+
             self.LigneChanged()
 
     def LigneChanged(self):
@@ -987,23 +990,31 @@ class SEE(QMainWindow):
 
         self.cut = self.plotLine.getArrayRegion(self.data, self.imh)
 
+        self.linePoints = self.plotLine.listPoints()
+        self.lineXo = self.linePoints[0][0]
+        self.lineYo = self.linePoints[0][1]
+        self.lineXf = self.linePoints[1][0]
+        self.lineYf = self.linePoints[1][1]
+
         if self.winPref.checkBoxAxeScale.isChecked() == 1:
-            self.linePoints = self.plotLine.listPoints()
-            self.lineXo = self.linePoints[0][0]
-            self.lineYo = self.linePoints[0][1]
-            self.lineXf = self.linePoints[1][0]
-            self.lineYf = self.linePoints[1][1]
             # self.plotLineAngle = np.arctan((self.lineYf-self.lineYo)/(self.lineXf-self.lineXo))
 
-            step = (self.winPref.stepX**2*(self.lineXo-self.lineXf)**2 +
-                    self.winPref.stepY**2*(self.lineYo-self.lineYf)**2)
-            
-            step = step**0.5/self.cut.size
+            lineLength = (self.winPref.stepX**2*(self.lineXo-self.lineXf)**2 +
+                          self.winPref.stepY**2*(self.lineYo-self.lineYf)**2)**0.5
+
+            step = lineLength/self.cut.size
             self.absiLine = np.arange(0, (self.cut.size)*step, step)
+            self.textLineLength.setText(f'L = {round(lineLength, 2)} um')
+        else:
+            lineLength = ((self.lineXf-self.lineXo)**2 + (self.lineYf-self.lineYo)**2)**0.5
+            self.textLineLength.setText(f'L = {round(lineLength, 1)} px')
+
+        self.textLineLength.setPos((self.lineXo+self.lineXf)/2, (self.lineYo+self.lineYf)/2)
 
     def Rectangle(self):
         try:
             self.p1.removeItem(self.plotLine)
+            self.p1.removeItem(self.textLineLength)
             self.p1.removeItem(self.plotCercle)
             self.p1.removeItem(self.plotPentagon)
         except:
@@ -1096,6 +1107,7 @@ class SEE(QMainWindow):
         try:
             self.p1.removeItem(self.plotRect)
             self.p1.removeItem(self.plotLine)
+            self.p1.removeItem(self.textLineLength)
             self.p1.removeItem(self.plotPentagon)
         except:
             pass
@@ -1113,6 +1125,7 @@ class SEE(QMainWindow):
         try:
             self.p1.removeItem(self.plotRect)
             self.p1.removeItem(self.plotLine)
+            self.p1.removeItem(self.textLineLength)
             self.p1.removeItem(self.plotCercle)
         except:
             pass
@@ -1558,14 +1571,26 @@ class SEE(QMainWindow):
                 #print(nomFichier)
 
             #  print(nomFichier, 'saved')
+            bgSubtracted = self.checkBoxBg.isChecked() and self.winOpt.dataBgExist
+
             if self.winOpt.checkBoxTiff.isChecked():  # save as tiff
                 self.dataS = np.rot90(self.data, 1)
                 img_PIL = Image.fromarray(self.dataS)
                 img_PIL.save(str(nomFichier) + '.TIFF', format='TIFF')
+
+                if bgSubtracted and self.winOpt.checkBoxSaveOrg.isChecked():
+                    # background subtracted : also save the origin (non subtracted) data
+                    self.dataOrgS = np.rot90(self.dataOrg, 1)
+                    img_PIL_org = Image.fromarray(self.dataOrgS)
+                    img_PIL_org.save(str(nomFichier) + '_org.TIFF', format='TIFF')
             else:
                 np.savetxt(str(nomFichier)+'.txt', self.data)
 
-            if not self.winOpt.checkBoxServer.isChecked():  
+                if bgSubtracted and self.winOpt.checkBoxSaveOrg.isChecked():
+                    # background subtracted : also save the origin (non subtracted) data
+                    np.savetxt(str(nomFichier)+'_org.txt', self.dataOrg)
+
+            if not self.winOpt.checkBoxServer.isChecked():
                 # if not connected to server we had +1
                 self.numTir += 1
                 self.winOpt.setTirNumber(self.numTir)
@@ -2263,6 +2288,13 @@ class SEE(QMainWindow):
             img_PIL.save(str(fname[0]) + '.TIFF', format='TIFF')
             self.fileName.setText(fname[0]+'.TIFF')
 
+            bgSubtracted = self.checkBoxBg.isChecked() and self.winOpt.dataBgExist
+            if bgSubtracted and self.winOpt.checkBoxSaveOrg.isChecked():
+                # background subtracted : also save the origin (non subtracted) data
+                self.dataOrgS = np.rot90(self.dataOrg, 1)
+                img_PIL_org = Image.fromarray(self.dataOrgS)
+                img_PIL_org.save(str(fname[0]) + '_org.TIFF', format='TIFF')
+
         else:
             fname = QFileDialog.getSaveFileName(self, "Save data as txt", self.path)
             self.path = os.path.dirname(str(fname[0]))
@@ -2274,6 +2306,12 @@ class SEE(QMainWindow):
             time.sleep(0.1)
             np.savetxt(str(fichier)+'.txt', self.dataS)
             self.fileName.setText(fname[0]+str(ext))
+
+            bgSubtracted = self.checkBoxBg.isChecked() and self.winOpt.dataBgExist
+            if bgSubtracted and self.winOpt.checkBoxSaveOrg.isChecked():
+                # background subtracted : also save the origin (non subtracted) data
+                self.dataOrgS = np.rot90(self.dataOrg, 1)
+                np.savetxt(str(fichier)+'_org.txt', self.dataOrgS)
 
     @pyqtSlot(object)
     def newDataReceived(self, data):
