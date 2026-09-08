@@ -31,6 +31,9 @@ from PyQt6.QtGui import QFont
 import sys
 import time
 import os
+import re
+import subprocess
+import urllib.request
 
 import numpy as np
 import qdarkstyle  # pip install qdarkstyle https://github.com/ColinDuquesnoy/QDarkStyleSheet  sur conda
@@ -340,7 +343,13 @@ class SEE(QMainWindow):
         self.AboutMenu.addAction(self.aboutAction)
         self.aboutAction.triggered.connect(
             lambda: self.open_widget(self.aboutWidget))
-        
+
+        self.updateAction = QAction(QtGui.QIcon(self.icon+"download.png"),
+                                    'Check for update', self)
+
+        self.AboutMenu.addAction(self.updateAction)
+        self.updateAction.triggered.connect(self.checkUpdate)
+
         self.statusBar = QStatusBar()
         self.setContentsMargins(0, 0, 0, 0)
 
@@ -2312,6 +2321,76 @@ class SEE(QMainWindow):
                 # background subtracted : also save the origin (non subtracted) data
                 self.dataOrgS = np.rot90(self.dataOrg, 1)
                 np.savetxt(str(fichier)+'_org.txt', self.dataOrgS)
+
+    def checkUpdate(self):
+        '''
+        Compare the installed version to the one on GitHub (master branch)
+        and, if different, offer to update with :
+        pip install --upgrade git+https://github.com/julienGautier77/visu.git
+
+        On Linux visu is generally installed in a venv (loaenv) so pip works
+        without admin rights. On Windows it is often installed directly in
+        python's site-packages, so the update requires an administrator cmd.
+        '''
+        urlVersion = 'https://raw.githubusercontent.com/julienGautier77/visu/master/visu/__init__.py'
+        try:
+            with urllib.request.urlopen(urlVersion, timeout=5) as response:
+                content = response.read().decode('utf-8')
+            remoteVersion = re.search(r"__version__\s*=\s*['\"]([^'\"]+)['\"]", content).group(1)
+        except Exception as e:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Icon.Warning)
+            msg.setText("Unable to check for update")
+            msg.setInformativeText(str(e))
+            msg.setWindowTitle("Update")
+            msg.exec()
+            return
+
+        if remoteVersion == self.version:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Icon.Information)
+            msg.setText(f"Visu is up to date (version {self.version})")
+            msg.setWindowTitle("Update")
+            msg.exec()
+            return
+
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Icon.Question)
+        msg.setText(f"A new version is available : {remoteVersion} (installed : {self.version})")
+        msg.setInformativeText("Update now ?")
+        msg.setWindowTitle("Update")
+        msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        reply = msg.exec()
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        pipCmd = [sys.executable, '-m', 'pip', 'install', '--upgrade',
+                  'git+https://github.com/julienGautier77/visu.git']
+        try:
+            result = subprocess.run(pipCmd, capture_output=True, text=True, timeout=300)
+        except Exception as e:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Icon.Critical)
+            msg.setText("Update failed")
+            msg.setInformativeText(str(e))
+            msg.setWindowTitle("Update")
+            msg.exec()
+            return
+
+        msg = QMessageBox()
+        if result.returncode == 0:
+            msg.setIcon(QMessageBox.Icon.Information)
+            msg.setText(f"Visu has been updated to version {remoteVersion}.")
+            msg.setInformativeText("Restart the application to use the new version.")
+        else:
+            msg.setIcon(QMessageBox.Icon.Critical)
+            msg.setText("Update failed.")
+            msg.setInformativeText(
+                "On Windows, visu is often installed directly in python's site-packages : "
+                "open a command prompt as administrator and run :\n\n"
+                + ' '.join(pipCmd) + "\n\nError :\n" + result.stderr[-1500:])
+        msg.setWindowTitle("Update")
+        msg.exec()
 
     @pyqtSlot(object)
     def newDataReceived(self, data):
