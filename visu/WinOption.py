@@ -438,7 +438,7 @@ class THREADCLIENT(QtCore.QThread):
                 path = event['path']
                 if sys.platform == 'linux':
                     lpath = "/mnt/SJ_NAS/"
-                    path = path.replace("X:/", lpath)
+                    path = path.replace("X:/", lpath).replace("\\", "/")
                 self.pathSignal.emit(path)
             
             if 'autosave' in event:
@@ -474,7 +474,7 @@ class THREADCLIENT(QtCore.QThread):
             # Adaptation Linux
             if sys.platform == 'linux':
                 lpath = "/mnt/SJ_NAS/"      # pas tres propre mais bon ...
-                path = path.replace("X:/", lpath)
+                path = path.replace("X:/", lpath).replace("\\", "/")
             
             if str(self.parent.pathBox.text()) != path:
                 self.pathSignal.emit(path)
