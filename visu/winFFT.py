@@ -514,7 +514,7 @@ class SEEFFT(QWidget):
         
         if self.checkBoxBg.isChecked() is True and self.winOpt.dataBgExist is True:
             try:
-                self.data = self.data-self.winOpt.dataBg
+                self.data = self.data.astype(np.int32) - self.winOpt.dataBg.astype(np.int32)
             except:
                 msg = QMessageBox()
                 msg.setIcon(QMessageBox.Icon.Critical)

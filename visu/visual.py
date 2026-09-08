@@ -1370,7 +1370,8 @@ class SEE(QMainWindow):
                 self.winOpt.dataBgExist is True):
             self.labelFrameName.setText('bg sub  on frame :')
             try:
-                self.data = np.where( self.data - self.winOpt.dataBg > 0,  self.data - self.winOpt.dataBg, 0)
+                diff = self.data.astype(np.int32) - self.winOpt.dataBg.astype(np.int32)
+                self.data = np.clip(diff, 0, None).astype(self.data.dtype)
             except Exception:
                 self.winOpt.dataBgExist = False
                 self.checkBoxBg.setChecked(False)
