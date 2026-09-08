@@ -2135,7 +2135,12 @@ class SEE(QMainWindow):
 
         self.winHistory.Display(fichier)
 
-        self.newDataReceived(data)
+        self.data = data
+        self.dimy = np.shape(self.data)[1]
+        self.dimx = np.shape(self.data)[0]
+        self.dataOrgScale = self.data
+        self.dataOrg = self.data
+        self.Display(self.data)
         return self.data
     
     def StactF(self):
@@ -2181,7 +2186,11 @@ class SEE(QMainWindow):
         self.conf.setValue(self.name+"/path", chemin)
         self.conf.setValue(self.name+"/lastFichier", os.path.split(fichier)[1])
         self.data = datS.sum(axis=0)
-        self.newDataReceived(self.data)
+        self.dimy = np.shape(self.data)[1]
+        self.dimx = np.shape(self.data)[0]
+        self.dataOrgScale = self.data
+        self.dataOrg = self.data
+        self.Display(self.data)
 
 
     def OpenFNewWin(self):
@@ -2224,7 +2233,12 @@ class SEE(QMainWindow):
         self.newWindow = SEELIGHT(conf=self.conf, name=self.name)
         self.open_widget(self.newWindow)
         self.newWindow.setWindowTitle(fichier)
-        self.newWindow.newDataReceived(data)
+        self.newWindow.data = data
+        self.newWindow.dimy = np.shape(data)[1]
+        self.newWindow.dimx = np.shape(data)[0]
+        self.newWindow.dataOrgScale = data
+        self.newWindow.dataOrg = data
+        self.newWindow.Display(data)
 
     def SliderImgFct(self):  # open multiimage
 
