@@ -391,25 +391,35 @@ class MEAS(QMainWindow):
         # coûteux/instable sur de très longues acquisitions. Modifiable via
         # le menu Settings > "Limiter l'historique des graphes...".
         self.maxPlotHistory = int(self.conf.value(self.name + "/maxPlotHistory", 500))
-        
+
         # Configuration serveur ZMQ
         self.serverHost = 'localhost'
         self.serverPort = '5555'
-        
+
         # Configuration serveur ZMQ Publisher (envoi des données du widget MEAS)
         self.pubPort = '5556'
         self.pubServerActive = False
         self.pubThread = None
         self.pubWorker = None
-        
-        # Lecture config serveur si disponible
+
+        # Lecture config serveur (host/port/pubPort) si disponible
         fileconf = str(p.parent) + sepa + "confServer.ini"
         if os.path.exists(fileconf):
             confServer = QtCore.QSettings(fileconf, QtCore.QSettings.Format.IniFormat)
             self.serverHost = str(confServer.value('MAIN/server_host', 'localhost'))
             self.serverPort = str(confServer.value('MAIN/serverPort', '5555'))
             self.pubPort = str(confServer.value('MAIN/pubPort', '5556'))
-        
+
+        # Formule Python de la fonction User1, éditable par l'utilisateur
+        # depuis le menu Settings > "Configurer fonction User1..." (voir
+        # FctUser1()). La variable disponible dans la formule est self.data
+        # (image du tir courant), ex: round(self.data.max()-self.data.min())
+        # Stockée dans self.conf (le confVisu.ini de la caméra courante), et
+        # non dans un fichier partagé : chaque caméra peut ainsi avoir sa
+        # propre formule. Si rien n'a encore été défini pour cette caméra,
+        # on retombe simplement sur "0" (fonction neutre, comme avant).
+        self.user1Formula = str(self.conf.value(self.name + "/user1Formula", "0"))
+
         # Gestion moteurs RSAI via ZMQ
         self.motRSAI = kwds.get('motRSAI', False)
         self.zmqClient = None
@@ -483,11 +493,7 @@ class MEAS(QMainWindow):
         
         if self.motRSAI or self.motA2V:
             self.unit()
-            
-            # Timer pour mise à jour de la position moteur (200ms)
-            self.positionTimer = QTimer()
-            self.positionTimer.timeout.connect(self._updatePositionLabel)
-            self.positionTimer.start(200)
+            self._ensurePositionTimer()
 
     def _initZMQConnection(self):
         """Initialise la connexion ZMQ et récupère les infos des racks/moteurs"""
@@ -522,7 +528,24 @@ class MEAS(QMainWindow):
                 if self.listRack:
                     self.currentIP = self.listRack[0]
                     self._updateMotorList()
-                
+
+                # Connexion réussie : on active le mode RSAI même si motRSAI
+                # valait False au départ (cas d'une connexion déclenchée après
+                # coup via le menu Settings > Reconnect / Configure Server).
+                self.motRSAI = True
+
+                if hasattr(self, 'hLayout1'):
+                    # setup() a déjà tourné (reconnexion après la construction
+                    # de la fenêtre) : on fait apparaître les widgets moteur
+                    # (rack, moteur, position) s'ils n'existaient pas encore,
+                    # et on les repeuple avec les données qu'on vient de
+                    # récupérer.
+                    self._ensureMotorWidgets()
+                    self._refreshMotorCombos()
+                    self.unit()
+                    self._ensurePositionTimer()
+                    self._updateConnectionStatus()
+
                 print('✅ RSAI motors connected via ZMQ server')
             else:
                 print('⚠️ Impossible de se connecter au serveur ZMQ')
@@ -533,6 +556,78 @@ class MEAS(QMainWindow):
             import traceback
             traceback.print_exc()
             self.motRSAI = False
+
+    def _ensureMotorWidgets(self):
+        """
+        Crée (une seule fois) les widgets de contrôle moteur (indicateur de
+        connexion, sélecteur d'unité, sélecteur de rack, sélecteur de
+        moteur, label de position) et les ajoute à la barre du haut.
+        Appelé depuis setup() si motRSAI/motA2V est actif au démarrage, ou
+        dynamiquement depuis _initZMQConnection() dès qu'une connexion RSAI
+        réussit après coup (cas où motRSAI valait False au départ).
+        """
+        if hasattr(self, 'motorNameBox'):
+            return
+
+        self.connectionLabel = QLabel()
+        self._updateConnectionStatus()
+        self.hLayout1.addWidget(self.connectionLabel)
+
+        self.unitBouton = QComboBox()
+        self.unitBouton.addItems(['Step', 'µm', 'mm', 'ps', '°'])
+        self.unitBouton.setMaximumWidth(100)
+        self.unitBouton.setMinimumWidth(80)
+        self.unitBouton.setCurrentIndex(self.indexUnit)
+        self.unitBouton.currentIndexChanged.connect(self.unit)
+        self.hLayout1.addWidget(self.unitBouton)
+
+        self.rackChoise = QComboBox()
+        self.rackChoise.setMinimumWidth(200)
+        self.rackChoise.currentIndexChanged.connect(self.ChangeIPRack)
+        self.hLayout1.addWidget(self.rackChoise)
+
+        self.motorNameBox = QComboBox()
+        self.motorNameBox.setMinimumWidth(200)
+        self.motorNameBox.addItem('Choose a Motor')
+        self.motorNameBox.currentIndexChanged.connect(self.motorChange)
+        self.hLayout1.addWidget(self.motorNameBox)
+
+        self.positionLabel = QLabel("Pos: ---")
+        self.positionLabel.setStyleSheet("font-weight: bold; color: #00ff00;")
+        self.positionLabel.setMinimumWidth(150)
+        self.hLayout1.addWidget(self.positionLabel)
+
+        # Configuration table avec colonne Motor
+        self.table.setColumnCount(14)
+        self.table.setHorizontalHeaderLabels(('File', 'Tir', 'Max', 'Min', 'x max', 'y max', 'Sum', 'Mean', 'Size', 'x c.mass', 'y c.mass', 'user1', 'Motor', 'date'))
+
+    def _refreshMotorCombos(self):
+        """
+        (Re)peuple les combos rack/moteur à partir de self.listRack /
+        self.listRackNames / self.listMotorName. Appelé après _ensureMotorWidgets()
+        (peuplement initial) et après chaque (re)connexion réussie.
+        """
+        self.rackChoise.blockSignals(True)
+        self.rackChoise.clear()
+        for i, ip in enumerate(self.listRack):
+            name = self.listRackNames[i] if i < len(self.listRackNames) else ip
+            self.rackChoise.addItem(f"{name}  ({ip})")
+        self.rackChoise.blockSignals(False)
+
+        self.motorNameBox.blockSignals(True)
+        self.motorNameBox.clear()
+        self.motorNameBox.addItem('Choose a motor')
+        if self.listMotorName:
+            self.motorNameBox.addItems(self.listMotorName)
+        self.motorNameBox.blockSignals(False)
+
+    def _ensurePositionTimer(self):
+        """Crée et démarre (une seule fois) le timer de mise à jour de la
+        position moteur (200ms)."""
+        if not hasattr(self, 'positionTimer'):
+            self.positionTimer = QTimer()
+            self.positionTimer.timeout.connect(self._updatePositionLabel)
+            self.positionTimer.start(200)
 
     def _updateMotorList(self):
         """Met à jour la liste des moteurs pour le rack actuel"""
@@ -707,6 +802,7 @@ class MEAS(QMainWindow):
     def setup(self):
         vLayout = QVBoxLayout()
         hLayout1 = QHBoxLayout()
+        self.hLayout1 = hLayout1
         
         menubar = self.menuBar()
         menubar.setNativeMenuBar(False)
@@ -731,32 +827,39 @@ class MEAS(QMainWindow):
         self.saveAct.triggered.connect(self.saveF)
         self.fileMenu.addAction(self.saveAct)
         
-        # Menu Settings
+        # Menu Settings, organisé en sections (titres) pour bien séparer les
+        # moteurs (connexion serveur RSAI), la publication de données
+        # (serveur ZMQ Publisher) et le reste (affichage/tableau).
+        # Note : QMenu.addSection() ne fonctionne pas ici, son texte est
+        # avalé par le style QSS de qdarkstyle (les séparateurs stylés en
+        # QSS ne dessinent qu'un trait, sans texte) ; on utilise donc une
+        # vraie QAction désactivée en guise de titre, entourée de séparateurs.
+        def addMenuTitle(text):
+            titleAct = QAction(text, self)
+            titleAct.setEnabled(False)
+            self.settingsMenu.addAction(titleAct)
+            self.settingsMenu.addSeparator()
+            return titleAct
+
+        # ===== Section : Contrôle Moteur (RSAI) =====
+        addMenuTitle('— Motor Control —')
+
         self.serverConfigAct = QAction('🔧 Configure Serveur Motors ZMQ...', self)
         self.serverConfigAct.triggered.connect(self.openServerConfig)
         self.settingsMenu.addAction(self.serverConfigAct)
-        
+
         self.reconnectAct = QAction('🔄 Reconnect', self)
         self.reconnectAct.triggered.connect(self.reconnectServer)
         self.settingsMenu.addAction(self.reconnectAct)
-        
-        self.settingsMenu.addSeparator()
-        
+
         self.showConnectionInfoAct = QAction('ℹ️ Info Connexion', self)
         self.showConnectionInfoAct.triggered.connect(self.showConnectionInfo)
         self.settingsMenu.addAction(self.showConnectionInfoAct)
-        
+
+        # ===== Section : Publication des données (ZMQ Publisher) =====
         self.settingsMenu.addSeparator()
-        
-        # Filtre médian+gaussien (accéléré) pour trouver la position du Max
-        self.filterMaxPositionAct = QAction('🎯 Filtre Médian+Gaussien pour position du Max (rapide)', self)
-        self.filterMaxPositionAct.setCheckable(True)
-        self.filterMaxPositionAct.setChecked(self.useFilteredMaxPosition)
-        self.filterMaxPositionAct.triggered.connect(self.toggleFilterMaxPosition)
-        self.settingsMenu.addAction(self.filterMaxPositionAct)
-        
-        self.settingsMenu.addSeparator()
-        
+        addMenuTitle('— Data Publishing —')
+
         # Serveur ZMQ Publisher : publie les données du widget (Max, Min, Sum, ...)
         # dans un thread séparé, en mode événementiel (PUB/SUB, pas de polling)
         self.pubServerAct = QAction('📡 Activer serveur ZMQ Publisher (données widget)', self)
@@ -764,17 +867,26 @@ class MEAS(QMainWindow):
         self.pubServerAct.setChecked(False)
         self.pubServerAct.triggered.connect(self.togglePubServer)
         self.settingsMenu.addAction(self.pubServerAct)
-        
+
         self.pubConfigAct = QAction('🔧 Configurer port Publisher...', self)
         self.pubConfigAct.triggered.connect(self.openPubConfig)
         self.settingsMenu.addAction(self.pubConfigAct)
-        
+
         self.openPlotWidgetAct = QAction('📈 Ouvrir widget de traçage ZMQ', self)
         self.openPlotWidgetAct.triggered.connect(self.openZMQPlotWidget)
         self.settingsMenu.addAction(self.openPlotWidgetAct)
-        
+
+        # ===== Section : Affichage / Tableau =====
         self.settingsMenu.addSeparator()
-        
+        addMenuTitle('— Display —')
+
+        # Filtre médian+gaussien (accéléré) pour trouver la position du Max
+        self.filterMaxPositionAct = QAction('🎯 Filtre Médian+Gaussien pour position du Max (rapide)', self)
+        self.filterMaxPositionAct.setCheckable(True)
+        self.filterMaxPositionAct.setChecked(self.useFilteredMaxPosition)
+        self.filterMaxPositionAct.triggered.connect(self.toggleFilterMaxPosition)
+        self.settingsMenu.addAction(self.filterMaxPositionAct)
+
         # Ajustement manuel des colonnes : n'est plus fait automatiquement
         # à chaque tir (coût qui grandit avec le nombre de lignes et
         # bloquait l'interface après quelques centaines de tirs) ; à faire
@@ -782,11 +894,15 @@ class MEAS(QMainWindow):
         self.resizeColumnsAct = QAction('↔️ Ajuster la largeur des colonnes', self)
         self.resizeColumnsAct.triggered.connect(lambda: self.table.resizeColumnsToContents())
         self.settingsMenu.addAction(self.resizeColumnsAct)
-        
+
         self.maxPlotHistoryAct = QAction('📉 Limiter l\'historique des graphes...', self)
         self.maxPlotHistoryAct.triggered.connect(self.setMaxPlotHistory)
         self.settingsMenu.addAction(self.maxPlotHistoryAct)
-        
+
+        self.user1FormulaAct = QAction('🧮 Configurer fonction User1...', self)
+        self.user1FormulaAct.triggered.connect(self.openUser1FormulaConfig)
+        self.settingsMenu.addAction(self.user1FormulaAct)
+
         # Menus Plot
         self.PlotMenu.addAction('max', self.PlotMAX)
         self.PlotMenu.addAction('min', self.PlotMIN)
@@ -824,51 +940,9 @@ class MEAS(QMainWindow):
 
         # Configuration pour moteurs RSAI ou A2V
         if self.motRSAI or self.motA2V:
-            # Indicateur de connexion
-            self.connectionLabel = QLabel()
-            self._updateConnectionStatus()
-            hLayout1.addWidget(self.connectionLabel)
-            
-            # Sélecteur d'unité
-            self.unitBouton = QComboBox()
-            self.unitBouton.addItems(['Step', 'µm', 'mm', 'ps', '°'])
-            self.unitBouton.setMaximumWidth(100)
-            self.unitBouton.setMinimumWidth(80)
-            self.unitBouton.setCurrentIndex(self.indexUnit)
-            self.unitBouton.currentIndexChanged.connect(self.unit)
-            hLayout1.addWidget(self.unitBouton)
-            
-            # Sélecteur de rack (IP)
-            self.rackChoise = QComboBox()
-            self.rackChoise.setMinimumWidth(200)
-            if self.motRSAI:
-                for i, ip in enumerate(self.listRack):
-                    name = self.listRackNames[i] if i < len(self.listRackNames) else ip
-                    self.rackChoise.addItem(f"{name}  ({ip})")
-            self.rackChoise.currentIndexChanged.connect(self.ChangeIPRack)
-            hLayout1.addWidget(self.rackChoise)
-            
-            # Sélecteur de moteur
-            self.motorNameBox = QComboBox()
-            self.motorNameBox.setMinimumWidth(200)
-            self.motorNameBox.addItem('Choose a Motor')
-            if self.motRSAI:
-                self.motorNameBox.addItems(self.listMotorName)
-            elif self.motA2V:
-                self.motorNameBox.addItems(self.listMotorName)
-            self.motorNameBox.currentIndexChanged.connect(self.motorChange)
-            hLayout1.addWidget(self.motorNameBox)
-            
-            # Label position moteur
-            self.positionLabel = QLabel("Pos: ---")
-            self.positionLabel.setStyleSheet("font-weight: bold; color: #00ff00;")
-            self.positionLabel.setMinimumWidth(150)
-            hLayout1.addWidget(self.positionLabel)
-            
-            # Configuration table avec colonne Motor
-            self.table.setColumnCount(14)
-            self.table.setHorizontalHeaderLabels(('File', 'Tir', 'Max', 'Min', 'x max', 'y max', 'Sum', 'Mean', 'Size', 'x c.mass', 'y c.mass', 'user1', 'Motor', 'date'))
-             
+            self._ensureMotorWidgets()
+            self._refreshMotorCombos()
+
         self.table.horizontalHeader().setVisible(True)
         self.table.setAlternatingRowColors(True)
         self.table.resizeColumnsToContents()
@@ -898,14 +972,24 @@ class MEAS(QMainWindow):
                 self.connectionLabel.setStyleSheet("color: #ff0000; font-weight: bold;")
 
     def _updatePositionLabel(self):
-        """Met à jour l'affichage de la position du moteur"""
-        if hasattr(self, 'positionLabel') and self.motRSAI:
-            if self.motorNameBox.currentIndex() > 0 and self.zmqClient:
-                pos = self.zmqClient.getPosition(self.currentIP, self.currentMotorNum)
-                pos_converted = pos / self.unitChange if self.unitChange != 0 else pos
-                self.positionLabel.setText(f"Pos: {pos_converted:.2f} {self.unitName}")
-            else:
-                self.positionLabel.setText("Pos: ---")
+        """Met à jour l'affichage de la position du moteur (RSAI ou A2V)"""
+        if not hasattr(self, 'positionLabel'):
+            return
+
+        if self.motorNameBox.currentIndex() <= 0:
+            self.positionLabel.setText("Pos: ---")
+            return
+
+        if self.motRSAI and self.zmqClient:
+            pos = self.zmqClient.getPosition(self.currentIP, self.currentMotorNum)
+        elif self.motA2V and hasattr(self, 'MOT'):
+            pos = self.MOT.position()
+        else:
+            self.positionLabel.setText("Pos: ---")
+            return
+
+        pos_converted = pos * self.unitChange
+        self.positionLabel.setText(f"Pos: {pos_converted:.2f} {self.unitName}")
 
     def openServerConfig(self):
         """Ouvre le dialogue de configuration du serveur"""
@@ -1094,25 +1178,15 @@ class MEAS(QMainWindow):
         self.dict_moteurs = {}
         self.currentIP = None
         
-        # Reconnecter
+        # Reconnecter : sur succès, _initZMQConnection() fait déjà apparaître
+        # les widgets moteur (s'ils n'existaient pas encore) et repeuple les
+        # combos rack/moteur.
         self._initZMQConnection()
-        
-        # Mettre à jour l'interface
+
+        # Mettre à jour l'indicateur de connexion (utile notamment en cas
+        # d'échec, pour repasser l'indicateur au rouge)
         self._updateConnectionStatus()
-        
-        if self.motRSAI and hasattr(self, 'rackChoise'):
-            # Mettre à jour le combo des racks
-            self.rackChoise.clear()
-            for i, ip in enumerate(self.listRack):
-                name = self.listRackNames[i] if i < len(self.listRackNames) else ip
-                self.rackChoise.addItem(f"{name}  ({ip})")
-            
-            # Mettre à jour le combo des moteurs
-            self.motorNameBox.clear()
-            self.motorNameBox.addItem('Choose a motor')
-            if self.listMotorName:
-                self.motorNameBox.addItems(self.listMotorName)
-        
+
         if self.zmqClient and self.zmqClient.isconnected:
             QMessageBox.information(self, "Connexion", "✅ Connexion réussie !")
         else:
@@ -1197,10 +1271,10 @@ class MEAS(QMainWindow):
             self.unitChange = float(1 * self.stepmotor)
             self.unitName = 'µm'
         elif self.indexUnit == 2:  # mm
-            self.unitChange = float(1000 * self.stepmotor)
+            self.unitChange = float(self.stepmotor / 1000)
             self.unitName = 'mm'
         elif self.indexUnit == 3:  # ps (double passage: 1 micron = 6fs)
-            self.unitChange = float(1 * self.stepmotor / 0.0066666666)
+            self.unitChange = float(self.stepmotor * 0.0066666666)
             self.unitName = 'ps'
         elif self.indexUnit == 4:  # degrés
             self.unitChange = 1 * self.stepmotor
@@ -1448,7 +1522,10 @@ class MEAS(QMainWindow):
         self.table.setItem(self.shoot, 8, QTableWidgetItem((str(self.xs) + '*' + str(self.ys))))
         self.table.setItem(self.shoot, 9, QTableWidgetItem(str(self.xcmass)))
         self.table.setItem(self.shoot, 10, QTableWidgetItem(str(self.ycmass)))
-        self.table.setItem(self.shoot, 11, QTableWidgetItem(str(self.user1)))
+        # La colonne 'user1' n'est pas toujours à l'index 11 : sa position
+        # dépend de la présence ou non de la colonne 'Sum Thr' (ThresholdState),
+        # elle est donc écrite plus bas avec les autres colonnes qui dépendent
+        # de l'état (Motor, date, Sum Thr...).
 
         # Gestion de la position moteur
         self.motorNameOpt = None   # nom du moteur actif (None si mode Shoot/Tir)
@@ -1460,13 +1537,13 @@ class MEAS(QMainWindow):
             else:
                 if self.motRSAI and self.zmqClient:
                     pos = self.zmqClient.getPosition(self.currentIP, self.currentMotorNum)
-                    Posi = round(pos / self.unitChange, 2)
+                    Posi = round(pos * self.unitChange, 2)
                     motorName = self.zmqClient.getMotorName(self.currentIP, self.currentMotorNum)
                     self.label = f"{motorName} ({self.unitName})"
                     self.motorNameOpt = motorName
                     self.motorUnitOpt = self.unitName
                 elif self.motA2V:
-                    Posi = round(self.MOT.position() / self.unitChange, 2)
+                    Posi = round(self.MOT.position() * self.unitChange, 2)
                     self.label = f"{self.MOT.name} ({self.unitName})"
                     self.motorNameOpt = self.MOT.name
                     self.motorUnitOpt = self.unitName
@@ -1517,23 +1594,27 @@ class MEAS(QMainWindow):
             if self.motRSAI or self.motA2V:
                 self.table.setColumnCount(15)
                 self.table.setHorizontalHeaderLabels(('File', 'Tir', 'Max', 'Min', 'x max', 'y max', 'Sum', 'Mean', 'Size', 'x c.mass', 'y c.mass', 'Sum Thr', 'user1', 'Motor', 'date'))
+                self.table.setItem(self.shoot, 12, QTableWidgetItem("{:.3e}".format(self.user1)))
                 self.table.setItem(self.shoot, 13, QTableWidgetItem(str(Posi)))
                 self.table.setItem(self.shoot, 14, QTableWidgetItem(str(self.date)))
             else:
                 self.table.setColumnCount(14)
                 self.table.setHorizontalHeaderLabels(('File', 'Tir', 'Max', 'Min', 'x max', 'y max', 'Sum', 'Mean', 'Size', 'x c.mass', 'y c.mass', 'Sum Thr', 'user1', 'date'))
+                self.table.setItem(self.shoot, 12, QTableWidgetItem("{:.3e}".format(self.user1)))
                 self.table.setItem(self.shoot, 13, QTableWidgetItem(str(self.date)))
             self.table.setItem(self.shoot, 11, QTableWidgetItem("{:.3e}".format(self.summThre)))
-            
+
         else:
             if self.motRSAI or self.motA2V:
                 self.table.setHorizontalHeaderLabels(('File', 'Tir', 'Max', 'Min', 'x max', 'y max', 'Sum', 'Mean', 'Size', 'x c.mass', 'y c.mass', 'user1', 'Motor', 'date'))
                 self.table.setColumnCount(14)
+                self.table.setItem(self.shoot, 11, QTableWidgetItem("{:.3e}".format(self.user1)))
                 self.table.setItem(self.shoot, 12, QTableWidgetItem(str(Posi)))
                 self.table.setItem(self.shoot, 13, QTableWidgetItem(str(self.date)))
             else:
                 self.table.setHorizontalHeaderLabels(('File', 'Tir', 'Max', 'Min', 'x max', 'y max', 'Sum', 'Mean', 'Size', 'x c.mass', 'y c.mass', 'user1', 'date'))
                 self.table.setColumnCount(13)
+                self.table.setItem(self.shoot, 11, QTableWidgetItem("{:.3e}".format(self.user1)))
                 self.table.setItem(self.shoot, 12, QTableWidgetItem(str(self.date)))
         
         self.table.selectRow(self.shoot)
@@ -1633,10 +1714,38 @@ class MEAS(QMainWindow):
         else:
             fene.showNormal()
 
+    def openUser1FormulaConfig(self):
+        """
+        Dialogue pour définir la formule Python de FctUser1(), évaluée à
+        chaque tir. La variable disponible dans la formule est self.data
+        (l'image du tir courant), par exemple :
+            round(self.data.max()-self.data.min())
+        """
+        text, ok = QInputDialog.getText(
+            self, "Fonction User1",
+            "Formule Python (variable disponible : self.data) :\n"
+            "Ex: round(self.data.max()-self.data.min())",
+            QLineEdit.EchoMode.Normal, self.user1Formula
+        )
+        if ok and text.strip():
+            self.user1Formula = text.strip()
+            # Sauvegardée dans self.conf (confVisu.ini de la caméra courante)
+            # pour permettre une formule différente par caméra.
+            self.conf.setValue(self.name + "/user1Formula", self.user1Formula)
+            self.conf.sync()
+
     def FctUser1(self):
-        """Fonction utilisateur personnalisable"""
-        a = 0
-        return a
+        """
+        Fonction utilisateur personnalisable : évalue self.user1Formula,
+        une formule Python définie par l'utilisateur (menu Settings >
+        "Configurer fonction User1..."), avec self.data (image du tir
+        courant) comme variable disponible.
+        """
+        try:
+            return eval(self.user1Formula, {'self': self, 'np': np, 'ndimage': ndimage})
+        except Exception as e:
+            print(f"❌ Erreur dans la formule User1 ('{self.user1Formula}'): {e}")
+            return 0
 
 
 if __name__ == "__main__":

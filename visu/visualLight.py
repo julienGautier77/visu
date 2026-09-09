@@ -421,7 +421,11 @@ class SEELIGHT(QMainWindow):
         self.ro1 = pg.EllipseROI([self.xc, self.yc], [self.rx, self.ry], pen='r', movable=False)
         self.ro1.setPos([self.xc-(self.rx/2), self.yc - (self.ry/2)])
 
-        self.PlotXY()
+        # PlotXY() n'est plus appelé ici : self.Display(self.data), en fin de
+        # setup(), l'appelle déjà (voir Display()) ; l'appeler aussi ici
+        # ajoutait vLine/hLine/ro1 une première fois à self.p1, puis une
+        # seconde fois via Display(), d'où le warning pyqtgraph "Item already
+        # added to PlotItem, ignoring."
         # histogram
         self.hist = pg.HistogramLUTItem()
         self.hist.setImageItem(self.imh)
@@ -487,7 +491,16 @@ class SEELIGHT(QMainWindow):
             if self.meas == "on":
                 self.winM.setFile(self.nomFichier)
                 self.open_widget(self.winM)
-                self.signalMeas.emit(self.data)
+                # winMeas.Display() attend un tuple [data, transx, transy,
+                # scalex, scaley] (voir visual.py Measurement()), pas juste
+                # l'image brute : sinon data[0] ne récupère que la première
+                # ligne de l'image (1D) au lieu de l'image entière.
+                if self.winPref.checkBoxAxeScale.isChecked():
+                    scalex, scaley = self.winPref.stepX, self.winPref.stepY
+                else:
+                    scalex, scaley = 1, 1
+                MeasData = [self.data, 0, 0, scalex, scaley]
+                self.signalMeas.emit(MeasData)
                 # self.winM.Display(self.data)
 
     def Pointing(self):
@@ -500,13 +513,22 @@ class SEELIGHT(QMainWindow):
             pData = self.cut
         elif self.ite is None:
             pData = self.data
+            self.xini = 0
+            self.yini = 0
         else:
             pData = self.data
 
+        # WINPOINTING.Display() (connecté via signalPointing, voir
+        # winPointing.py) attend un objet [data, stepX, stepY, xini, yini] à
+        # transmettre tel quel à PointingWorker.set_data() (voir visual.py
+        # Pointing()) : lui passer l'image seule (ou en arguments positionnels
+        # séparés) fait que set_data() indexe l'image par obje[0], obje[1]...
+        # au lieu de récupérer data/stepX/stepY/xini/yini.
         if self.winPref.checkBoxAxeScale.isChecked():
-            self.winPointing.Display(pData, self.winPref.stepX, self.winPref.stepX)
+            self.signalPointing.emit([pData, self.winPref.stepX,
+                                     self.winPref.stepY, self.xini, self.yini])
         else:
-            self.winPointing.Display(pData)
+            self.signalPointing.emit([pData, 1, 1, self.xini, self.yini])
 
     @pyqtSlot(object)
     def Display(self, data):
@@ -552,6 +574,11 @@ class SEELIGHT(QMainWindow):
             self.imh.setImage(self.data, autoLevels=True, autoDownsample=True)  # .astype(float)
         else:
             self.imh.setImage(self.data, autoLevels=False, autoDownsample=True)
+
+        # Rafraîchit la position/valeur affichée sous la croix (voir
+        # PlotXY()) avec les données de la nouvelle image, comme le fait
+        # visual.py en appelant Coupe() depuis Display()
+        self.PlotXY()
 
         if self.meas == "on":
             if self.winM.isWinOpen is True:  # measurement update
@@ -657,16 +684,45 @@ class SEELIGHT(QMainWindow):
 
         if self.checkBoxPlot.isChecked():
 
-            self.p1.addItem(self.vLine, ignoreBounds=False)
-            self.p1.addItem(self.hLine, ignoreBounds=False)
-            if self.roiCross is True:
+            # addItem() prévient (warning pyqtgraph "Item already added to
+            # PlotItem, ignoring") si l'item est déjà présent : on ne
+            # l'ajoute donc que s'il ne l'est pas déjà. PlotXY() est en effet
+            # appelé à chaque nouvelle image (Display()) et à chaque
+            # déplacement de la croix (mouseMoved()), pas seulement au
+            # basculement de la case "Cross On".
+            if self.vLine not in self.p1.items:
+                self.p1.addItem(self.vLine, ignoreBounds=False)
+            if self.hLine not in self.p1.items:
+                self.p1.addItem(self.hLine, ignoreBounds=False)
+            if self.roiCross is True and self.ro1 not in self.p1.items:
                 self.p1.addItem(self.ro1)
+
+            # Affiche la position et la valeur du pixel sous la croix (comme
+            # dans visual.py Coupe()) : en mode "Cross On", mouseMoved() ne
+            # met pas à jour ces labels (il ne le fait qu'en mode survol,
+            # Cross Off), donc c'est PlotXY() qui s'en charge ici, appelé à
+            # chaque déplacement de la croix.
+            try:
+                dataCross = self.data[int(self.xc), int(self.yc)]
+            except Exception:
+                # évite une erreur si la croix est en dehors de l'image
+                dataCross = 0
+
+            if self.winPref.checkBoxAxeScale.isChecked():  # scale axe on
+                self.label_Cross.setText(f'x = {round(int(self.xc) * self.winPref.stepX, 2)}um  y = {round(int(self.yc) * self.winPref.stepY, 2)}um')
+            else:
+                self.label_Cross.setText(f'x = {int(self.xc)}  y = {int(self.yc)}')
+
+            dataCross = round(dataCross, 3)  # take data value on the cross
+            self.label_CrossValue.setText(f' v.= {dataCross}')
         else:
-            self.p1.removeItem(self.vLine)
-            self.p1.removeItem(self.hLine)
+            if self.vLine in self.p1.items:
+                self.p1.removeItem(self.vLine)
+            if self.hLine in self.p1.items:
+                self.p1.removeItem(self.hLine)
             self.p1.showAxis('left', show=False)
             self.p1.showAxis('bottom', show=False)
-            if self.roiCross is True:
+            if self.roiCross is True and self.ro1 in self.p1.items:
                 self.p1.removeItem(self.ro1)
 
     def paletteup(self):
@@ -803,9 +859,20 @@ class SEELIGHT(QMainWindow):
         
         self.fileName.setText(str(fichier))
         self.nomFichier = os.path.split(fichier)[1]
-    
-        self.newDataReceived(data)
-          
+
+        # Ne pas passer par newDataReceived() ici (comme dans visual.py
+        # OpenF()) : newDataReceived() applique en plus la rotation
+        # winPref.rotateValue (pour les flux caméra live), ce qui fait
+        # tourner l'image une seconde fois en plus de la rotation fixe déjà
+        # appliquée à la lecture du fichier (rot90(data, 3) ci-dessus pour
+        # TIFF/sif) quand la rotation est active dans les préférences.
+        self.data = data
+        self.dimy = np.shape(self.data)[1]
+        self.dimx = np.shape(self.data)[0]
+        self.dataOrgScale = self.data
+        self.dataOrg = self.data
+        self.Display(self.data)
+
     def SaveF(self):
         # save data  in TIFF or Text  files
         if self.winOpt.checkBoxTiff.isChecked():
@@ -848,9 +915,8 @@ class SEELIGHT(QMainWindow):
         
     def ScaleImg(self):
         # scale Axis px to um
-        if self.winPref.checkBoxAxeScale:
+        if self.winPref.checkBoxAxeScale.isChecked():
             self.scaleAxis = "on"
-            self.LigneChanged()
         else:
             self.scaleAxis = "off"
         self.data = self.dataOrg

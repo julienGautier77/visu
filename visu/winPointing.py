@@ -222,12 +222,14 @@ class WINPOINTING(QMainWindow):
         # Timer pour la mise à jour des graphiques
         self.plot_update_timer = QTimer()
         self.plot_update_timer.timeout.connect(self.updatePlotsFromTimer)
-        self.plot_update_interval = 200  # ms (5 fps par défaut)
-        
-        
+        # Par défaut : pas de throttle, chaque point reçu est affiché dès
+        # que possible (voir menu "Set Plot Update Rate..." pour ralentir
+        # l'affichage sur une acquisition très rapide si besoin).
+        self.plot_update_interval = 1  # ms
+
         # Compteur pour ne mettre à jour QUE via le timer
         self.update_counter = 0
-        self.update_every_n_points = 5  # Tous les 5 points
+        self.update_every_n_points = 1  # Chaque point déclenche un rafraîchissement
         
         # Flag pour indiquer si de nouvelles données sont arrivées
         self.new_data_available = False
@@ -454,6 +456,14 @@ class WINPOINTING(QMainWindow):
         infoLayout.addWidget(self.nbPointsCard)
         infoLayout.addWidget(self.updateRateCard)
         infoLayout.addStretch()
+
+        # Bouton pour positionner la croix du parent (visual/visualLight) sur
+        # la moyenne X, Y du pointing (même action que le menu Options >
+        # "Set Cross to Mean Position", raccourci Ctrl+Shift+M)
+        self.setCrossButton = QPushButton('Set Cross')
+        self.setCrossButton.setToolTip('Positionner la croix sur la moyenne X, Y du pointing')
+        self.setCrossButton.clicked.connect(self.setCrossToMean)
+        infoLayout.addWidget(self.setCrossButton)
         
         mainLayout.addLayout(infoLayout)
         
@@ -844,9 +854,13 @@ class WINPOINTING(QMainWindow):
             self.parent.conf.setValue(self.parent.name + "/xc", xc_pixel)
             self.parent.conf.setValue(self.parent.name + "/yc", yc_pixel)
             
-            # Rafraîchir l'affichage
-            self.parent.Coupe()
-            
+            # Rafraîchir l'affichage : Coupe() (visual.py) ou PlotXY()
+            # (visualLight.py), selon la fenêtre parente utilisée
+            if hasattr(self.parent, 'Coupe'):
+                self.parent.Coupe()
+            elif hasattr(self.parent, 'PlotXY'):
+                self.parent.PlotXY()
+
             print(f"Cross set to mean position: X={xc_pixel}, Y={yc_pixel}")
             
         except Exception as e:

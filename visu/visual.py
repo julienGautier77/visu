@@ -1538,8 +1538,19 @@ class SEE(QMainWindow):
                     self.Measurement()
 
         if self.fft is True:
-            if self.winFFT.isWinOpen is True:  # fft update
+            if self.winFFT.isWinOpen is True:  # fft update (2D, rect/cercle/pas de ROI)
                 self.winFFT.Display(self.data)
+            if self.winFFT1D.isWinOpen is True and self.ite == 'line':
+                # fft update (1D, profil de coupe "line") : winFFT1D n'était
+                # rafraîchi qu'une fois, lors de l'ouverture via
+                # fftTransform() ; il faut refaire le même calcul à chaque
+                # tir pour qu'il se mette à jour comme winFFT en 2D.
+                self.LigneChanged()
+                if self.cut.ndim == 1:
+                    datafft = np.fft.fft(np.array(self.cut))
+                    self.norm = abs(np.fft.fftshift(datafft))
+                    self.norm = np.log10(1 + self.norm)
+                    self.winFFT1D.PLOT(self.norm)
 
         # if self.plot3D is True:
         #     if self.Widget3D.isWinOpen==True:
