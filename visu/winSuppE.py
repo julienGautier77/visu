@@ -306,6 +306,65 @@ class WINENCERCLED(QWidget):
         resultsGroup.setLayout(resultsGrid)
         vbox1.addWidget(resultsGroup)
 
+        # --- Groupe : caractérisation de la tache focale (D4σ) ---
+        focalGroup = QGroupBox("Tache focale (D4σ, ISO 11146)")
+        focalGrid = QGridLayout()
+        focalGrid.setHorizontalSpacing(16)
+        focalGrid.setVerticalSpacing(6)
+
+        labelD4SxTxt = QLabel("D4σ X")
+        labelD4SxTxt.setStyleSheet("color:#ef5350; font: 11pt;")
+        self.labelD4Sx = QLabel("?")
+        self.labelD4Sx.setStyleSheet("color:#ef5350; font: 11pt;")
+        labelD4SyTxt = QLabel("D4σ Y")
+        labelD4SyTxt.setStyleSheet("color:#66bb6a; font: 11pt;")
+        self.labelD4Sy = QLabel("?")
+        self.labelD4Sy.setStyleSheet("color:#66bb6a; font: 11pt;")
+
+        labelD4MajorTxt = QLabel("Grand axe D4σ")
+        self.labelD4Major = QLabel("?")
+        labelD4MinorTxt = QLabel("Petit axe D4σ")
+        self.labelD4Minor = QLabel("?")
+        labelAngleTxt = QLabel("Angle")
+        self.labelAngle = QLabel("?")
+        labelEllipticityTxt = QLabel("Ellipticité (petit/grand)")
+        self.labelEllipticity = QLabel("?")
+
+        labelStrehlTxt = QLabel("Strehl")
+        labelStrehlTxt.setStyleSheet("color:#4dd0e1; font: 11pt;")
+        self.labelStrehl = QLabel("?")
+        self.labelStrehl.setStyleSheet("color:#4dd0e1; font: 11pt;")
+
+        focalGrid.addWidget(labelD4SxTxt, 0, 0)
+        focalGrid.addWidget(self.labelD4Sx, 0, 1)
+        focalGrid.addWidget(labelD4SyTxt, 1, 0)
+        focalGrid.addWidget(self.labelD4Sy, 1, 1)
+
+        sepFocal1 = QFrame()
+        sepFocal1.setFrameShape(QFrame.Shape.HLine)
+        sepFocal1.setStyleSheet("color:#3a3f4b;")
+        focalGrid.addWidget(sepFocal1, 2, 0, 1, 2)
+
+        focalGrid.addWidget(labelD4MajorTxt, 3, 0)
+        focalGrid.addWidget(self.labelD4Major, 3, 1)
+        focalGrid.addWidget(labelD4MinorTxt, 4, 0)
+        focalGrid.addWidget(self.labelD4Minor, 4, 1)
+        focalGrid.addWidget(labelAngleTxt, 5, 0)
+        focalGrid.addWidget(self.labelAngle, 5, 1)
+        focalGrid.addWidget(labelEllipticityTxt, 6, 0)
+        focalGrid.addWidget(self.labelEllipticity, 6, 1)
+
+        sepFocal2 = QFrame()
+        sepFocal2.setFrameShape(QFrame.Shape.HLine)
+        sepFocal2.setStyleSheet("color:#3a3f4b;")
+        focalGrid.addWidget(sepFocal2, 7, 0, 1, 2)
+
+        focalGrid.addWidget(labelStrehlTxt, 8, 0)
+        focalGrid.addWidget(self.labelStrehl, 8, 1)
+
+        focalGroup.setLayout(focalGrid)
+        vbox1.addWidget(focalGroup)
+
         vbox1.addStretch(1)
         
         self.winImage = pg.GraphicsLayoutWidget()
@@ -659,8 +718,72 @@ class WINENCERCLED(QWidget):
             if self.bloqq == 1:
                 self.CalculE()
     
+    def computeD4Sigma(self):
+        """
+        Largeur au 2nd moment (D4σ, norme ISO 11146), calculée sur la
+        fenêtre roi2 (déjà utilisée comme dénominateur du rapport
+        d'énergie), sur self.data (fond déjà soustrait le cas échéant
+        par Back()). Plus robuste que le FWHM gaussien sur une tache
+        réelle non-gaussienne / aberrée / partiellement clippée.
+
+        Donne aussi l'ellipse des moments (grand axe, petit axe, angle
+        d'orientation) : utile pour détecter un astigmatisme que les
+        coupes X/Y séparées (fwhmX/fwhmY) ne peuvent pas révéler si le
+        petit/grand axe de la tache n'est pas aligné avec X/Y.
+
+        Retourne un dict (largeurs en pixels) ou None si la fenêtre roi2
+        est vide/sans signal (aucun pixel positif après soustraction).
+        """
+        region = self.roi2.getArrayRegion(self.data, self.imh)
+        # roi2.getArrayRegion masque déjà les pixels hors du cercle (mis à
+        # 0) : le clip ci-dessous retire juste le bruit résiduel négatif
+        # qui pourrait rester après soustraction de fond. roi2 (pas roi1)
+        # est utilisé comme fenêtre d'intégration : roi1 (rayon ~ w) est
+        # trop serré et tronquerait les ailes de la distribution, biaisant
+        # D4σ vers le bas ; roi2 (~4x le diamètre de roi1 en mode auto)
+        # est une fenêtre bien plus conforme aux recommandations ISO 11146.
+        if region is None or region.size == 0:
+            return None
+        I = np.clip(region.astype(float), 0, None)
+        total = I.sum()
+        if total <= 0:
+            return None
+
+        nx, ny = I.shape  # convention du fichier : axe 0 = x, axe 1 = y
+        xs = np.arange(nx)
+        ys = np.arange(ny)
+        X, Y = np.meshgrid(xs, ys, indexing='ij')
+
+        xbar = (I * X).sum() / total
+        ybar = (I * Y).sum() / total
+        sx2 = (I * (X - xbar) ** 2).sum() / total
+        sy2 = (I * (Y - ybar) ** 2).sum() / total
+        sxy = (I * (X - xbar) * (Y - ybar)).sum() / total
+
+        # tenseur des moments -> axes principaux de l'ellipse (permet de
+        # détecter un astigmatisme même si la tache n'est pas alignée
+        # avec les axes X/Y du capteur)
+        M = np.array([[sx2, sxy], [sxy, sy2]])
+        eigvals, eigvecs = np.linalg.eigh(M)  # valeurs propres croissantes
+        lamMinor, lamMajor = max(eigvals[0], 0), max(eigvals[1], 0)
+        vecMajor = eigvecs[:, 1]
+        dMajor = 4 * np.sqrt(lamMajor)
+        dMinor = 4 * np.sqrt(lamMinor)
+        angleDeg = np.degrees(np.arctan2(vecMajor[1], vecMajor[0]))
+        angleDeg = ((angleDeg + 90) % 180) - 90  # ramène dans ]-90°, 90°]
+        ellipticity = dMinor / dMajor if dMajor > 0 else None
+
+        return {
+            'd4sx': 4 * np.sqrt(sx2),
+            'd4sy': 4 * np.sqrt(sy2),
+            'dMajor': dMajor,
+            'dMinor': dMinor,
+            'angleDeg': angleDeg,
+            'ellipticity': ellipticity,
+        }
+
     def CalculE(self):
-        
+
         if self.fwhmX is None or self.fwhmY is None:
             self.fwhmX = 100
             self.fwhmY = 100
@@ -721,6 +844,43 @@ class WINENCERCLED(QWidget):
         self.LabelE1Mean.setText('%.2f' % (self.roi1.getArrayRegion(self.data, self.imh).mean()))
         self.LabelE2Sum.setText('%.2f' % E2)
         self.LabelE2Mean.setText('%.2f' % (self.roi2.getArrayRegion(self.data, self.imh).mean()))
+
+        # --- Caractérisation de la tache focale : D4σ, ellipticité/angle,
+        # Strehl approximatif ---
+        focal = self.computeD4Sigma()
+        step = stepX if scaleOn else 1
+        if focal is not None:
+            self.labelD4Sx.setText(f"{round(focal['d4sx'] * (stepX if scaleOn else 1), 2)} {unit}")
+            self.labelD4Sy.setText(f"{round(focal['d4sy'] * (stepY if scaleOn else 1), 2)} {unit}")
+            # grand/petit axe (ellipse tournée) : approximés avec stepX,
+            # exact seulement si le pixel est carré (stepX == stepY)
+            self.labelD4Major.setText(f"{round(focal['dMajor'] * step, 2)} {unit}")
+            self.labelD4Minor.setText(f"{round(focal['dMinor'] * step, 2)} {unit}")
+            self.labelAngle.setText(f"{round(focal['angleDeg'], 1)} °")
+            if focal['ellipticity'] is not None:
+                self.labelEllipticity.setText(f"{round(focal['ellipticity'], 3)}")
+            else:
+                self.labelEllipticity.setText("?")
+
+            # Strehl approximatif : PAS le Strehl rigoureux (qui nécessite
+            # le profil de PSF théorique en unités radiométriques
+            # absolues, hors de portée ici). Estimation par rapport
+            # d'aires (diamètre Airy / grand axe D4σ)² : valable en ordre
+            # de grandeur pour comparer des tirs entre eux, pas comme
+            # mesure d'aberration certifiée. Nécessite le calibrage Airy
+            # (menu "Rayon d'Airy").
+            rAiryPx, _ = self.computeAiryRadiusPx()
+            if rAiryPx is not None and focal['dMajor'] > 0:
+                dAiry = 2 * rAiryPx
+                strehlApprox = min((dAiry / focal['dMajor']) ** 2, 1.0)
+                self.labelStrehl.setText(f"{round(strehlApprox, 3)} (approx.)")
+            else:
+                self.labelStrehl.setText("N/A (réglages Airy requis)")
+        else:
+            for lbl in (self.labelD4Sx, self.labelD4Sy, self.labelD4Major,
+                       self.labelD4Minor, self.labelAngle,
+                       self.labelEllipticity, self.labelStrehl):
+                lbl.setText("?")
         
     def _resizeWindowToMatchAspect(self, imgWidth, imgHeight):
         """
@@ -962,10 +1122,10 @@ class WINENCERCLED(QWidget):
         else:
             xmax = levels[1]
             xmin = levels[0]
-            
-        self.imh.setLevels([xmin, xmax + (xmax - xmin) / 10])
-        # hist.setImageItem(imh,clear=True)
-        self.hist.setHistogramRange(xmin, xmax)
+
+        self.imh.setLevels([xmin, xmax-(xmax - xmin) / 10])
+        self.hist.setLevels(xmin, xmax-(xmax - xmin) / 10)
+        self.hist.setHistogramRange(xmin, xmax-(xmax - xmin) / 10)
 
     def palettedown(self):
         levels = self.imh.getLevels()
@@ -975,10 +1135,10 @@ class WINENCERCLED(QWidget):
         else:
             xmax = levels[1]
             xmin = levels[0]
-            
-        self.imh.setLevels([xmin, xmax - (xmax - xmin) / 10])
-        # hist.setImageItem(imh,clear=True)
-        self.hist.setHistogramRange(xmin, xmax)
+
+        self.imh.setLevels([xmin, xmax + (xmax - xmin) / 10])
+        self.hist.setLevels(xmin, xmax+(xmax - xmin) / 10)
+        self.hist.setHistogramRange(xmin, xmax + (xmax - xmin) / 10)
 
     def roiBackChanged(self):
         bg = self.ROIRect.getArrayRegion(self.dataOrg, self.imh).mean()
