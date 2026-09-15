@@ -442,6 +442,12 @@ class SEE(QMainWindow):
         self.maxGraphBox.triggered.connect(self.Maxcross)
         self.AnalyseMenu.addAction(self.maxGraphBox)
 
+        self.cursorsBox = QAction('Cursors', self)
+        self.cursorsBox.setCheckable(True)
+        self.cursorsBox.setChecked(False)
+        self.cursorsBox.triggered.connect(self.Cursors)
+        self.AnalyseMenu.addAction(self.cursorsBox)
+
         self.label_CrossValue = QLabel()
         self.label_CrossValue.setStyleSheet("font:13pt")
 
@@ -652,10 +658,15 @@ class SEE(QMainWindow):
         if self.meas is True :
             self.MeasButton = QAction(QtGui.QIcon(self.icon+"laptop.png"),
                                       'Measure', self)
-            
+
             self.MeasButton.setShortcut('ctrl+m')
             self.MeasButton.triggered.connect(self.Measurement)
             self.AnalyseMenu.addAction(self.MeasButton)
+
+            self.addSquareButton = QAction(QtGui.QIcon(self.icon+"rectangle.png"),
+                                           'Add measurement Square', self)
+            self.addSquareButton.triggered.connect(self.addMeasROI)
+            self.AnalyseMenu.addAction(self.addSquareButton)
 
         if self.fft is True:
             self.fftButton = QAction('FFT', self)
@@ -802,9 +813,32 @@ class SEE(QMainWindow):
         self.hLine.setPos(self.yc)
 
         # cross for the max
-        self.vLineCrossMax = pg.InfiniteLine(angle=90, movable=False, pen='g') 
+        self.vLineCrossMax = pg.InfiniteLine(angle=90, movable=False, pen='g')
         self.hLineCrossMax = pg.InfiniteLine(angle=0, movable=False, pen='g')
         self.labelCmax = pg.TextItem(angle=0)
+
+        # two movable cursors (crosshair targets) used to measure the
+        # distance between two points on the image. Each one is an
+        # independent draggable pg.TargetItem: click and drag directly on
+        # the cross you want to move, no selection step is needed.
+        self.cursor1 = pg.TargetItem(pos=(self.xc-50, self.yc), pen='c',
+                                     movable=True, label='1',
+                                     labelOpts={'color': 'c'})
+        self.cursor2 = pg.TargetItem(pos=(self.xc+50, self.yc), pen='m',
+                                     movable=True, label='2',
+                                     labelOpts={'color': 'm'})
+        self.labelCursor1 = pg.TextItem(angle=0, color='c')
+        self.labelCursor2 = pg.TextItem(angle=0, color='m')
+        self.labelCursors = pg.TextItem(angle=0, color='w')
+
+        # several independent measurement squares can be added on top of
+        # the image (menu Analyse > Add measurement Square). Each one is
+        # removable : right-click on it shows "Remove ROI". Clicking or
+        # dragging a square makes it the active one (thicker outline),
+        # ctrl+M / Measurement then measures that active square.
+        self.measROIs = []
+        self.activeMeasROI = None
+        self.measROICounter = 0
 
         self.ro1 = pg.EllipseROI([self.xc, self.yc], [self.rx, self.ry],
                                  pen='r', movable=False)
@@ -890,6 +924,9 @@ class SEE(QMainWindow):
         self.plotRect.sigRegionChangeFinished.connect(self.RectChanged)
         self.plotCercle.sigRegionChangeFinished.connect(self.CercChanged)
         self.plotPentagon.sigRegionChangeFinished.connect(self.PentaChanged)
+
+        self.cursor1.sigPositionChanged.connect(self.CursorsChanged)
+        self.cursor2.sigPositionChanged.connect(self.CursorsChanged)
 
         # if self.plot3D is True:
         #     self.box3d.clicked.connect(self.Graph3D)
@@ -1231,6 +1268,155 @@ class SEE(QMainWindow):
     #     self.open_widget(self.Widget3D)
     #     self.Widget3D.Plot3D(self.data)
 
+    def _newMeasWindow(self):
+        '''create a standalone MEAS window for one measurement square.
+        It must NOT stay wired to the shared signalMeas broadcast (MEAS
+        auto-connects to it in its own setup()) : otherwise every square
+        window would display every other square's measurement too.
+        Each square window is instead fed directly, see updateMeasROI().
+        '''
+        if getattr(self, 'motRSAI', False):
+            win = MEAS(parent=self, conf=self.conf, name=self.name, motRSAI=self.motRSAI)
+        elif getattr(self, 'motA2V', False):
+            win = MEAS(parent=self, conf=self.conf, name=self.name, motA2V=self.motA2V)
+        else:
+            win = MEAS(parent=self, conf=self.conf, name=self.name)
+        try:
+            self.signalMeas.disconnect(win.Display)
+        except Exception:
+            pass
+        return win
+
+    def addMeasROI(self):
+        '''add one more independent measurement square on top of the
+        image, each with its own dedicated Measurement window (titled
+        and labelled with the square's name/color), opened right away
+        and kept live on every new acquisition - entirely separate from
+        ctrl+M / Measurement, which stays dedicated to the classic
+        rect/circle/pentagon tool and the single winM window as before.
+        Each square can be dragged/resized on its own ; clicking or
+        moving one makes it the "active" square (highlighted with a
+        thicker outline, cosmetic only).
+        Right-click on a square shows "Remove ROI" to delete just that
+        one (built-in pyqtgraph behaviour, removable=True).
+        '''
+        # 'g' (green) is excluded : it's already the color of the classic
+        # rectangle/circle/pentagon ROI tool, reusing it here would make
+        # the first square indistinguishable from that one
+        colors = ['c', 'm', 'y', 'r', 'b', 'orange']
+        color = colors[len(self.measROIs) % len(colors)]
+        self.measROICounter += 1
+        name = f"Square {self.measROICounter}"
+
+        # stagger each new square so they don't all land on top of each
+        # other at the image center
+        n = len(self.measROIs)
+        pos = [self.dimx/2 + n*(2*self.rx), self.dimy/2 + n*self.ry]
+
+        roi = pg.RectROI(pos, [4*self.rx, self.ry], pen=color, removable=True)
+        roi.measColor = color
+        roi.measName = name
+        roi.measWin = self._newMeasWindow()
+        roi.measWin.setWindowTitle(f"MEASUREMENTS - {name}")
+        winLabel = QLabel(name)
+        winLabel.setStyleSheet(f"color: {color}; font-weight: bold; font-size: 14pt;")
+        winLabel.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        roi.measWin.centralWidget().layout().insertWidget(0, winLabel)
+
+        # number displayed just above the square, not overlapping it :
+        # anchor=(0,1) pins the text's bottom-left corner to the given
+        # point, so the text grows up and to the right from there - using
+        # the square's top-left corner (pos + height) as that point puts
+        # the whole label above the square instead of inside it
+        roi.numberLabel = pg.TextItem(text=str(self.measROICounter),
+                                      color=color, anchor=(0, 1))
+        roi.numberLabel.setPos(pos[0], pos[1] + self.ry)
+
+        roi.sigRegionChanged.connect(self.measROIMoved)
+        roi.sigRegionChangeFinished.connect(self.measROIChanged)
+        roi.sigClicked.connect(self.measROIClicked)
+        roi.sigRemoveRequested.connect(self.removeMeasROI)
+        self.measROIs.append(roi)
+        self.p1.addItem(roi)
+        self.p1.addItem(roi.numberLabel, ignoreBounds=True)
+        self.setActiveMeasROI(roi)
+
+        # the square's own window opens right away : it no longer relies
+        # on ctrl+M, which stays dedicated to the classic tool
+        self.open_widget(roi.measWin)
+        self.updateMeasROI(roi)
+
+    def setActiveMeasROI(self, roi):
+        '''highlight the active square (thicker outline) among all the
+        measurement squares, leave the others at their own color
+        '''
+        self.activeMeasROI = roi
+        for r in self.measROIs:
+            width = 3 if r is roi else 1
+            r.setPen(pg.mkPen(r.measColor, width=width))
+
+    def measROIClicked(self, roi, ev):
+        self.setActiveMeasROI(roi)
+
+    def measROIMoved(self, roi):
+        '''keep the number label glued just above its square (top-left
+        corner) while it is dragged/resized
+        '''
+        roi.numberLabel.setPos(roi.pos()[0], roi.pos()[1] + roi.size()[1])
+
+    def measROIChanged(self, roi):
+        '''a square has been moved/resized : make it active and push the
+        updated cut to its own window right away, independently of
+        ctrl+M / Measurement (which stays dedicated to the classic
+        rect/circle/pentagon tool, untouched by the squares feature)
+        '''
+        self.setActiveMeasROI(roi)
+        if roi.measWin.isWinOpen:
+            self.updateMeasROI(roi)
+
+    def removeMeasROI(self, roi):
+        try:
+            self.p1.removeItem(roi)
+            self.p1.removeItem(roi.numberLabel)
+        except Exception:
+            pass
+        try:
+            roi.measWin.close()
+        except Exception:
+            pass
+        if roi in self.measROIs:
+            self.measROIs.remove(roi)
+        if self.activeMeasROI is roi:
+            self.activeMeasROI = None
+            if self.measROIs:
+                self.setActiveMeasROI(self.measROIs[-1])
+
+    def updateMeasROI(self, roi):
+        '''push the current frame's data for one square into its own,
+        dedicated measurement window
+        '''
+        if self.winPref.checkBoxAxeScale.isChecked():
+            scalex, scaley = self.winPref.stepX, self.winPref.stepY
+        else:
+            scalex, scaley = 1, 1
+
+        cut = roi.getArrayRegion(self.data, self.imh)
+        xini = roi.pos()[0]
+        yini = roi.pos()[1]
+        roi.measWin.setFile(self.nomFichier)
+        MeasData = [cut, xini, yini, scalex, scaley]
+        roi.measWin.Display(MeasData)
+
+    def refreshMeasROIs(self):
+        '''update every measurement square's own window with the data of
+        the frame just received. Called on every new acquisition (see
+        Display()) so each open square window stays live on its own,
+        entirely independently of ctrl+M / the classic winM window.
+        '''
+        for roi in self.measROIs:
+            if roi.measWin.isWinOpen:
+                self.updateMeasROI(roi)
+
     def Measurement(self):
         '''how widget for measurement on all image or ROI  (max, min mean ...)
         '''
@@ -1287,12 +1473,10 @@ class SEE(QMainWindow):
         elif self.ite == 'pentagon':
             self.PentaChanged()
             pData = self.cut
-        elif self.ite is None:
+        else:
             pData = self.data
             self.xini = 0
             self.yini = 0
-        else:
-            pData = self.data
 
         if self.winPref.checkBoxAxeScale.isChecked() == 1:
             self.signalPointing.emit([pData, self.winPref.stepX,
@@ -1537,6 +1721,11 @@ class SEE(QMainWindow):
                 else:
                     self.Measurement()
 
+            # each measurement square has its own window, independent of
+            # winM : refresh every one of them that is currently open,
+            # not just the active square
+            self.refreshMeasROIs()
+
         if self.fft is True:
             if self.winFFT.isWinOpen is True:  # fft update (2D, rect/cercle/pas de ROI)
                 self.winFFT.Display(self.data)
@@ -1734,6 +1923,79 @@ class SEE(QMainWindow):
             except:
                 pass
 
+    def Cursors(self):
+        '''toggle two movable crosshair cursors ('1' cyan and '2' magenta)
+        used to measure the distance (delta x, delta y) between two points
+        on the image.
+        Each cursor is an independent draggable pg.TargetItem: click and
+        drag directly on the cross you want to move, there is no
+        separate "select" step or keyboard shortcut needed, clicking one
+        cursor never affects the other.
+        '''
+        if self.cursorsBox.isChecked():
+            # start centered on the image, symmetric around the middle
+            offset = self.dimx/10
+            self.cursor1.setPos((self.dimx/2 - offset, self.dimy/2))
+            self.cursor2.setPos((self.dimx/2 + offset, self.dimy/2))
+
+            self.p1.addItem(self.cursor1, ignoreBounds=True)
+            self.p1.addItem(self.cursor2, ignoreBounds=True)
+            self.p1.addItem(self.labelCursor1, ignoreBounds=True)
+            self.p1.addItem(self.labelCursor2, ignoreBounds=True)
+            self.p1.addItem(self.labelCursors, ignoreBounds=True)
+            f = QFont()
+            f.setPointSize(9)
+            self.labelCursor1.setFont(f)
+            self.labelCursor2.setFont(f)
+            self.labelCursors.setFont(f)
+            self.CursorsChanged()
+        else:
+            try:
+                self.p1.removeItem(self.cursor1)
+                self.p1.removeItem(self.cursor2)
+                self.p1.removeItem(self.labelCursor1)
+                self.p1.removeItem(self.labelCursor2)
+                self.p1.removeItem(self.labelCursors)
+            except:
+                pass
+
+    def CursorsChanged(self):
+        '''update, for each cursor, the (x, y, value) readout next to it,
+        and the delta x / delta y between the two cursors, when a cursor
+        is moved
+        '''
+        if self.cursorsBox.isChecked():
+            x1, y1 = self.cursor1.pos()
+            x2, y2 = self.cursor2.pos()
+
+            if self.winPref.checkBoxAxeScale.isChecked():  # scale axe on
+                scalex, scaley = self.winPref.stepX, self.winPref.stepY
+                unit = 'um'
+            else:
+                scalex, scaley = 1, 1
+                unit = 'pix'
+
+            values = []
+            for x, y, label in ((x1, y1, self.labelCursor1),
+                                (x2, y2, self.labelCursor2)):
+                try:
+                    # cast to float : self.data is often an unsigned int
+                    # dtype (uint8/uint16), and v2-v1 below would silently
+                    # wrap around instead of going negative otherwise
+                    v = round(float(self.data[int(x), int(y)]), 3)
+                except Exception:
+                    # evoid to have an error if cursor is out of the image
+                    v = 0
+                values.append(v)
+                label.setText(f"x= {round(x*scalex, 2)} {unit}\ny= {round(y*scaley, 2)} {unit}\nv= {v}")
+                label.setPos(x, y)
+
+            dx = (x2 - x1) * scalex
+            dy = (y2 - y1) * scaley
+            dv = values[1] - values[0]
+            self.labelCursors.setText(f"dx= {round(dx, 2)} {unit}\ndy= {round(dy, 2)} {unit}\ndv= {round(dv, 3)}")
+            self.labelCursors.setPos((x1+x2)/2, (y1+y2)/2)
+
     def Coupe(self):
         '''make  plot profile on cross update when display new image or cross moved
         '''
@@ -1862,6 +2124,11 @@ class SEE(QMainWindow):
 
             dataCross = round(dataCross, 3)  # take data  value  on the mousse
             self.label_CrossValue.setText(f' v.= {dataCross} {self.labelValue}')
+
+        # refresh the cursors delta readout too (unit switches px/um if the
+        # "Scale Factor" preference is toggled while the cursors are shown,
+        # without needing to drag a cursor first)
+        self.CursorsChanged()
 
     def PlotXY(self):
         '''plot curves on the  graph
