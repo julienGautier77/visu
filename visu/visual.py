@@ -1042,6 +1042,12 @@ class SEE(QMainWindow):
         self.lineXf = self.linePoints[1][0]
         self.lineYf = self.linePoints[1][1]
 
+        # angle par rapport à l'axe X, en pixels (indépendant de l'unité
+        # affichée px/um : un facteur d'échelle isotrope ne change pas
+        # l'angle, et stepX/stepY ne sont de toute façon pas garantis
+        # pertinents pour une direction qui n'est pas alignée avec X ou Y)
+        angleDeg = np.degrees(np.arctan2(self.lineYf-self.lineYo, self.lineXf-self.lineXo))
+
         if self.winPref.checkBoxAxeScale.isChecked() == 1:
             # self.plotLineAngle = np.arctan((self.lineYf-self.lineYo)/(self.lineXf-self.lineXo))
 
@@ -1050,10 +1056,10 @@ class SEE(QMainWindow):
 
             step = lineLength/self.cut.size
             self.absiLine = np.arange(0, (self.cut.size)*step, step)
-            self.textLineLength.setText(f'L = {round(lineLength, 2)} um')
+            self.textLineLength.setText(f'L = {round(lineLength, 2)} um\nangle = {round(angleDeg, 1)} °')
         else:
             lineLength = ((self.lineXf-self.lineXo)**2 + (self.lineYf-self.lineYo)**2)**0.5
-            self.textLineLength.setText(f'L = {round(lineLength, 1)} px')
+            self.textLineLength.setText(f'L = {round(lineLength, 1)} px\nangle = {round(angleDeg, 1)} °')
 
         self.textLineLength.setPos((self.lineXo+self.lineXf)/2, (self.lineYo+self.lineYf)/2)
 
