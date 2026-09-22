@@ -897,10 +897,15 @@ class SEE(QMainWindow):
         MainWidget.setLayout(hMainLayout)
         self.setCentralWidget(MainWidget)
         
-        # ROI definition 
+        # ROI definition
         self.plotLine = pg.LineSegmentROI(positions=((0, 200), (200, 200)),
                                           movable=True, angle=0, pen='w')
         self.textLineLength = pg.TextItem(angle=0, color='w', anchor=(0.5, 1))
+        # longueur/angle cachés par défaut : affichables via un clic droit
+        # sur la ligne (menu contextuel, voir _setupLineMenu()). Le choix
+        # est mémorisé pour rester actif si la ligne est retirée puis
+        # remise (LIGNE() recrée self.plotLine à chaque fois)
+        self.showLineInfo = False
 
         self.plotRect = pg.RectROI([self.xc, self.yc], [4*self.rx, self.ry],
                                    pen='g')
@@ -1019,9 +1024,39 @@ class SEE(QMainWindow):
                                             movable=True, pen='w')
             self.plotLine.sigRegionChangeFinished.connect(self.LigneChanged)
             self.p1.addItem(self.plotLine)
-            self.p1.addItem(self.textLineLength)
+            self._setupLineMenu()
+            if self.showLineInfo:
+                self.p1.addItem(self.textLineLength)
 
             self.LigneChanged()
+
+    def _setupLineMenu(self):
+        '''ajoute au clic droit sur la ligne un item "Afficher
+        longueur/angle" (coché/décoché selon self.showLineInfo), pour ne
+        montrer L=.../angle=... que si l'utilisateur le demande
+        '''
+        menu = self.plotLine.getMenu()
+        # par défaut, pyqtgraph n'active le clic droit (contextMenuEvent)
+        # que si l'ROI est removable=True, ou si son menu a déjà plus d'un
+        # item : ici la ligne n'est pas removable et n'a qu'un seul item
+        # custom, donc on force l'activation explicitement
+        self.plotLine.contextMenuEnabled = lambda: True
+        self.lineInfoAction = QAction('Afficher longueur/angle', menu)
+        self.lineInfoAction.setCheckable(True)
+        self.lineInfoAction.setChecked(self.showLineInfo)
+        self.lineInfoAction.toggled.connect(self.toggleLineInfo)
+        menu.addAction(self.lineInfoAction)
+
+    def toggleLineInfo(self, checked):
+        self.showLineInfo = checked
+        if checked:
+            self.p1.addItem(self.textLineLength)
+            self.LigneChanged()
+        else:
+            try:
+                self.p1.removeItem(self.textLineLength)
+            except Exception:
+                pass
 
     def LigneChanged(self):
         '''Take line ROI
