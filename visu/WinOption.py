@@ -47,10 +47,6 @@ class OPTION(QWidget):
         self.auto = False
         self.setWindowTitle('Options Auto Save & visualisation')
         self.setWindowIcon(QIcon(self.icon+'LOA.png'))
-        
-        # self.stepX=float(self.conf.value(self.name+"/stepX"))
-        # self.stepY=float(self.conf.value(self.name+"/stepY"))
-
         self.shoot = int(self.conf.value(self.name+"/tirNumber"))
         self.setup()
         self.pathAutoSave = self.conf.value(self.name+"/path")
@@ -65,8 +61,6 @@ class OPTION(QWidget):
         self.nomFichier = file
 
     def setup(self):
-        
-        
         TogOff = self.icon+'Toggle_Off.png'
         TogOn = self.icon+'Toggle_On.png'
         TogOff = pathlib.Path(TogOff)
@@ -168,7 +162,6 @@ class OPTION(QWidget):
         self.tirNumberBox.setValue(self.tirNumber)
  
     def selectBg(self):
-        
         fname = QFileDialog.getOpenFileName(
             self, "Select a background file", self.pathBg, 
             "Images (*.txt *.spe *.TIFF *.sif);;Text File(*.txt);;Ropper File (*.SPE);;Andor File(*.sif);; TIFF file(*.TIFF)")
@@ -436,7 +429,6 @@ class THREADCLIENT(QtCore.QThread):
         """Gérer la confirmation d'enregistrement"""
         client_id = event.get('client_id')
         if client_id == self.client_id:
-            # print(f"Registration confirmed by server")
             # Optionnel: traiter la config initiale si le serveur l'envoie
             if 'path' in event:
                 path = event['path']
@@ -454,7 +446,7 @@ class THREADCLIENT(QtCore.QThread):
     
         """
         nbshot = event.get('number')
-        timestamp = event.get('timestamp') # pour aline si besoin
+        timestamp = event.get('timestamp') # pour aline si besoin ?
          # print('clien shoot receveid,nbshot', nbshot)
         # Émettre le signal si le numéro a changé
         if int(self.parent.tirNumberBox.value()) != nbshot:
@@ -530,8 +522,6 @@ class THREADCLIENT(QtCore.QThread):
         time.sleep(0.1)
         self.quit()
         self.wait()
-
-
 
 if __name__ == "__main__":
     appli = QApplication(sys.argv)

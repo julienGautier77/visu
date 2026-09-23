@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 """
 Window for Measurement
-Réécriture avec connexion ZMQ directe au serveur RSAI
-Sans utiliser le client MOTORRSAI complet
+connexion ZMQ directe au serveur RSAI
+
 
 @author: juliengautier
 @modified: 2025 - Connexion ZMQ directe
@@ -89,7 +89,7 @@ class ServerConfigDialog(QDialog):
 class ZMQMotorClient:
     """
     Client ZMQ léger pour communiquer avec le serveur RSAI
-    Basé sur le code fonctionnel de mainMotor.py
+    Basé sur mainMotor.py
     """
     
     def __init__(self, server_host='localhost', server_port='5555'):
@@ -412,11 +412,7 @@ class MEAS(QMainWindow):
 
         # Formule Python de la fonction User1, éditable par l'utilisateur
         # depuis le menu Settings > "Configurer fonction User1..." (voir
-        # FctUser1()). La variable disponible dans la formule est self.data
-        # (image du tir courant), ex: round(self.data.max()-self.data.min())
-        # Stockée dans self.conf (le confVisu.ini de la caméra courante), et
-        # non dans un fichier partagé : chaque caméra peut ainsi avoir sa
-        # propre formule. Si rien n'a encore été défini pour cette caméra,
+        # FctUser1()). Si n'a encore été défini pour cette caméra,
         # on retombe simplement sur "0" (fonction neutre, comme avant).
         self.user1Formula = str(self.conf.value(self.name + "/user1Formula", "0"))
 
@@ -729,9 +725,7 @@ class MEAS(QMainWindow):
         - sinon (pas d'autosave), utilise le compteur interne self.shoot,
           qui s'incrémente à chaque acquisition et repart à 0 au Reset.
           Sans cette vérification, le numéro de tir de WinOption restait
-          bloqué à la même valeur (il ne s'incrémente que lors d'une
-          sauvegarde autosave réelle), ce qui faisait que l'axe des tracés
-          affichait toujours la même valeur en dehors du mode autosave.
+          bloqué à la même valeur
         """
         if self._isAutoSaveActive() and self.tirNumberOpt is not None:
             return self.tirNumberOpt, 'Tir'
@@ -746,10 +740,8 @@ class MEAS(QMainWindow):
         Détermine la position (indices pixel) du maximum de l'image.
 
         - Si self.useFilteredMaxPosition est False : comportement d'origine,
-          argmax brut sur l'image complète (rapide mais sensible au bruit
-          et aux pixels chauds).
-        - Si True (par défaut) : applique un filtre médian (retire les
-          pixels chauds isolés) puis un filtre gaussien (lisse le bruit)
+          argmax brut sur l'image complète
+        - Si True (par défaut) : applique un filtre médian puis un filtre gaussien (lisse le bruit)
           avant de chercher le maximum. Sur les grandes images, un
           sous-échantillonnage est appliqué avant le filtrage gaussien
           (qui est coûteux en pleine résolution), puis la position trouvée
@@ -827,12 +819,7 @@ class MEAS(QMainWindow):
         self.saveAct.triggered.connect(self.saveF)
         self.fileMenu.addAction(self.saveAct)
         
-        # Menu Settings, organisé en sections (titres) pour bien séparer les
-        # moteurs (connexion serveur RSAI), la publication de données
-        # (serveur ZMQ Publisher) et le reste (affichage/tableau).
-        # Note : QMenu.addSection() ne fonctionne pas ici, son texte est
-        # avalé par le style QSS de qdarkstyle (les séparateurs stylés en
-        # QSS ne dessinent qu'un trait, sans texte) ; on utilise donc une
+        # on utilise une
         # vraie QAction désactivée en guise de titre, entourée de séparateurs.
         def addMenuTitle(text):
             titleAct = QAction(text, self)
@@ -887,10 +874,8 @@ class MEAS(QMainWindow):
         self.filterMaxPositionAct.triggered.connect(self.toggleFilterMaxPosition)
         self.settingsMenu.addAction(self.filterMaxPositionAct)
 
-        # Ajustement manuel des colonnes : n'est plus fait automatiquement
-        # à chaque tir (coût qui grandit avec le nombre de lignes et
-        # bloquait l'interface après quelques centaines de tirs) ; à faire
-        # à la demande, par exemple une fois l'acquisition terminée.
+        # Ajustement manuel des colonnes : n'est plus fait automatiquement car trop long
+        
         self.resizeColumnsAct = QAction('↔️ Ajuster la largeur des colonnes', self)
         self.resizeColumnsAct.triggered.connect(lambda: self.table.resizeColumnsToContents())
         self.settingsMenu.addAction(self.resizeColumnsAct)
@@ -1580,9 +1565,6 @@ class MEAS(QMainWindow):
             })
 
         # Mise à jour incrémentale de l'en-tête vertical (numéro de ligne),
-        # au lieu de reconstruire toute la liste des labels à chaque tir
-        # (coût O(n) par appel -> O(n²) au total, cause principale du
-        # ralentissement/blocage observé après quelques centaines de tirs).
         self.table.setVerticalHeaderItem(self.shoot, QTableWidgetItem('%s' % self.shoot))
         
         # Gestion du threshold
@@ -1730,7 +1712,6 @@ class MEAS(QMainWindow):
         if ok and text.strip():
             self.user1Formula = text.strip()
             # Sauvegardée dans self.conf (confVisu.ini de la caméra courante)
-            # pour permettre une formule différente par caméra.
             self.conf.setValue(self.name + "/user1Formula", self.user1Formula)
             self.conf.sync()
 

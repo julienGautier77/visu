@@ -458,8 +458,7 @@ class WINPOINTING(QMainWindow):
         infoLayout.addStretch()
 
         # Bouton pour positionner la croix du parent (visual/visualLight) sur
-        # la moyenne X, Y du pointing (même action que le menu Options >
-        # "Set Cross to Mean Position", raccourci Ctrl+Shift+M)
+        # la moyenne X, Y du pointing 
         self.setCrossButton = QPushButton('Set Cross')
         self.setCrossButton.setToolTip('Positionner la croix sur la moyenne X, Y du pointing')
         self.setCrossButton.clicked.connect(self.setCrossToMean)
