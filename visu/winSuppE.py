@@ -69,6 +69,12 @@ class WINENCERCLED(QWidget):
         self.airyBeamSize = self._readConfFloat(self.name+"/airyBeamSize", 85)      # mm (défaut 85 mm)
         self.airyWavelength = self._readConfFloat(self.name+"/airyWavelength", 800)  # nm (défaut 800 nm)
         self._airyAdded = False
+
+        # Paramètres laser pour le calcul de l'intensité crête
+        self.laserEnergy = self._readConfFloat(self.name+"/laserEnergy", 60)                # mJ
+        self.laserTransmission = self._readConfFloat(self.name+"/laserTransmission", 1)     # 0-1
+        self.laserDuration = self._readConfFloat(self.name+"/laserDuration", 28)            # fs FWHM
+        self.intensityThreshold = self._readConfFloat(self.name+"/intensityThreshold", 0.05)  # seuil normalisé
         
         self.kE = 0  # variable pour la courbe E fct du nb shoot
         
@@ -142,8 +148,8 @@ class WINENCERCLED(QWidget):
             "  font: bold 10pt;"
             "  border: 1px solid #3a3f4b;"
             "  border-radius: 6px;"
-            "  margin-top: 10px;"
-            "  padding-top: 10px;"
+            "  margin-top: 8px;"
+            "  padding-top: 4px;"
             "}"
             "QGroupBox::title{"
             "  subcontrol-origin: margin;"
@@ -156,7 +162,8 @@ class WINENCERCLED(QWidget):
         
         vbox1 = QVBoxLayout()
         self.vbox1 = vbox1  # gardé pour ajuster la hauteur de la fenêtre au contenu réel du panneau (voir __init__)
-        vbox1.setSpacing(12)
+        vbox1.setSpacing(4)
+        vbox1.setContentsMargins(0, 0, 0, 0)
 
         # --- Groupe : mode de détection ---
         modeGroup = QGroupBox("Détection")
@@ -168,33 +175,40 @@ class WINENCERCLED(QWidget):
         modeLayout.addWidget(self.bckButton)
         modeLayout.addStretch(1)
         modeGroup.setLayout(modeLayout)
-        vbox1.addWidget(modeGroup)
 
         # --- Groupe : rapport d'énergie (résultat principal, mis en avant) ---
         ratioGroup = QGroupBox("Rapport d'énergie")
         ratioLayout = QHBoxLayout()
         self.lEnergie = QLabel('s(E1)/s(E2) :')
-        self.lEnergie.setStyleSheet("color:#8ab4f8; font: 13pt;")
+        self.lEnergie.setStyleSheet("color:#8ab4f8; font: 11pt;")
         self.energieRes = QLabel('?')
-        self.energieRes.setStyleSheet("color:#8ab4f8; font: bold 20pt;")
-        self.energieRes.setMaximumHeight(36)
+        self.energieRes.setStyleSheet("color:#8ab4f8; font: bold 16pt;")
+        self.energieRes.setMaximumHeight(30)
         ratioLayout.addWidget(self.lEnergie)
         ratioLayout.addWidget(self.energieRes)
         ratioLayout.addStretch(1)
+        self.plotRatioBtn = QPushButton("Plot")
+        self.plotRatioBtn.setToolTip("Rapport s(E1)/s(E2) en fonction des tirs")
+        self.plotRatioBtn.setMaximumWidth(60)
+        ratioLayout.addWidget(self.plotRatioBtn)
         ratioGroup.setLayout(ratioLayout)
-        vbox1.addWidget(ratioGroup)
+        topRow = QHBoxLayout()
+        topRow.addWidget(modeGroup)
+        topRow.addWidget(ratioGroup, 1)
+        vbox1.addLayout(topRow)
 
         # --- Groupe : rayons des cercles de mesure ---
         radiusGroup = QGroupBox("Rayons des cercles")
         radiusForm = QFormLayout()
         radiusForm.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
-        radiusForm.setVerticalSpacing(8)
+        radiusForm.setVerticalSpacing(2)
 
         self.LabelR1x = QLabel("w = fwhm X × 0.85")
         self.LabelR1x.setStyleSheet("color:#ef5350; font: 11pt;")
         self.r1xBox = QDoubleSpinBox()
         self.r1xBox.setDecimals(2)
         self.r1xBox.setMaximum(20000)
+        self.r1xBox.setMaximumWidth(100)
         self.r1xBox.setSuffix(" px")
 
         self.LabelR1y = QLabel('w = fwhm Y × 0.85')
@@ -202,6 +216,7 @@ class WINENCERCLED(QWidget):
         self.r1yBox = QDoubleSpinBox()
         self.r1yBox.setDecimals(2)
         self.r1yBox.setMaximum(20000)
+        self.r1yBox.setMaximumWidth(100)
         self.r1yBox.setSuffix(" px")
 
         self.LabelR2 = QLabel('R2')
@@ -263,12 +278,117 @@ class WINENCERCLED(QWidget):
         self.airyWavelengthBox.setValue(self.airyWavelength)
 
         self._buildAirySettingsWindow()
+        self._buildRatioPlotWindow()
+
+        # --- Groupe : intensité crête (réglages laser dans une fenêtre séparée) ---
+        intensityGroup = QGroupBox("Intensité (×10¹⁸ W/cm²)")
+        intensityGrid = QGridLayout()
+        intensityGrid.setHorizontalSpacing(12)
+        intensityGrid.setVerticalSpacing(2)
+
+        tipPeakPower = (
+            "<b>Puissance crête</b><br>"
+            "P = E · T / τ<br><br>"
+            "E : énergie, T : transmission, τ : durée FWHM "
+            "(réglages ⚙ Laser...).<br>"
+            "NB : pour une impulsion gaussienne en temps, la vraie "
+            "puissance crête vaut 0,94 · E/τ.")
+        tipCircle = (
+            "<b>Cercle (méthode LHC)</b><br>"
+            "I = P / A<sub>eff</sub><br><br>"
+            "Dans le cercle rouge, chaque pixel est normalisé au max : "
+            "n<sub>i</sub> = I<sub>i</sub> / I<sub>max</sub><br>"
+            "A<sub>eff</sub> = Σ n<sub>i</sub> · a<sub>pix</sub> "
+            "(pixels où n<sub>i</sub> &gt; seuil)<br>"
+            "a<sub>pix</sub> = stepX · stepY (calibration des Préférences)<br><br>"
+            "Suppose que TOUTE la puissance est dans le cercle rouge : "
+            "surestime I<sub>0</sub> de 1/f (≈ +16 % pour une gaussienne, "
+            "f = 1 − e<sup>−2</sup> = 0,865).")
+        tipCircleCorr = (
+            "<b>Cercle corrigé</b><br>"
+            "I = f · P / A<sub>eff</sub>, avec f = E1 / E2<br><br>"
+            "Même aire effective que la méthode LHC, mais on ne compte que "
+            "la fraction f de la puissance contenue dans le cercle rouge "
+            "(rapport d'énergie affiché en haut). E2 (cercle jaune, 2w) "
+            "contient ≈ toute l'énergie.<br>"
+            "Valable aussi pour une tache non gaussienne ; nécessite un "
+            "fond bien soustrait (le bruit gonfle A<sub>eff</sub> et E2).")
+        tipGauss = (
+            "<b>Gaussien</b><br>"
+            "I<sub>0</sub> = 2P / (π · w<sub>x</sub> · w<sub>y</sub>)<br><br>"
+            "Pour I(x,y) = I<sub>0</sub> · exp(−2x²/w<sub>x</sub>² − 2y²/w<sub>y</sub>²), "
+            "l'intégrale donne P = I<sub>0</sub> · π·w<sub>x</sub>·w<sub>y</sub> / 2.<br>"
+            "w (rayon 1/e²) = FWHM / √(2 ln2) = 0,849 · FWHM, "
+            "FWHM issue du fit gaussien des coupes.<br>"
+            "Exact seulement si la tache est gaussienne.")
+
+        labelPeakPowerTxt = QLabel("P crête")
+        self.labelPeakPower = QLabel("?")
+        labelCircleTxt = QLabel("Cercle LHC")
+        labelCircleTxt.setStyleSheet("color:#ef5350; font: 11pt;")
+        self.labelIntensityCircle = QLabel("?")
+        self.labelIntensityCircle.setStyleSheet("color:#ef5350; font: 11pt;")
+        labelCircleCorrTxt = QLabel("Cercle corrigé")
+        labelCircleCorrTxt.setStyleSheet("color:#ef5350; font: 11pt;")
+        self.labelIntensityCircleCorr = QLabel("?")
+        self.labelIntensityCircleCorr.setStyleSheet("color:#ef5350; font: bold 11pt;")
+        labelGaussTxt = QLabel("Gaussien")
+        labelGaussTxt.setStyleSheet("color:#ffb74d; font: 11pt;")
+        self.labelIntensityGauss = QLabel("?")
+        self.labelIntensityGauss.setStyleSheet("color:#ffb74d; font: 11pt;")
+
+        for tip, widgets in ((tipPeakPower, (labelPeakPowerTxt, self.labelPeakPower)),
+                             (tipCircle, (labelCircleTxt, self.labelIntensityCircle)),
+                             (tipCircleCorr, (labelCircleCorrTxt, self.labelIntensityCircleCorr)),
+                             (tipGauss, (labelGaussTxt, self.labelIntensityGauss))):
+            for w in widgets:
+                w.setToolTip(tip)
+
+        self.intensitySettingsBtn = QPushButton("⚙ Laser...")
+        self.intensitySettingsBtn.setMaximumWidth(90)
+
+        intensityGrid.addWidget(labelPeakPowerTxt, 0, 0)
+        intensityGrid.addWidget(self.labelPeakPower, 0, 1, 1, 2)
+        intensityGrid.addWidget(self.intensitySettingsBtn, 0, 3)
+        intensityGrid.addWidget(labelCircleTxt, 1, 0)
+        intensityGrid.addWidget(self.labelIntensityCircle, 1, 1)
+        intensityGrid.addWidget(labelGaussTxt, 1, 2)
+        intensityGrid.addWidget(self.labelIntensityGauss, 1, 3)
+        intensityGrid.addWidget(labelCircleCorrTxt, 2, 0)
+        intensityGrid.addWidget(self.labelIntensityCircleCorr, 2, 1)
+        intensityGroup.setLayout(intensityGrid)
+
+        self.laserEnergyBox = QDoubleSpinBox()
+        self.laserEnergyBox.setDecimals(1)
+        self.laserEnergyBox.setMaximum(1000000)
+        self.laserEnergyBox.setSuffix(" mJ")
+        self.laserEnergyBox.setValue(self.laserEnergy)
+
+        self.laserTransmissionBox = QDoubleSpinBox()
+        self.laserTransmissionBox.setDecimals(3)
+        self.laserTransmissionBox.setRange(0, 1)
+        self.laserTransmissionBox.setSingleStep(0.01)
+        self.laserTransmissionBox.setValue(self.laserTransmission)
+
+        self.laserDurationBox = QDoubleSpinBox()
+        self.laserDurationBox.setDecimals(1)
+        self.laserDurationBox.setRange(0.1, 1000000)
+        self.laserDurationBox.setSuffix(" fs")
+        self.laserDurationBox.setValue(self.laserDuration)
+
+        self.intensityThresholdBox = QDoubleSpinBox()
+        self.intensityThresholdBox.setDecimals(2)
+        self.intensityThresholdBox.setRange(0, 0.99)
+        self.intensityThresholdBox.setSingleStep(0.01)
+        self.intensityThresholdBox.setValue(self.intensityThreshold)
+
+        self._buildIntensitySettingsWindow()
 
         # --- Groupe : résultats E1 / E2 ---
         resultsGroup = QGroupBox("Résultats")
         resultsGrid = QGridLayout()
-        resultsGrid.setHorizontalSpacing(16)
-        resultsGrid.setVerticalSpacing(6)
+        resultsGrid.setHorizontalSpacing(12)
+        resultsGrid.setVerticalSpacing(2)
 
         LabelE1 = QLabel("E1 Sum")
         LabelE1.setStyleSheet("color:#ef5350; font: 11pt;")
@@ -290,18 +410,12 @@ class WINENCERCLED(QWidget):
 
         resultsGrid.addWidget(LabelE1, 0, 0)
         resultsGrid.addWidget(self.LabelE1Sum, 0, 1)
-        resultsGrid.addWidget(LabelE1M, 1, 0)
-        resultsGrid.addWidget(self.LabelE1Mean, 1, 1)
-
-        sep = QFrame()
-        sep.setFrameShape(QFrame.Shape.HLine)
-        sep.setStyleSheet("color:#3a3f4b;")
-        resultsGrid.addWidget(sep, 2, 0, 1, 2)
-
-        resultsGrid.addWidget(LabelE2, 3, 0)
-        resultsGrid.addWidget(self.LabelE2Sum, 3, 1)
-        resultsGrid.addWidget(LabelE2M, 4, 0)
-        resultsGrid.addWidget(self.LabelE2Mean, 4, 1)
+        resultsGrid.addWidget(LabelE1M, 0, 2)
+        resultsGrid.addWidget(self.LabelE1Mean, 0, 3)
+        resultsGrid.addWidget(LabelE2, 1, 0)
+        resultsGrid.addWidget(self.LabelE2Sum, 1, 1)
+        resultsGrid.addWidget(LabelE2M, 1, 2)
+        resultsGrid.addWidget(self.LabelE2Mean, 1, 3)
 
         resultsGroup.setLayout(resultsGrid)
         vbox1.addWidget(resultsGroup)
@@ -309,8 +423,8 @@ class WINENCERCLED(QWidget):
         # --- Groupe : caractérisation de la tache focale (D4σ) ---
         focalGroup = QGroupBox("Tache focale (D4σ, ISO 11146)")
         focalGrid = QGridLayout()
-        focalGrid.setHorizontalSpacing(16)
-        focalGrid.setVerticalSpacing(6)
+        focalGrid.setHorizontalSpacing(12)
+        focalGrid.setVerticalSpacing(2)
 
         labelD4SxTxt = QLabel("D4σ X")
         labelD4SxTxt.setStyleSheet("color:#ef5350; font: 11pt;")
@@ -321,13 +435,14 @@ class WINENCERCLED(QWidget):
         self.labelD4Sy = QLabel("?")
         self.labelD4Sy.setStyleSheet("color:#66bb6a; font: 11pt;")
 
-        labelD4MajorTxt = QLabel("Grand axe D4σ")
+        labelD4MajorTxt = QLabel("Grand axe")
         self.labelD4Major = QLabel("?")
-        labelD4MinorTxt = QLabel("Petit axe D4σ")
+        labelD4MinorTxt = QLabel("Petit axe")
         self.labelD4Minor = QLabel("?")
         labelAngleTxt = QLabel("Angle")
         self.labelAngle = QLabel("?")
-        labelEllipticityTxt = QLabel("Ellipticité (petit/grand)")
+        labelEllipticityTxt = QLabel("Ellipticité")
+        labelEllipticityTxt.setToolTip("petit axe / grand axe")
         self.labelEllipticity = QLabel("?")
 
         labelStrehlTxt = QLabel("Strehl")
@@ -335,35 +450,20 @@ class WINENCERCLED(QWidget):
         self.labelStrehl = QLabel("?")
         self.labelStrehl.setStyleSheet("color:#4dd0e1; font: 11pt;")
 
-        focalGrid.addWidget(labelD4SxTxt, 0, 0)
-        focalGrid.addWidget(self.labelD4Sx, 0, 1)
-        focalGrid.addWidget(labelD4SyTxt, 1, 0)
-        focalGrid.addWidget(self.labelD4Sy, 1, 1)
-
-        sepFocal1 = QFrame()
-        sepFocal1.setFrameShape(QFrame.Shape.HLine)
-        sepFocal1.setStyleSheet("color:#3a3f4b;")
-        focalGrid.addWidget(sepFocal1, 2, 0, 1, 2)
-
-        focalGrid.addWidget(labelD4MajorTxt, 3, 0)
-        focalGrid.addWidget(self.labelD4Major, 3, 1)
-        focalGrid.addWidget(labelD4MinorTxt, 4, 0)
-        focalGrid.addWidget(self.labelD4Minor, 4, 1)
-        focalGrid.addWidget(labelAngleTxt, 5, 0)
-        focalGrid.addWidget(self.labelAngle, 5, 1)
-        focalGrid.addWidget(labelEllipticityTxt, 6, 0)
-        focalGrid.addWidget(self.labelEllipticity, 6, 1)
-
-        sepFocal2 = QFrame()
-        sepFocal2.setFrameShape(QFrame.Shape.HLine)
-        sepFocal2.setStyleSheet("color:#3a3f4b;")
-        focalGrid.addWidget(sepFocal2, 7, 0, 1, 2)
-
-        focalGrid.addWidget(labelStrehlTxt, 8, 0)
-        focalGrid.addWidget(self.labelStrehl, 8, 1)
+        focalRows = [
+            (labelD4SxTxt, self.labelD4Sx, labelD4SyTxt, self.labelD4Sy),
+            (labelD4MajorTxt, self.labelD4Major, labelD4MinorTxt, self.labelD4Minor),
+            (labelAngleTxt, self.labelAngle, labelEllipticityTxt, self.labelEllipticity),
+        ]
+        for row, widgets in enumerate(focalRows):
+            for col, w in enumerate(widgets):
+                focalGrid.addWidget(w, row, col)
+        focalGrid.addWidget(labelStrehlTxt, 3, 0)
+        focalGrid.addWidget(self.labelStrehl, 3, 1, 1, 3)
 
         focalGroup.setLayout(focalGrid)
         vbox1.addWidget(focalGroup)
+        vbox1.addWidget(intensityGroup)
 
         vbox1.addStretch(1)
         
@@ -466,7 +566,7 @@ class WINENCERCLED(QWidget):
         self.ROIRect = pg.RectROI([self.xec, self.yec], [4*self.r1x, 4*self.r1y], pen='m',)
         self.ROIRect.setPos([self.xec-(self.r1x), self.yec-(self.r1y)])
         hLayout1 = QHBoxLayout()
-        hLayout1.addLayout(vbox2)
+        hLayout1.addLayout(vbox2, 1)  # la place libre va au graphique, pas au panneau
         hLayout1.addLayout(vbox1)
         hLayout1.setContentsMargins(1, 1, 1, 1)
         
@@ -513,12 +613,18 @@ class WINENCERCLED(QWidget):
 
         self.checkBoxAiry.stateChanged.connect(self.updateAiry)
         self.airySettingsBtn.clicked.connect(self.openAirySettings)
+        self.plotRatioBtn.clicked.connect(self.openRatioPlot)
+        self.intensitySettingsBtn.clicked.connect(self.openIntensitySettings)
+        for box in (self.laserEnergyBox, self.laserTransmissionBox,
+                    self.laserDurationBox, self.intensityThresholdBox):
+            box.valueChanged.connect(self.updateIntensity)
+        self.resetRatioBtn.clicked.connect(self.resetRatio)
         self.airyFocaleBox.valueChanged.connect(self.updateAiry)
         self.airyBeamBox.valueChanged.connect(self.updateAiry)
         self.airyWavelengthBox.valueChanged.connect(self.updateAiry)
         
         if self.parent is not None:
-            self.parent.signalEng.connect(self.Display)
+            self.parent.signalEng.connect(self.newShot)
         
     def mouseClick(self):
         # bloque ou debloque la souris si click su le graph
@@ -660,6 +766,142 @@ class WINENCERCLED(QWidget):
         self.airySettingsWin.show()
         self.airySettingsWin.raise_()
         self.airySettingsWin.activateWindow()
+
+    def _buildIntensitySettingsWindow(self):
+        """Fenêtre séparée des paramètres laser utilisés pour l'intensité"""
+        self.intensitySettingsWin = QDialog(self)
+        self.intensitySettingsWin.setWindowTitle("Paramètres laser (intensité)")
+        self.intensitySettingsWin.setStyleSheet(self.styleSheet())
+
+        form = QFormLayout()
+        form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
+        form.setVerticalSpacing(8)
+        form.addRow(QLabel("Énergie"), self.laserEnergyBox)
+        form.addRow(QLabel("Transmission"), self.laserTransmissionBox)
+        form.addRow(QLabel("Durée (FWHM)"), self.laserDurationBox)
+        form.addRow(QLabel("Seuil cercle"), self.intensityThresholdBox)
+        self.intensitySettingsWin.setLayout(form)
+
+    def openIntensitySettings(self):
+        """Affiche la fenêtre des paramètres laser (non modale)"""
+        self.intensitySettingsWin.show()
+        self.intensitySettingsWin.raise_()
+        self.intensitySettingsWin.activateWindow()
+
+    def updateIntensity(self):
+        """
+        Puissance crête et intensité crête (×10¹⁸ W/cm²), avec la
+        calibration réelle µm/px de winPref (comme le rayon d'Airy) :
+        - Cercle (LHC) : P / aire effective dans le cercle rouge, l'aire étant
+          la somme des pixels normalisés au max au-dessus du seuil ;
+        - Cercle corrigé : idem × E1/E2, fraction de la puissance réellement
+          contenue dans le cercle rouge ;
+        - Gaussien : 2·P / (π·wx·wy), w (rayon 1/e²) = FWHM / √(2 ln2).
+        """
+        self.laserEnergy = self.laserEnergyBox.value()
+        self.laserTransmission = self.laserTransmissionBox.value()
+        self.laserDuration = self.laserDurationBox.value()
+        self.intensityThreshold = self.intensityThresholdBox.value()
+        self.conf.setValue(self.name+"/laserEnergy", self.laserEnergy)
+        self.conf.setValue(self.name+"/laserTransmission", self.laserTransmission)
+        self.conf.setValue(self.name+"/laserDuration", self.laserDuration)
+        self.conf.setValue(self.name+"/intensityThreshold", self.intensityThreshold)
+
+        peakPowerTW = (self.laserEnergy * 1e-3 * self.laserTransmission
+                       / (self.laserDuration * 1e-15) * 1e-12)
+        self.labelPeakPower.setText(f"{peakPowerTW:.2f} TW")
+
+        stepX, stepY = self._realStepXY()  # µm/px
+        if stepX is None:
+            for lbl in (self.labelIntensityCircle, self.labelIntensityCircleCorr,
+                        self.labelIntensityGauss):
+                lbl.setText("N/A")
+            return
+        pixelAreaCm2 = stepX * stepY * 1e-8
+
+        disk = self.roi1.getArrayRegion(self.data, self.imh)
+        diskMax = disk.max() if disk.size else 0
+        if diskMax > 0:
+            diskNorm = disk / diskMax
+            areaCm2 = np.where(diskNorm > self.intensityThreshold, diskNorm, 0).sum() * pixelAreaCm2
+            intensityCircle = peakPowerTW / areaCm2 * 1e-6
+            self.labelIntensityCircle.setText(f"{intensityCircle:.2f}")
+            self.labelIntensityCircleCorr.setText(f"{intensityCircle * self.rap / 100:.2f}")
+        else:
+            self.labelIntensityCircle.setText("?")
+            self.labelIntensityCircleCorr.setText("?")
+
+        if self.fwhmX and self.fwhmY:
+            fwhmToW = 1 / np.sqrt(2 * np.log(2))
+            wxCm = self.fwhmX * stepX * fwhmToW * 1e-4
+            wyCm = self.fwhmY * stepY * fwhmToW * 1e-4
+            self.labelIntensityGauss.setText(f"{2 * peakPowerTW / (np.pi * wxCm * wyCm) * 1e-6:.2f}")
+        else:
+            self.labelIntensityGauss.setText("?")
+
+    def _buildRatioPlotWindow(self):
+        """Fenêtre séparée : rapport s(E1)/s(E2) en fonction du numéro de tir"""
+        self.ratioPlotWin = QDialog(self)
+        self.ratioPlotWin.setWindowTitle("Rapport d'énergie en fonction des tirs")
+        self.ratioPlotWin.setStyleSheet(self.styleSheet())
+        self.ratioPlotWin.resize(700, 400)
+
+        self.ratioPlot = pg.PlotWidget()
+        self.ratioPlot.setLabel('left', 's(E1)/s(E2)', units='%')
+        self.ratioPlot.setLabel('bottom', 'Tir')
+        self.ratioPlot.showGrid(x=True, y=True, alpha=0.3)
+        self.ratioCurve = self.ratioPlot.plot(pen='#8ab4f8', symbol='o', symbolSize=5,
+                                              symbolBrush='#8ab4f8', symbolPen=None)
+        self.ratioMeanLine = pg.InfiniteLine(angle=0, movable=False,
+                                             pen=pg.mkPen('y', style=QtCore.Qt.PenStyle.DashLine))
+        self.ratioPlot.addItem(self.ratioMeanLine)
+
+        self.ratioStats = QLabel("")
+        self.ratioStats.setStyleSheet("color:#8ab4f8; font: 11pt;")
+        self.resetRatioBtn = QPushButton("Reset")
+        self.resetRatioBtn.setMaximumWidth(80)
+
+        statsLayout = QHBoxLayout()
+        statsLayout.addWidget(self.ratioStats)
+        statsLayout.addStretch(1)
+        statsLayout.addWidget(self.resetRatioBtn)
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.ratioPlot)
+        layout.addLayout(statsLayout)
+        self.ratioPlotWin.setLayout(layout)
+        self.updateRatioPlot()
+
+    def openRatioPlot(self):
+        """Affiche la fenêtre du rapport en fonction des tirs (non modale)"""
+        self.updateRatioPlot()
+        self.ratioPlotWin.show()
+        self.ratioPlotWin.raise_()
+        self.ratioPlotWin.activateWindow()
+
+    def newShot(self, data):
+        """Nouveau tir reçu de visual : calcul puis ajout du rapport à l'historique"""
+        self.Display(data)
+        self.E.append(self.rap)
+        if self.ratioPlotWin.isVisible():
+            self.updateRatioPlot()
+
+    def resetRatio(self):
+        self.E = []
+        self.updateRatioPlot()
+
+    def updateRatioPlot(self):
+        if not self.E:
+            self.ratioCurve.setData([], [])
+            self.ratioMeanLine.hide()
+            self.ratioStats.setText("Aucun tir")
+            return
+        E = np.array(self.E)
+        self.ratioCurve.setData(np.arange(1, len(E) + 1), E)
+        self.ratioMeanLine.setPos(E.mean())
+        self.ratioMeanLine.show()
+        self.ratioStats.setText(f"Tirs : {len(E)}    Moyenne : {E.mean():.2f} %    "
+                                f"Écart-type : {E.std():.2f} %")
 
     def updateAiry(self):
         """Met à jour le cercle d'Airy (affichage/position/taille) et le sauvegarde"""
@@ -831,13 +1073,6 @@ class WINENCERCLED(QWidget):
         E2 = self.roi2.getArrayRegion(self.data, self.imh).sum()
         self.rap = 100*E1/E2
         self.energieRes.setText('%.2f %%' % self.rap)
-        # self.E=np.append(self.E,self.rap)
-        # #self.E.append(self.rap)
-        # Emean=np.mean(self.E)
-        # self.meanAff.setText('%.2f' % Emean)
-        # EPV=np.std(self.E)
-        # self.PVAff.setText('%.2f' % EPV)
-        # self.hLineMeanE.setPos(Emean)
         # (textX/textY sont déjà mis à jour par Coupe(), avec le FWHM issu
         # du fit gaussien — pas besoin de les réécrire ici)
         self.LabelE1Sum.setText('%.2f' % E1)
@@ -881,26 +1116,34 @@ class WINENCERCLED(QWidget):
                        self.labelD4Minor, self.labelAngle,
                        self.labelEllipticity, self.labelStrehl):
                 lbl.setText("?")
+
+        self.updateIntensity()
         
     def _resizeWindowToMatchAspect(self, imgWidth, imgHeight):
         """
-        Redimensionne la hauteur de la fenêtre pour que le panneau
-        graphique (à largeur constante) ait un ratio proche de celui de
-        l'image réelle de la caméra. Réduit au minimum la marge que
-        setAspectLocked doit ajouter pour préserver des pixels carrés :
-        sans ça, l'axe pouvait afficher une plage bien plus grande que la
-        résolution réelle (ex : jusqu'à 2500 pour une caméra de 1500 px).
+        Redimensionne la fenêtre pour que le graphique ait le même ratio que
+        l'image de la caméra : sans ça, setAspectLocked ajoute une grande
+        marge (ex : axe Y jusqu'à 1750 pour une caméra de 1024 px).
+        La hauteur est imposée par le panneau de contrôle, on ajuste donc
+        d'abord la largeur ; on ne touche à la hauteur que si l'image est
+        si haute que le graphique deviendrait trop étroit.
         """
         graphPxWidth = self.p1.vb.width()
         graphPxHeight = self.p1.vb.height()
         if graphPxWidth <= 0 or graphPxHeight <= 0:
             return
-        targetGraphHeight = graphPxWidth * imgHeight / imgWidth
-        delta = targetGraphHeight - graphPxHeight
-        if abs(delta) > 20:  # évite les ajustements insignifiants/instables
-            currentSize = self.size()
-            newHeight = max(int(currentSize.height() + delta), 300)
-            self.resize(currentSize.width(), newHeight)
+        currentSize = self.size()
+        targetGraphWidth = graphPxHeight * imgWidth / imgHeight
+        if targetGraphWidth >= 300:
+            delta = targetGraphWidth - graphPxWidth
+            if abs(delta) > 20:  # évite les ajustements insignifiants/instables
+                newWidth = min(int(currentSize.width() + delta), 2400)
+                self.resize(newWidth, currentSize.height())
+        else:
+            targetGraphHeight = graphPxWidth * imgHeight / imgWidth
+            delta = targetGraphHeight - graphPxHeight
+            if abs(delta) > 20:
+                self.resize(currentSize.width(), int(currentSize.height() + delta))
 
     def _fitViewFullImage(self, imgWidth, imgHeight):
         """
