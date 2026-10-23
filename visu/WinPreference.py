@@ -9,7 +9,7 @@ Created on Wed Feb 13 16:02:40 2019
 import qdarkstyle
 from PyQt6 import QtCore
 from PyQt6.QtWidgets import QApplication, QCheckBox, QVBoxLayout, QHBoxLayout, QDoubleSpinBox
-from PyQt6.QtWidgets import QWidget, QLabel, QSpinBox, QLineEdit, QComboBox
+from PyQt6.QtWidgets import QWidget, QLabel, QSpinBox, QLineEdit, QComboBox, QPushButton
 from PyQt6.QtGui import QIcon
 import sys
 import os
@@ -87,7 +87,15 @@ class PREFERENCES(QWidget):
         hbox6.addWidget(self.checkBoxStepY)
         hbox6.addWidget(self.stepYBox)
         vbox1.addLayout(hbox6)
-        
+
+        hboxLambda = QHBoxLayout()
+        self.checkBoxLambda = QCheckBox('X axe in Wavelength (nm) ', self)
+        self.checkBoxLambda.setChecked(False)
+        hboxLambda.addWidget(self.checkBoxLambda)
+        self.lambdaSettingBut = QPushButton('Wavelength calibration')
+        hboxLambda.addWidget(self.lambdaSettingBut)
+        vbox1.addLayout(hboxLambda)
+
         hbox7 = QHBoxLayout()
         self.checkBoxFwhm = QCheckBox('FWHM ', self)
         self.checkBoxFwhm.setChecked(False)

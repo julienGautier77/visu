@@ -47,6 +47,7 @@ from visu.WinCut import GRAPHCUT
 from visu.winMeas import MEAS
 from visu.WinOption import OPTION
 from visu.WinPreference import PREFERENCES
+from visu.winLambda import WINLAMBDA, CalibAxisItem
 from visu.andor import SifFile
 from visu.winFFT import WINFFT
 from visu.winMath import WINMATH
@@ -201,6 +202,7 @@ class SEE(QMainWindow):
 
         self.winOpt = OPTION(conf=self.conf, name=self.name, parent=self)
         self.winPref = PREFERENCES(conf=self.conf, name=self.name)
+        self.winLambda = WINLAMBDA(conf=self.conf, name=self.name)
         self.winHistory = HISTORY(self, conf=self.conf, name=self.name)
 
         
@@ -451,7 +453,7 @@ class SEE(QMainWindow):
 
         self.label_Cross = QLabel()
         # self.label_Cross.setMaximumHeight(20)
-        self.label_Cross.setMaximumWidth(170)
+        self.label_Cross.setMaximumWidth(230)
         self.label_Cross.setStyleSheet("font:12pt")
         self.statusBar.addPermanentWidget(self.label_Cross)
         self.statusBar.addPermanentWidget(self.label_CrossValue)
@@ -506,6 +508,24 @@ class SEE(QMainWindow):
         self.checkBoxScale.toggled.connect(
             lambda checked: self.setToolButtonHighlight(self.checkBoxScale, checked))
         self.setToolButtonHighlight(self.checkBoxScale, self.checkBoxScale.isChecked())
+
+        # X axis in wavelength (nm) using the calibration of winLambda
+        self.lambdaAct = QAction('λ', self)
+        self.lambdaAct.setToolTip('X axis in wavelength (nm)')
+        self.lambdaAct.setCheckable(True)
+        self.lambdaAct.setChecked(False)
+        self.ImageMenu.addAction(self.lambdaAct)
+        self.lambdaAct.toggled.connect(self.lambdaChanged)
+        # same option in the preferences window, kept in sync with the menu
+        self.lambdaAct.toggled.connect(self.winPref.checkBoxLambda.setChecked)
+        self.winPref.checkBoxLambda.toggled.connect(self.lambdaAct.setChecked)
+        self.winPref.lambdaSettingBut.clicked.connect(
+            lambda: self.open_widget(self.winLambda))
+
+        self.lambdaSettingAct = QAction('Wavelength calibration', self)
+        self.lambdaSettingAct.triggered.connect(
+            lambda: self.open_widget(self.winLambda))
+        self.ImageMenu.addAction(self.lambdaSettingAct)
 
         self.checkBoxColor = QAction(QtGui.QIcon(self.icon+"colors-icon.png"),
                                      'Color on', self)
@@ -745,7 +765,7 @@ class SEE(QMainWindow):
         self.vbox2.setContentsMargins(0, 0, 0, 0)
 
         # Image principale, placée en haut à droite de la grille (row=0, col=1)
-        self.p1 = self.winImage.addPlot(row=0, col=1)
+        self.p1 = self.winImage.addPlot(row=0, col=1, axisItems={'bottom': CalibAxisItem(orientation='bottom')})
         self.imh = pg.ImageItem()
         self.axeX = self.p1.getAxis('bottom')
         self.axeY = self.p1.getAxis('left')
@@ -912,6 +932,7 @@ class SEE(QMainWindow):
         #     self.box3d.clicked.connect(self.Graph3D)
 
         self.winPref.closeEventVar.connect(self.ScaleImg)
+        self.winLambda.signalChange.connect(self.lambdaChanged)
 
         self.sliderImage.valueChanged.connect(self.SliderImgFct)
         # self.dockImage.topLevelChanged.connect(self.fullScreen)
@@ -1054,7 +1075,12 @@ class SEE(QMainWindow):
         # angle par rapport à l'axe X, en pixels (indépendant de l'unité
         angleDeg = np.degrees(np.arctan2(self.lineYf-self.lineYo, self.lineXf-self.lineXo))
 
-        if self.winPref.checkBoxAxeScale.isChecked() == 1:
+        if self.lambdaAct.isChecked():
+            # abscissa = wavelength of the x position of each point of the line
+            self.absiLine = self.winLambda.toLambda(np.linspace(self.lineXo, self.lineXf, self.cut.size))
+            deltaLambda = abs(self.winLambda.slope*(self.lineXf-self.lineXo))
+            self.textLineLength.setText(f'Δλ = {round(deltaLambda, 2)} nm\nangle = {round(angleDeg, 1)} °')
+        elif self.winPref.checkBoxAxeScale.isChecked() == 1:
             # longueur en micron
             lineLength = (self.winPref.stepX**2*(self.lineXo-self.lineXf)**2 +
                           self.winPref.stepY**2*(self.lineYo-self.lineYf)**2)**0.5
@@ -1214,20 +1240,27 @@ class SEE(QMainWindow):
 
     def CUT(self):
         # plot on a separated widget the ROI plot profile
+        # bottom label of the plot : '' to erase a previous 'λ (nm)'
+        self.signalTrans['label'] = 'λ (nm)' if self.lambdaAct.isChecked() else ''
         if self.ite == 'line':
             self.signalTrans['data'] = self.cut
             self.open_widget(self.winCoupe)
 
-            if self.winPref.checkBoxAxeScale.isChecked() == 1:
+            if self.lambdaAct.isChecked() or self.winPref.checkBoxAxeScale.isChecked() == 1:
                 self.signalTrans['axis'] = self.absiLine
                 self.signalPlot.emit(self.signalTrans)
                 # self.winCoupe.PLOT(self.cut,axis = self.absiLine)
             else:
                 # self.winCoupe.PLOT(self.cut)#,symbol = False)
+                self.signalTrans['axis'] = None
                 self.signalPlot.emit(self.signalTrans)
 
         if self.ite == 'rect':
             self.signalTrans['data'] = self.cut1
+            if self.lambdaAct.isChecked():
+                self.signalTrans['axis'] = self.winLambda.toLambda(self.xini + np.arange(len(self.cut1)))
+            else:
+                self.signalTrans['axis'] = None
             self.open_widget(self.winCoupe)
             # self.winCoupe.PLOT(self.cut1)#,symbol = False)
             self.signalPlot.emit(self.signalTrans)
@@ -1638,19 +1671,15 @@ class SEE(QMainWindow):
         if self.checkBoxScale.isChecked() == 1:  # color autoscale on
 
             if self.winPref.checkBoxAxeScale.isChecked() == 1:
-                self.axeX.setScale(self.winPref.stepX)
                 self.axeY.setScale(self.winPref.stepY)
-                self.axeX.setLabel('um')
                 self.axeY.setLabel('um')
-                self.axeX.showLabel(True)
             if self.winPref.checkBoxAxeScale.isChecked() == 0:
                 self.scaleAxis = "off"
-                self.axeX.setScale(1)
                 self.axeY.setScale(1)
-                self.axeX.showLabel(False)
             self.imh.setImage(self.data, autoLevels=True, autoDownsample=True)
         else:
             self.imh.setImage(self.data, autoLevels=False, autoDownsample=True)
+        self.updateAxeX()
 
         # Ajuste la vue pour que l'image COMPLÈTE reste toujours visible
         # (jamais recadrée), quel que soit le ratio largeur/hauteur du
@@ -1817,11 +1846,7 @@ class SEE(QMainWindow):
                             self.xcMouse = 0
                             self.ycMouse = 0
 
-                        if self.winPref.checkBoxAxeScale.isChecked():  # scale axe on
-                            self.label_Cross.setText(f'x = {round(int(self.xcMouse)*self.winPref.stepX, 2)}um  y= {round(int(self.ycMouse)*self.winPref.stepY, 2)}um')
-                        else:
-
-                            self.label_Cross.setText(f'x = {int(self.xcMouse)} y = {int(self.ycMouse)}')
+                        self.label_Cross.setText(self.crossText(self.xcMouse, self.ycMouse))
 
                         dataCross = round(dataCross, 3) 
                         # print(dataCross) # take data  value  on the cross
@@ -1944,13 +1969,20 @@ class SEE(QMainWindow):
                     # evoid to have an error if cursor is out of the image
                     v = 0
                 values.append(v)
-                label.setText(f"x= {round(x*scalex, 2)} {unit}\ny= {round(y*scaley, 2)} {unit}\nv= {v}")
+                if self.lambdaAct.isChecked():
+                    xText = f"λ= {round(self.winLambda.toLambda(x), 2)} nm"
+                else:
+                    xText = f"x= {round(x*scalex, 2)} {unit}"
+                label.setText(f"{xText}\ny= {round(y*scaley, 2)} {unit}\nv= {v}")
                 label.setPos(x, y)
 
-            dx = (x2 - x1) * scalex
             dy = (y2 - y1) * scaley
             dv = values[1] - values[0]
-            self.labelCursors.setText(f"dx= {round(dx, 2)} {unit}\ndy= {round(dy, 2)} {unit}\ndv= {round(dv, 3)}")
+            if self.lambdaAct.isChecked():
+                dxText = f"dλ= {round(self.winLambda.slope*(x2 - x1), 2)} nm"
+            else:
+                dxText = f"dx= {round((x2 - x1) * scalex, 2)} {unit}"
+            self.labelCursors.setText(f"{dxText}\ndy= {round(dy, 2)} {unit}\ndv= {round(dv, 3)}")
             self.labelCursors.setPos((x1+x2)/2, (y1+y2)/2)
 
     def Coupe(self):
@@ -2004,10 +2036,7 @@ class SEE(QMainWindow):
             if coupeYMax == 0:
                 coupeYMax = 1
 
-            if self.winPref.checkBoxAxeScale.isChecked():  # scale axe on
-                self.label_Cross.setText(f'x = {round(int(self.xc)*self.winPref.stepX, 2)}um y = {round(int(self.yc)*self.winPref.stepY, 2)}um')
-            else:
-                self.label_Cross.setText(f'x = {int(self.xc)}  y = {int(self.yc)}')
+            self.label_Cross.setText(self.crossText(self.xc, self.yc))
 
             dataCross = round(dataCross, 3)  # take data  value  on the cross
 
@@ -2047,7 +2076,9 @@ class SEE(QMainWindow):
                     if fwhmY is None:
                         self.textY.setText('', color='w')
                     else:
-                        if self.winPref.checkBoxAxeScale.isChecked() == 1:
+                        if self.lambdaAct.isChecked():
+                            self.textY.setText(f'fwhm = {round(fwhmY*abs(self.winLambda.slope), 2)}nm', color='w')
+                        elif self.winPref.checkBoxAxeScale.isChecked() == 1:
                             self.textY.setText(f'fwhm = {round(fwhmY*self.winPref.stepY, 2)}um', color='w')
                         else:
                             self.textY.setText(f'fwhm = {round(fwhmY, 2)}', color='w')
@@ -2063,10 +2094,7 @@ class SEE(QMainWindow):
                 self.xc = 0
                 self.yc = 0
 
-            if self.winPref.checkBoxAxeScale.isChecked() == 1:  # scale axe on
-                self.label_Cross.setText(f'x = {round(int(self.xcMouse)*self.winPref.stepX, 2)}um   y = {round(int(self.ycMouse)*self.winPref.stepY, 2)}um')
-            else:
-                self.label_Cross.setText(f'x = {int(self.xcMouse)} y= {int(self.ycMouse)}')
+            self.label_Cross.setText(self.crossText(self.xcMouse, self.ycMouse))
 
             dataCross = round(dataCross, 3)  # take data  value  on the mousse
             self.label_CrossValue.setText(f' v.= {dataCross} {self.labelValue}')
@@ -2115,7 +2143,8 @@ class SEE(QMainWindow):
             self.p1.removeItem(self.vLine)
             self.p1.removeItem(self.hLine)
             self.p1.showAxis('left', show=False)
-            self.p1.showAxis('bottom', show=False)
+            # wavelength axis stay visible without the cross
+            self.p1.showAxis('bottom', show=self.lambdaAct.isChecked())
             if self.roiCross is True:
                 self.p1.removeItem(self.ro1)
 
@@ -2644,6 +2673,44 @@ class SEE(QMainWindow):
                 pass
         self.Display(self.data)
 
+    def lambdaChanged(self):
+        # lambda option toggled or calibration changed
+        self.p1.showAxis('bottom', show=(self.lambdaAct.isChecked() or self.checkBoxPlot.isChecked()))
+        if self.ite == 'line':
+            self.LigneChanged()
+        self.Display(self.dataOrg)
+
+    def updateAxeX(self):
+        # X axis in nm (lambda) or um (scale factor) or pixel
+        if self.lambdaAct.isChecked():
+            self.axeX.setScale(self.winLambda.slope)
+            self.axeX.setOffset(self.winLambda.offset)
+            self.axeX.setLabel('λ (nm)')
+            self.axeX.showLabel(True)
+        elif self.winPref.checkBoxAxeScale.isChecked():
+            self.axeX.setOffset(0)
+            self.axeX.setScale(self.winPref.stepX)
+            self.axeX.setLabel('um')
+            self.axeX.showLabel(True)
+        else:
+            self.axeX.setOffset(0)
+            self.axeX.setScale(1)
+            self.axeX.showLabel(False)
+
+    def crossText(self, x, y):
+        # text of the position (cross or mouse) in the status bar
+        if self.winPref.checkBoxAxeScale.isChecked():
+            yText = f'y = {round(int(y)*self.winPref.stepY, 2)}um'
+        else:
+            yText = f'y = {int(y)}'
+        if self.lambdaAct.isChecked():
+            xText = f'λ = {round(self.winLambda.toLambda(int(x)), 2)}nm'
+        elif self.winPref.checkBoxAxeScale.isChecked():
+            xText = f'x = {round(int(x)*self.winPref.stepX, 2)}um'
+        else:
+            xText = f'x = {int(x)}'
+        return f'{xText}  {yText}'
+
     def zoomRectAct(self):  # zoom fonction Display data on a range difined by a rectangular  roi
         
         if self.plotRectZoomEtat == "Zoom":
@@ -2813,6 +2880,8 @@ class SEE(QMainWindow):
             self.winOpt.close()
         if self.winPref.isWinOpen is True:
             self.winPref.close()
+        if self.winLambda.isWinOpen is True:
+            self.winLambda.close()
         if self.fft is True:
             if self.winFFT.isWinOpen is True:
                 self.winFFT.close()
